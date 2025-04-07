@@ -1,10 +1,16 @@
+import os
+
 import geopandas as gpd
 from flask import Flask, jsonify, render_template, request
 
 app = Flask(__name__)
 
+# Construct the absolute path to the GeoJSON file
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+DATA_PATH = os.path.join(BASE_DIR, "data", "europe_regions.geojson")
+
 # Load your multi-year GeoJSON data once at startup
-gdf = gpd.read_file("data/europe_regions.geojson")
+gdf = gpd.read_file(DATA_PATH)
 
 
 @app.route("/")
