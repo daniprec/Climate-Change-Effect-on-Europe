@@ -110,8 +110,10 @@ def build_europe_geojson():
     # Drop the now-redundant combined column
     df = df.iloc[:, 1:]
 
-    # Choose "DEATH_NR" as the indicator
-    df = df[df["indic_de"] == "DEATH_NR"].copy()
+    # DEATH_NR = Deaths - number
+    # GDEATHRT_THSP = Crude death rate - per thousand persons
+    # Choose "GDEATHRT_THSP" as the indicator
+    df = df[df["indic_de"] == "GDEATHRT_THSP"].copy()
 
     # Next columns typically contain data for various years, e.g. "2020 ", "2021 "
     # 3.2 Identify those year columns

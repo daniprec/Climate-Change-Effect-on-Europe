@@ -17,7 +17,7 @@
 </head>
 <body>
 
-<h1>Climate Risk Demo (Dummy Data)</h1>
+<h1>Climate Risk Demo</h1>
 <div id="map"></div>
 
 <!-- Leaflet JS -->
@@ -49,13 +49,11 @@
 
   // A simple style function that colors regions by deaths per million population
   function styleFeature(feature) {
-    let deaths = feature.properties.deaths || 0;
-    let pop = feature.properties.population || 1; // avoid div by zero
-    let ratio = deaths / pop; // e.g. 1000 / 65,000,000
+    let deaths = feature.properties.mortality || 0;
 
     // We'll convert ratio to a color. This is a simplistic approach.
     // Increase the multiplier to see more variation for small differences.
-    let intensity = Math.min(ratio * 1e6, 255); // scale to up to 255
+    let intensity = Math.min(deaths * 10, 255); // scale to up to 255
     let color = `rgb(${intensity}, 0, 0)`; // more red => more deaths per capita
 
     return {
@@ -70,12 +68,9 @@
   function onEachFeature(feature, layer) {
     let name = feature.properties.name;
     let deaths = feature.properties.mortality;
-    let pop = feature.properties.population;
     layer.bindPopup(`
       <b>${name}</b><br/>
-      Deaths: ${deaths}<br/>
-      Population: ${pop}<br/>
-      Deaths per capita: ${(deaths/pop).toFixed(6)}
+      Death rate (per thousand): ${deaths}<br/>
     `);
   }
 </script>
