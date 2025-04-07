@@ -3,24 +3,71 @@
 <head>
   <meta charset="utf-8">
   <title>Flask Demo</title>
+  <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <!-- Include Chart.js for plotting graphs -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    #map { width: 100%; height: 500px; }
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 0;
+      color: #333;
+    }
+    h1 {
+      text-align: center;
+      margin-top: 20px;
+    }
+    /* Center the slider controls with extra space */
+    #controls {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 15px;
+      margin: 20px 0;
+    }
+    #yearSlider {
+      width: 300px;
+    }
+    #map {
+      width: 80%;
+      height: 500px;
+      margin: 0 auto;
+      border: 2px solid #ccc;
+      border-radius: 8px;
+    }
+    /* Graph container styling */
+    #graph {
+      width: 80%;
+      height: 300px;
+      margin: 20px auto;
+      padding: 10px;
+      background-color: #fff;
+      border: 2px solid #ccc;
+      border-radius: 8px;
+    }
   </style>
 </head>
 <body>
   <h1>Flask Demo</h1>
-  <label for="yearSlider">Select Year: </label>
-  <input type="range" id="yearSlider" min="2012" max="2023" value="2023" step="1">
-  <span id="yearLabel">2023</span>
+  <div id="controls">
+    <label for="yearSlider">Select Year:</label>
+    <input type="range" id="yearSlider" min="2012" max="2023" value="2023" step="1">
+    <span id="yearLabel">2023</span>
+  </div>
   <div id="map"></div>
+  <div id="graph"></div>
 
+  <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
+    // Initialize the Leaflet map
     const map = L.map('map').setView([47, 5], 5);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
     let geoJsonLayer = null;
 
+    // Fetch mortality data for the selected year and add to the map
     function loadDataForYear(year) {
       fetch(`/api/mortality?year=${year}`)
         .then(response => response.json())
@@ -31,7 +78,8 @@
           geoJsonLayer = L.geoJSON(data, {
             style: feature => {
               const deaths = feature.properties.mortality || 0;
-              let intensity = Math.min(deaths * 10, 255);
+              // Use squared deaths to calculate intensity for a stronger visual contrast
+              let intensity = Math.min(deaths ** 2, 255);
               return {
                 fillColor: `rgb(${intensity}, 0, 0)`,
                 fillOpacity: 0.7,
@@ -40,18 +88,63 @@
               };
             },
             onEachFeature: (feature, layer) => {
-              layer.bindPopup(`<b>${feature.properties.name}</b><br>
-                               Mortality: ${feature.properties.mortality}`);
+              layer.bindPopup(`<b>${feature.properties.name}</b><br>Mortality: ${feature.properties.mortality}`);
+              // When the user clicks a country, plot its mortality over the years
+              layer.on('click', () => plotGraph(feature.properties));
             }
           }).addTo(map);
         })
         .catch(error => console.error('Error fetching data:', error));
     }
 
-    // Initial load for default year
+    // Plot a line graph with Chart.js showing mortality per year for the selected country
+    function plotGraph(properties) {
+      // Create arrays for years and mortality values
+      const years = [];
+      const deaths = [];
+      for (let y = 2012; y <= 2023; y++) {
+        years.push(y);
+        // Each property should be like "mortality_2023" etc.
+        deaths.push(properties[`mortality_${y}`] || 0);
+      }
+      // Get the graph container
+      const graphDiv = document.getElementById("graph");
+      // Clear any previous graph
+      graphDiv.innerHTML = "";
+      // Create a canvas for Chart.js
+      const canvas = document.createElement("canvas");
+      graphDiv.appendChild(canvas);
+      const ctx = canvas.getContext("2d");
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: years,
+          datasets: [{
+            label: `Mortality for ${properties.name} (per thousand)`,
+            data: deaths,
+            borderColor: 'rgba(255, 99, 132, 1)',
+            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+            fill: true,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true,
+              max: 25,
+              min: 0,
+            }
+          }
+        }
+      });
+    }
+
+    // Initial load for the default year (2023)
     loadDataForYear("2023");
 
-    // Update data on slider change
+    // Update data when the slider changes
     document.getElementById('yearSlider').addEventListener('input', function() {
       const selectedYear = this.value;
       document.getElementById('yearLabel').innerText = selectedYear;
@@ -60,3 +153,4 @@
   </script>
 </body>
 </html>
+<!-- End of HTML file -->
