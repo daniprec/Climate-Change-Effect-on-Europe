@@ -1,0 +1,17 @@
+/* Basic styling for the map and page */
+body {
+    margin: 0;
+    padding: 0;
+    font-family: sans-serif;
+  }
+  
+  h1 {
+    text-align: center;
+  }
+  
+  #map {
+    width: 100%;
+    height: 500px;
+    margin: 0 auto;
+  }
+  

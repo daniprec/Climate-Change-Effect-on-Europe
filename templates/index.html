@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Climate Risk Map Demo</title>
+
+  <!-- Leaflet CSS -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    crossorigin=""
+  />
+
+  <!-- Our own stylesheet -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+</head>
+<body>
+
+<h1>Climate Risk Demo (Dummy Data)</h1>
+<div id="map"></div>
+
+<!-- Leaflet JS -->
+<script
+  src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  crossorigin="">
+</script>
+
+<script>
+  // Initialize the map centered on roughly central Europe
+  var map = L.map('map').setView([47, 5], 5);
+
+  // Add a tile layer (OpenStreetMap by default)
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19
+  }).addTo(map);
+
+  // Fetch the GeoJSON from our Flask endpoint
+  fetch('/api/data')
+    .then(response => response.json())
+    .then(data => {
+      // Create a Leaflet geoJSON layer
+      L.geoJSON(data, {
+        style: styleFeature,
+        onEachFeature: onEachFeature
+      }).addTo(map);
+    })
+    .catch(error => console.error('Error fetching geojson:', error));
+
+  // A simple style function that colors regions by deaths per million population
+  function styleFeature(feature) {
+    let deaths = feature.properties.deaths || 0;
+    let pop = feature.properties.population || 1; // avoid div by zero
+    let ratio = deaths / pop; // e.g. 1000 / 65,000,000
+
+    // We'll convert ratio to a color. This is a simplistic approach.
+    // Increase the multiplier to see more variation for small differences.
+    let intensity = Math.min(ratio * 1e6, 255); // scale to up to 255
+    let color = `rgb(${intensity}, 0, 0)`; // more red => more deaths per capita
+
+    return {
+      fillColor: color,
+      fillOpacity: 0.6,
+      color: '#999',
+      weight: 1
+    };
+  }
+
+  // A tooltip or popup for each feature
+  function onEachFeature(feature, layer) {
+    let name = feature.properties.name;
+    let deaths = feature.properties.deaths;
+    let pop = feature.properties.population;
+    layer.bindPopup(`
+      <b>${name}</b><br/>
+      Deaths: ${deaths}<br/>
+      Population: ${pop}<br/>
+      Deaths per capita: ${(deaths/pop).toFixed(6)}
+    `);
+  }
+</script>
+
+</body>
+</html>
