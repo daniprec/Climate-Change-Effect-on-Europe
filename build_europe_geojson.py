@@ -1,8 +1,11 @@
+import gzip
 import os
-import requests
+import shutil
 import zipfile
-import pandas as pd
+
 import geopandas as gpd
+import pandas as pd
+import requests
 
 
 def download_file(url, local_path):
@@ -34,20 +37,19 @@ def extract_zip(zip_path, extract_to):
 def build_europe_geojson():
     """
     Downloads Natural Earth data for Admin 0 countries,
-    filters to European countries, merges with dummy population/deaths data,
+    downloads Eurostat mortality data,
+    filters to European countries, merges with mortality data,
     and saves as a final GeoJSON file.
     """
 
     # ------------------------------------------------------
     # 1. Download Natural Earth Admin 0 Shapefile (1:50m)
     # ------------------------------------------------------
-    # Official download link for 1:50m Admin 0 Countries
-    # (Double-check version if it changes over time)
+    # Reliable NACIS CDN link for 1:50m Admin 0 Countries
     ne_url = (
         "https://naciscdn.org/naturalearth/50m/cultural/ne_50m_admin_0_countries.zip"
     )
 
-    # We will store it locally
     data_dir = "data"
     os.makedirs(data_dir, exist_ok=True)
 
@@ -60,11 +62,7 @@ def build_europe_geojson():
         os.makedirs(shapefile_dir, exist_ok=True)
         extract_zip(zip_path, shapefile_dir)
 
-    # ------------------------------------------------------
-    # 2. Read the shapefile using GeoPandas
-    # ------------------------------------------------------
-    # The shapefile name typically ends with .shp, e.g.:
-    # "ne_50m_admin_0_countries.shp"
+    # Read the shapefile with GeoPandas
     shp_files = [f for f in os.listdir(shapefile_dir) if f.endswith(".shp")]
     if not shp_files:
         raise FileNotFoundError(
@@ -76,92 +74,102 @@ def build_europe_geojson():
     gdf = gpd.read_file(shp_path)
     print(f"[INFO] Loaded {len(gdf)} country polygons from Natural Earth.")
 
-    # ------------------------------------------------------
-    # 3. Filter to countries in Europe
-    # ------------------------------------------------------
-    # Natural Earth has a field "CONTINENT", or "SUBREGION"
-    # We'll keep only "Europe" or special cases. You can refine as needed.
+    # Filter to countries in Europe
     gdf_europe = gdf[gdf["CONTINENT"] == "Europe"].copy()
     print(f"[INFO] Filtered to {len(gdf_europe)} countries in Europe (by CONTINENT).")
 
-    # Potentially, you can also manually add countries that are
-    # transcontinental (e.g., Turkey, Russia) if you want them included.
-    # For example:
-    #   gdf_europe = gdf_europe.append(gdf[gdf["ADMIN"] == "Turkey"])
+    # ------------------------------------------------------
+    # 2. Download Eurostat mortality data
+    # ------------------------------------------------------
+    # Eurostat mortality data
+    eurostat_url = "https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data/tps00029?format=TSV&compressed=true"
+    eurostat_tsv_gz = os.path.join(data_dir, "mortality.tsv.gz")
+    download_file(eurostat_url, eurostat_tsv_gz)
+
+    # We need to decompress the GZ into a .tsv file
+    eurostat_tsv = os.path.join(data_dir, "mortality.tsv")
+    if not os.path.exists(eurostat_tsv):
+        print(f"[INFO] Decompressing {eurostat_tsv_gz} to {eurostat_tsv} ...")
+        with (
+            gzip.open(eurostat_tsv_gz, "rb") as gz_in,
+            open(eurostat_tsv, "wb") as tsv_out,
+        ):
+            shutil.copyfileobj(gz_in, tsv_out)
+        print("[INFO] Decompression complete.")
 
     # ------------------------------------------------------
-    # 4. Prepare or fetch population/deaths data
+    # 3. Parse the Eurostat TSV (COMPLETED STEP)
     # ------------------------------------------------------
-    # For demonstration, let's create a small dummy CSV of population & deaths
-    # keyed by the ISO_A3 code. In practice, you'd fetch real data from
-    # a reliable source (WHO, WB, etc.).
-    csv_population = os.path.join(data_dir, "europe_population_deaths.csv")
-    if not os.path.exists(csv_population):
-        print("[INFO] Creating dummy population/deaths CSV.")
-        dummy_data = {
-            "NAME_EN": [
-                "France",
-                "Germany",
-                "Spain",
-                "Italy",
-                "Poland",
-                "Sweden",
-                "Greece",
-                "United Kingdom",
-            ],
-            "population": [
-                65000000,
-                83000000,
-                47000000,
-                60000000,
-                38000000,
-                10300000,
-                10700000,
-                67000000,
-            ],
-            "deaths": [1500, 2000, 1200, 1800, 1100, 900, 700, 1600],
-        }
-        df_dummy = pd.DataFrame(dummy_data)
-        df_dummy.to_csv(csv_population, index=False)
-    else:
-        print("[INFO] Using existing CSV for population/deaths.")
+    print("[INFO] Reading Eurostat data into Pandas...")
+    df = pd.read_csv(eurostat_tsv, sep="\t", na_values=":", dtype=str)
 
-    df_pop = pd.read_csv(csv_population)
-    print("[INFO] Loaded population/deaths data:")
-    print(df_pop.head())
+    # The first column is something like "freq,indic_de,geo\TIME_PERIOD"
+    # 3.1 Split that into separate columns
+    df[["freq", "indic_de", "geo"]] = df.iloc[:, 0].str.split(",", expand=True)
 
-    # ------------------------------------------------------
-    # 5. Merge the population/deaths info into our GeoDataFrame
-    # ------------------------------------------------------
-    # Natural Earth uses "ISO_A3" for 3-letter country code
-    # We will do a left join to keep all Europe's polygons
-    gdf_europe_merged = gdf_europe.merge(df_pop, on="NAME_EN", how="left")
-    # Rename columns for clarity
-    gdf_europe_merged.rename(columns={"NAME_EN": "name"}, inplace=True)
+    # Drop the now-redundant combined column
+    df = df.iloc[:, 1:]
 
-    # Some countries won't match if not in the dummy CSV. They get NaN.
-    # You can handle that if needed:
-    gdf_europe_merged["population"] = gdf_europe_merged["population"].fillna(0)
-    gdf_europe_merged["deaths"] = gdf_europe_merged["deaths"].fillna(0)
+    # Choose "DEATH_NR" as the indicator
+    df = df[df["indic_de"] == "DEATH_NR"].copy()
+
+    # Next columns typically contain data for various years, e.g. "2020 ", "2021 "
+    # 3.2 Identify those year columns
+    year_cols = [col for col in df.columns if col.strip().isdigit()]
+    if not year_cols:
+        raise ValueError(
+            "No year columns found in the downloaded TSV. The structure may have changed."
+        )
+
+    # Pick the most recent year column
+    latest_year = sorted(year_cols, key=lambda x: x.strip())[-1]
+    print(f"[INFO] Found year columns {year_cols}. Using {latest_year} for data.")
+
+    # 3.3 Convert that latest year's data into a numeric column
+    df["mortality_raw"] = df[latest_year].str.strip().replace(":", "-1")
+    df["mortality"] = (
+        pd.to_numeric(df["mortality_raw"], errors="coerce").fillna(0).astype(int)
+    )
+
+    # Keep only the geo code + the mortality
+    df = df[["geo", "mortality"]]
+
+    print("[INFO] Final parsed DataFrame sample:")
+    print(df.head(10))
 
     # ------------------------------------------------------
-    # 6. Export to GeoJSON
+    # 4. Match Eurostat "geo" codes to Natural Earth country names
+    # ------------------------------------------------------
+    # We will do a left join on ISO_A2 = geo
+    gdf_europe["ISO_A2"] = gdf_europe["ISO_A2"].str.strip()
+
+    merged_gdf = gdf_europe.merge(df, left_on="ISO_A2", right_on="geo", how="left")
+
+    # If a country doesn't match, we get NaN in "mortality"
+    # We will fill them with 0 for demonstration
+    merged_gdf["mortality"] = merged_gdf["mortality"].fillna(0).astype(int)
+
+    # Create the "name" column for GeoJSON
+    merged_gdf["name"] = merged_gdf["NAME_EN"].str.strip()
+
+    # ------------------------------------------------------
+    # 5. Export final GeoJSON
     # ------------------------------------------------------
     output_geojson = os.path.join(data_dir, "europe_regions.geojson")
-    gdf_europe_merged.to_file(output_geojson, driver="GeoJSON")
+    merged_gdf.to_file(output_geojson, driver="GeoJSON")
     print(
-        f"[INFO] Successfully wrote {len(gdf_europe_merged)} features to {output_geojson}!"
+        f"[INFO] Successfully wrote {len(merged_gdf)} European features to {output_geojson}!"
     )
 
     # -------------------------------------------------------
-    # 7. Cleanup
+    # 6. Cleanup (optional)
     # -------------------------------------------------------
-    # Remove the downloaded zip and extracted files
     os.remove(zip_path)
     for f in os.listdir(shapefile_dir):
         os.remove(os.path.join(shapefile_dir, f))
     os.rmdir(shapefile_dir)
-    os.remove(csv_population)
+    os.remove(eurostat_tsv_gz)
+    os.remove(eurostat_tsv)
     print(f"[INFO] Cleaned up temporary files in {data_dir}.")
 
 
