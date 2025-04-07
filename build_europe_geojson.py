@@ -7,6 +7,14 @@ import geopandas as gpd
 import pandas as pd
 import requests
 
+ISO_A2_COUNTRY_CODES = {
+    "France": "FR",
+    "Germany": "DE",
+    "United Kingdom": "GB",
+    "Norway": "NO",
+    "Kosovo": "XK",
+}
+
 
 def download_file(url, local_path):
     """
@@ -82,6 +90,7 @@ def build_europe_geojson():
     # 2. Download Eurostat mortality data
     # ------------------------------------------------------
     # Eurostat mortality data
+    # https://ec.europa.eu/eurostat/databrowser/view/tps00029/default/table?lang=en&category=t_demo.t_demo_mor
     eurostat_url = "https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data/tps00029?format=TSV&compressed=true"
     eurostat_tsv_gz = os.path.join(data_dir, "mortality.tsv.gz")
     download_file(eurostat_url, eurostat_tsv_gz)
@@ -116,6 +125,7 @@ def build_europe_geojson():
     df = df[df["indic_de"] == "GDEATHRT_THSP"].copy()
     # We can drop the "indic_de" and "freq" columns now
     df.drop(columns=["indic_de", "freq"], inplace=True)
+    print(df["geo"])
 
     # Next columns typically contain data for various years, e.g. "2020 ", "2021 "
     # 3.2 Identify those year columns
@@ -142,6 +152,12 @@ def build_europe_geojson():
     # ------------------------------------------------------
     # We will do a left join on ISO_A2 = geo
     gdf_europe["ISO_A2"] = gdf_europe["ISO_A2"].str.strip()
+    # Some countries are missing ISO_A2 codes, e.g. "FR" for France
+    # We will use their "NAME_EN" to match them, using the ISO_A2_COUNTRY_CODES dict
+    # to fill in the missing codes
+    for country, iso_code in ISO_A2_COUNTRY_CODES.items():
+        gdf_europe.loc[gdf_europe["NAME_EN"] == country, "ISO_A2"] = iso_code
+    print(gdf_europe[["NAME_EN", "ISO_A2"]])
 
     merged_gdf = gdf_europe.merge(df, left_on="ISO_A2", right_on="geo", how="left")
 
