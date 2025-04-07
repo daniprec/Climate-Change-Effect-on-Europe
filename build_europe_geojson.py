@@ -114,6 +114,8 @@ def build_europe_geojson():
     # GDEATHRT_THSP = Crude death rate - per thousand persons
     # Choose "GDEATHRT_THSP" as the indicator
     df = df[df["indic_de"] == "GDEATHRT_THSP"].copy()
+    # We can drop the "indic_de" and "freq" columns now
+    df.drop(columns=["indic_de", "freq"], inplace=True)
 
     # Next columns typically contain data for various years, e.g. "2020 ", "2021 "
     # 3.2 Identify those year columns
@@ -123,18 +125,14 @@ def build_europe_geojson():
             "No year columns found in the downloaded TSV. The structure may have changed."
         )
 
-    # Pick the most recent year column
-    latest_year = sorted(year_cols, key=lambda x: x.strip())[-1]
-    print(f"[INFO] Found year columns {year_cols}. Using {latest_year} for data.")
-
-    # 3.3 Convert that latest year's data into a numeric column
-    df["mortality_raw"] = df[latest_year].str.strip().replace(":", "-1")
-    df["mortality"] = (
-        pd.to_numeric(df["mortality_raw"], errors="coerce").fillna(0).astype(int)
-    )
-
-    # Keep only the geo code + the mortality
-    df = df[["geo", "mortality"]]
+    # Rename the year columns to "mortality_YYYY"
+    for col_old in year_cols:
+        year = col_old.strip()
+        col = f"mortality_{year}"
+        df.rename(columns={col_old: col}, inplace=True)
+        # Convert that data into a numeric column
+        df[col] = df[col].str.strip().replace(":", "-1")
+        df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0).astype(int)
 
     print("[INFO] Final parsed DataFrame sample:")
     print(df.head(10))
@@ -147,12 +145,15 @@ def build_europe_geojson():
 
     merged_gdf = gdf_europe.merge(df, left_on="ISO_A2", right_on="geo", how="left")
 
-    # If a country doesn't match, we get NaN in "mortality"
-    # We will fill them with 0 for demonstration
-    merged_gdf["mortality"] = merged_gdf["mortality"].fillna(0).astype(int)
-
     # Create the "name" column for GeoJSON
     merged_gdf["name"] = merged_gdf["NAME_EN"].str.strip()
+
+    # Choose the columns we want to keep in the final GeoJSON
+    columns_to_keep = [
+        "name",
+        "geometry",
+    ] + [col for col in merged_gdf.columns if col.startswith("mortality_")]
+    merged_gdf = merged_gdf[columns_to_keep]
 
     # ------------------------------------------------------
     # 5. Export final GeoJSON
