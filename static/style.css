@@ -24,7 +24,8 @@ h1 {
 .slider {
   appearance: none;
   width: 100%; /* Full-width */
-  height: 25px; /* Specified height */
+  height: 10px; /* Specified height */
+  border-radius: 5px; /* Rounded slider */
   background: #6dc201; /* Grey background */
   outline: none; /* Remove outline */
   opacity: 0.7; /* Set transparency (for mouse-over effects on hover) */
@@ -39,10 +40,10 @@ h1 {
 
 /* The slider handle (use -webkit- (Chrome, Opera, Safari, Edge) and -moz- (Firefox) to override default look) */
 .slider::-webkit-slider-thumb {
-  -webkit-appearance: none; /* Override default look */
   appearance: none;
   width: 25px; /* Set a specific slider handle width */
   height: 25px; /* Slider handle height */
+  border-radius: 50%; /* Rounded slider handle */
   background: #000066; /* Blue background */
   cursor: pointer; /* Cursor on hover */
 }
@@ -50,6 +51,7 @@ h1 {
 .slider::-moz-range-thumb {
   width: 25px; /* Set a specific slider handle width */
   height: 25px; /* Slider handle height */
+  border-radius: 50%; /* Rounded slider handle */
   background: #000066; /* Blue background */
   cursor: pointer; /* Cursor on hover */
 }
