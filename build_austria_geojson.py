@@ -1,0 +1,197 @@
+import gzip
+import os
+import shutil
+import zipfile
+
+import geopandas as gpd
+import pandas as pd
+import requests
+
+
+def download_file(url, local_path):
+    """
+    Downloads a file from `url` to `local_path`.
+    If it already exists, we skip re-downloading.
+    """
+    if os.path.exists(local_path):
+        print(f"[INFO] {local_path} already exists, skipping download.")
+        return
+    print(f"[INFO] Downloading {url} ...")
+    r = requests.get(url)
+    r.raise_for_status()
+    with open(local_path, "wb") as f:
+        f.write(r.content)
+    print(f"[INFO] Saved to {local_path}")
+
+
+def extract_zip(zip_path, extract_to):
+    """
+    Extracts all contents of a zip file to the specified directory.
+    """
+    print(f"[INFO] Extracting {zip_path} into {extract_to} ...")
+    with zipfile.ZipFile(zip_path, "r") as z:
+        z.extractall(extract_to)
+    print("[INFO] Extraction complete.")
+
+
+def build_austria_geojson():
+    """
+    Downloads the Eurostat NUTS boundaries shapefile,
+    filters to Austria's NUTS-3 regions (district level),
+    downloads Eurostat mortality data,
+    processes and renames year columns,
+    merges the mortality data to the boundaries via NUTS_ID,
+    and writes a final GeoJSON.
+    """
+
+    # ------------------------------------------------------
+    # 1. Download Eurostat NUTS Boundaries Shapefile
+    # ------------------------------------------------------
+    # The following URL points to the 2021 reference dataset at 1:1M scale.
+    nuts_url = "https://gisco-services.ec.europa.eu/distribution/v2/nuts/download/ref-nuts-2021-01m.shp.zip"
+    data_dir = "data"
+    os.makedirs(data_dir, exist_ok=True)
+
+    zip_path = os.path.join(data_dir, "ref-nuts-2021-01m.shp.zip")
+    shapefile_dir = os.path.join(data_dir, "ref-nuts-2021-01m")
+    download_file(nuts_url, zip_path)
+    if not os.path.exists(shapefile_dir):
+        os.makedirs(shapefile_dir, exist_ok=True)
+        extract_zip(zip_path, shapefile_dir)
+
+    # Some shp files are still zipped as zip files, so we need to check for that.
+    # If the zip file is not extracted, we need to extract it.
+    for f in os.listdir(shapefile_dir):
+        if f.endswith(".zip"):
+            zip_file_path = os.path.join(shapefile_dir, f)
+            extract_zip(zip_file_path, shapefile_dir)
+            os.remove(zip_file_path)
+            print(f"[INFO] Removed zip file: {zip_file_path}")
+
+    # Identify the .shp file in the extracted folder
+    shp_files = [f for f in os.listdir(shapefile_dir) if f.endswith(".shp")]
+    if not shp_files:
+        raise FileNotFoundError("No .shp file found in the extracted NUTS folder.")
+    shp_path = os.path.join(shapefile_dir, shp_files[0])
+    print(f"[INFO] Reading NUTS shapefile: {shp_path}")
+    gdf_nuts = gpd.read_file(shp_path)
+    print(f"[INFO] Loaded {len(gdf_nuts)} NUTS features.")
+
+    # The codes are contained in the csv "NUTS_RG_BN_01M_2021.csv"
+    # columns "NUTS_CODE" and "NUTS_BN_ID"
+    # We will use the column "NUTS_BN_ID" from the gdf_nuts dataframe
+    # to filter the NUTS-3 regions in Austria.
+    df_codes = pd.read_csv(
+        os.path.join(shapefile_dir, "NUTS_RG_BN_01M_2021.csv"), sep=",", encoding="utf-8"
+    )
+    print(f"[INFO] Loaded {len(df_codes)} NUTS codes.")
+    gdf_nuts = gdf_nuts.merge(df_codes, right_on="NUTS_BN_CODE", left_on="NUTS_BN_ID", how="left")
+    print(f"[INFO] Merged NUTS codes into GeoDataFrame.")
+    # Create the "CNTR_CODE" column for filtering
+    gdf_nuts["CNTR_CODE"] = gdf_nuts["NUTS_CODE"].str[:2]
+
+    # Filter to Austria only (CNTR_CODE == "AT") and level 3 regions:
+    gdf_at = gdf_nuts[(gdf_nuts["CNTR_CODE"] == "AT") & (gdf_nuts["LEVL_CODE"] == 3)].copy()
+    print(f"[INFO] Filtered to {len(gdf_at)} NUTS-3 regions in Austria.")
+
+    # ------------------------------------------------------
+    # 2. Download Eurostat Mortality Data
+    # ------------------------------------------------------
+    # Here we use the tps00029 dataset (crude death rates per thousand persons)
+    # Adjust the URL as needed if you want a different indicator.
+    mortality_url = "https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data/demo_r_mwk_ts?format=TSV&compressed=true"
+    mortality_tsv_gz = os.path.join(data_dir, "mortality.tsv.gz")
+    download_file(mortality_url, mortality_tsv_gz)
+
+    # Decompress the GZ file into a TSV
+    mortality_tsv = os.path.join(data_dir, "mortality.tsv")
+    if not os.path.exists(mortality_tsv):
+        print(f"[INFO] Decompressing {mortality_tsv_gz} to {mortality_tsv} ...")
+        with gzip.open(mortality_tsv_gz, "rb") as gz_in, open(mortality_tsv, "wb") as tsv_out:
+            shutil.copyfileobj(gz_in, tsv_out)
+        print("[INFO] Decompression complete.")
+
+    # ------------------------------------------------------
+    # 3. Parse the Eurostat TSV for Mortality
+    # ------------------------------------------------------
+    print("[INFO] Reading Eurostat mortality data into Pandas...")
+    df = pd.read_csv(mortality_tsv, sep="\t", na_values=":", dtype=str)
+
+    # The first column is expected to have a composite header such as:
+    # "freq,indic_de,geo\TIME_PERIOD"
+    # Split it into separate columns (we ignore 'freq' here):
+    df[["freq", "sex", "unit", "geo"]] = df.iloc[:, 0].str.split(",", expand=True)
+    # Drop the now-redundant combined column
+    df = df.iloc[:, 1:]
+
+    # Filter for the mortality indicator of interest.
+    # For instance, use "GDEATHRT_THSP" (crude death rate per thousand persons)
+    df = df[df["indic_de"] == "GDEATHRT_THSP"].copy()
+    df.drop(columns=["indic_de", "freq"], inplace=True)
+    # At this point, the "geo" column should contain the regional codes,
+    # which we expect to match the NUTS_ID (e.g., "AT131", etc.)
+
+    # Identify columns for various years (e.g., "2020 ", "2021 ", etc.)
+    year_cols = [col for col in df.columns if col.strip().isdigit()]
+    if not year_cols:
+        raise ValueError("No year columns found in the downloaded TSV. The structure may have changed.")
+
+    # Rename each year column to a consistent format: "mortality_YYYY"
+    for col_old in year_cols:
+        year = col_old.strip()
+        new_col = f"mortality_{year}"
+        df.rename(columns={col_old: new_col}, inplace=True)
+        # Convert to numeric; if the value is missing (":"), set to -1 and then zero it out.
+        df[new_col] = df[new_col].str.strip().replace(":", "-1")
+        df[new_col] = pd.to_numeric(df[new_col], errors="coerce").fillna(0).astype(int)
+
+    print("[INFO] Parsed mortality DataFrame sample:")
+    print(df.head(10))
+
+    # ------------------------------------------------------
+    # 4. Merge Mortality Data with Austrian Municipalities
+    # ------------------------------------------------------
+    # The NUTS shapefile from Eurostat uses the "NUTS_BN_ID" field as the regional code.
+    # In the mortality data, the "geo" column should contain the matching code for each NUTS 3 region.
+    gdf_at["NUTS_BN_ID"] = gdf_at["NUTS_BN_ID"].str.strip()
+    df["geo"] = df["geo"].str.strip()
+    merged_gdf = gdf_at.merge(df, left_on="NUTS_BN_ID", right_on="geo", how="left")
+
+    # Create the "name" field for the GeoJSON from a suitable column, e.g., "NUTS_NAME"
+    # (The actual column name may vary; check the shapefile attributes.)
+    if "NUTS_NAME" in merged_gdf.columns:
+        merged_gdf["name"] = merged_gdf["NUTS_NAME"].str.strip()
+    else:
+        # Fallback: use the NUTS_ID as name if NUTS_NAME is unavailable.
+        merged_gdf["name"] = merged_gdf["NUTS_BN_ID"]
+
+    # Choose the columns for the output; keep "name", "geometry", and all mortality columns.
+    mortality_columns = [col for col in merged_gdf.columns if col.startswith("mortality_")]
+    columns_to_keep = ["name", "geometry"] + mortality_columns
+    merged_gdf = merged_gdf[columns_to_keep]
+
+    # ------------------------------------------------------
+    # 5. Export Final GeoJSON
+    # ------------------------------------------------------
+    output_geojson = os.path.join(data_dir, "austria_municipalities.geojson")
+    merged_gdf.to_file(output_geojson, driver="GeoJSON")
+    print(f"[INFO] Successfully wrote {len(merged_gdf)} features to {output_geojson}!")
+
+    # -------------------------------------------------------
+    # 6. Cleanup (optional)
+    # -------------------------------------------------------
+    os.remove(zip_path)
+    for f in os.listdir(shapefile_dir):
+        os.remove(os.path.join(shapefile_dir, f))
+    os.rmdir(shapefile_dir)
+    os.remove(mortality_tsv_gz)
+    os.remove(mortality_tsv)
+    print(f"[INFO] Cleaned up temporary files in {data_dir}.")
+
+
+def main():
+    build_austria_geojson()
+
+
+if __name__ == "__main__":
+    main()
