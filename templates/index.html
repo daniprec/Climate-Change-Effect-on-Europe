@@ -5,6 +5,8 @@
   <title>Flask Demo</title>
   <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <!-- My CSS style-->
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <!-- Include Chart.js for plotting graphs -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
@@ -53,7 +55,7 @@
   <h1>Flask Demo</h1>
   <div id="controls">
     <label for="yearSlider">Select Year:</label>
-    <input type="range" id="yearSlider" min="2012" max="2023" value="2023" step="1">
+    <input type="range" class="slider" min="2012" max="2023" value="2023" step="1" id="yearSlider">
     <span id="yearLabel">2023</span>
   </div>
   <div id="map"></div>
