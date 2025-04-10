@@ -5,9 +5,9 @@
   <title>Flask Demo</title>
   <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <!-- My CSS style-->
+  <!-- Custom CSS -->
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-  <!-- Include Chart.js for plotting graphs -->
+  <!-- Chart.js for plotting graphs -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
@@ -23,12 +23,12 @@
   <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    // Initialize the Leaflet map
+    // Initialize the Leaflet map using backend values for center and zoom.
     const map = L.map('map').setView({{ center | tojson }}, {{ zoom }});
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
     let geoJsonLayer = null;
 
-    // Fetch mortality data for the selected year and add to the map
+    // Function to fetch mortality data for the selected year and update the map.
     function loadDataForYear(year) {
       fetch(`/api/mortality?year=${year}`)
         .then(response => response.json())
@@ -39,7 +39,7 @@
           geoJsonLayer = L.geoJSON(data, {
             style: feature => {
               const deaths = feature.properties.mortality || 0;
-              // Use squared deaths to calculate intensity for a stronger visual contrast
+              // Calculate intensity based on squared value (adjust as needed for your data)
               let intensity = Math.min(deaths ** 2, 255);
               return {
                 fillColor: `rgb(0, ${intensity}, 0)`,
@@ -50,7 +50,7 @@
             },
             onEachFeature: (feature, layer) => {
               layer.bindPopup(`<b>${feature.properties.name}</b><br>Mortality: ${feature.properties.mortality}`);
-              // When the user clicks a country, plot its mortality over the years
+              // When the user clicks a region, plot its mortality history.
               layer.on('click', () => plotGraph(feature.properties));
             }
           }).addTo(map);
@@ -58,21 +58,20 @@
         .catch(error => console.error('Error fetching data:', error));
     }
 
-    // Plot a line graph with Chart.js showing mortality per year for the selected country
+    // Plot a line graph with Chart.js showing mortality per year for the selected region.
     function plotGraph(properties) {
-      // Create arrays for years and mortality values
+      const minYear = parseInt("{{ min_year }}", 10);
+      const maxYear = parseInt("{{ max_year }}", 10);
       const years = [];
       const deaths = [];
-      for (let y = "{{ min_year }}"; y <= "{{ max_year }}"; y++) {
+      for (let y = minYear; y <= maxYear; y++) {
         years.push(y);
-        // Each property should be like "mortality_2023" etc.
         deaths.push(properties[`mortality_${y}`] || 0);
       }
-      // Get the graph container
       const graphDiv = document.getElementById("graph");
-      // Clear any previous graph
+      // Clear any previous graph.
       graphDiv.innerHTML = "";
-      // Create a canvas for Chart.js
+      // Create a canvas element for Chart.js.
       const canvas = document.createElement("canvas");
       graphDiv.appendChild(canvas);
       const ctx = canvas.getContext("2d");
@@ -84,7 +83,7 @@
             label: `Mortality for ${properties.name} (per thousand)`,
             data: deaths,
             borderColor: '#6dc201',
-            backgroundColor: '#6dc2014D', /* 30% opacity */
+            backgroundColor: '#6dc2014D', // 30% opacity
             fill: true,
           }]
         },
@@ -94,18 +93,18 @@
           scales: {
             y: {
               beginAtZero: true,
-              max: 25,
               min: 0,
+              max: 25,
             }
           }
         }
       });
     }
 
-    // Initial load for the default year
+    // Initial load for the default year.
     loadDataForYear("{{ max_year }}");
 
-    // Update data when the slider changes
+    // Update map data when the slider changes.
     document.getElementById('yearSlider').addEventListener('input', function() {
       const selectedYear = this.value;
       document.getElementById('yearLabel').innerText = selectedYear;
@@ -114,4 +113,3 @@
   </script>
 </body>
 </html>
-<!-- End of HTML file -->
