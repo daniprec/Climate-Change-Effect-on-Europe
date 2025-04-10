@@ -47,8 +47,8 @@ def build_austria_geojson():
     # Download Eurostat NUTS Boundaries Shapefile
     # ------------------------------------------------------
     # The following URL points to the 2024 reference dataset.
-    # Download a low resolution 1:20 (other options are 1:1, 1:3, 1:10, 1:60)
-    nuts_url = "https://gisco-services.ec.europa.eu/distribution/v2/nuts/download/ref-nuts-2024-60m.shp.zip"
+    # Download a low resolution (options are 1:1, 1:3, 1:10, 1:20, 1:60)
+    nuts_url = "https://gisco-services.ec.europa.eu/distribution/v2/nuts/download/ref-nuts-2024-03m.shp.zip"
     data_dir = "data"
     os.makedirs(data_dir, exist_ok=True)
 
@@ -101,7 +101,14 @@ def build_austria_geojson():
 
     # The coordinates are in EPSG:3035 (ETRS89 / LAEA Europe)
     # We need to convert them to EPSG:4326 (WGS 84) for GeoJSON
-    gdf_nuts = gdf_nuts.to_crs(epsg=4326)
+    gdf_at = gdf_at.to_crs(epsg=4326)
+    # Next, to convert from LineString to Polygon, we need to close the polygons
+    # by adding the first point to the end of the list of points.
+    # This is done automatically by GeoPandas when converting to Polygon.
+    # However, we need to ensure that the geometry is of type Polygon.
+    gdf_at["geometry"] = gdf_at["geometry"].apply(
+        lambda geom: geom if geom.geom_type == "Polygon" else geom.convex_hull
+    )
     print("[INFO] Converted coordinates to EPSG:4326 (WGS 84).")
 
     # ------------------------------------------------------
