@@ -56,7 +56,7 @@ def get_mortality():
     if property_name not in gdf.columns:
         return jsonify({"error": f"No data available for year {year}"}), 400
 
-    region = request.args.get("region", "europe").lower()
+    region = request.args.get("region", "europe")
     # Check if the requested region is valid
     if region not in dict_gdf:
         return jsonify({"error": "Invalid region specified"}), 400
