@@ -24,7 +24,11 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     // Initialize the Leaflet map using backend values for center and zoom.
-    const map = L.map('map').setView({{ center | tojson }}, {{ zoom }});
+    const default_zoom = parseInt("{{ zoom }}", 10);
+    // Center coordinates for the map, passed from Flask backend.
+    const default_center = [parseFloat("{{ center_lat }}"), parseFloat("{{ center_lon }}")];
+    // Create the map and set its view to the specified center and zoom level.
+    const map = L.map('map').setView(default_center, default_zoom);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
     let geoJsonLayer = null;
 
