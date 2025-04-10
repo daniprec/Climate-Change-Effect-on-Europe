@@ -34,7 +34,18 @@ h1 {
 #graph {
   width: 80%;
   height: 300px;
-  margin: 20px auto;
+  margin: 20px 10px auto auto;
+  padding: 10px;
+  background-color: #fff;
+  border: 2px solid #ccc;
+  border-radius: 8px;
+}
+
+/* info container */
+#info-popup {
+  width: 80%;
+  height: 300px;
+  margin: 20px auto auto 10px;
   padding: 10px;
   background-color: #fff;
   border: 2px solid #ccc;
