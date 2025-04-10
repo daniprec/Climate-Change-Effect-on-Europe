@@ -11,6 +11,11 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
+  <!-- Logo in the top right -->
+  <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" class="logo"
+  style="position: absolute; top: 10px; right: 10px; width: 100px; height: auto; cursor: pointer;"
+  onclick="window.location.href='https://ixlabs.ie.edu/';">
+  
   <h1>Flask Demo</h1>
   <div id="controls">
     <label for="yearSlider">Select Year:</label>
@@ -19,7 +24,7 @@
   </div>
   <div id="map"></div>
   <div id="graph"></div>
-
+  
   <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
@@ -31,7 +36,7 @@
     const map = L.map('map').setView(default_center, default_zoom);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
     let geoJsonLayer = null;
-
+    
     // Function to fetch mortality data for the selected year and update the map.
     function loadDataForYear(year) {
       fetch(`/api/mortality?year=${year}`)
@@ -61,7 +66,7 @@
         })
         .catch(error => console.error('Error fetching data:', error));
     }
-
+    
     // Plot a line graph with Chart.js showing mortality per year for the selected region.
     function plotGraph(properties) {
       const minYear = parseInt("{{ min_year }}", 10);
@@ -104,10 +109,10 @@
         }
       });
     }
-
+    
     // Initial load for the default year.
     loadDataForYear("{{ max_year }}");
-
+    
     // Update map data when the slider changes.
     document.getElementById('yearSlider').addEventListener('input', function() {
       const selectedYear = this.value;
