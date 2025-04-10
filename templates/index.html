@@ -123,6 +123,7 @@
     document.getElementById('yearSlider').addEventListener('input', function() {
       const selectedYear = this.value;
       document.getElementById('yearLabel').innerText = selectedYear;
+      const region = "{{ region }}"; // Define the region variable from the backend
       loadDataForYear(region, selectedYear);
     });
   </script>
