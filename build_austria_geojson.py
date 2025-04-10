@@ -138,7 +138,7 @@ def build_austria_geojson():
     # ------------------------------------------------------
     # Export Final GeoJSON
     # ------------------------------------------------------
-    output_geojson = os.path.join(data_dir, "austria_municipalities.geojson")
+    output_geojson = os.path.join(data_dir, "austria.geojson")
     merged_gdf.to_file(output_geojson, driver="GeoJSON")
     print(f"[INFO] Successfully wrote {len(merged_gdf)} features to {output_geojson}!")
 

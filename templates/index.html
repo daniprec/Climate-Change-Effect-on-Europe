@@ -38,8 +38,8 @@
     let geoJsonLayer = null;
     
     // Function to fetch mortality data for the selected year and update the map.
-    function loadDataForYear(year) {
-      fetch(`/api/mortality?year=${year}`)
+    function loadDataForYear(region, year) {
+      fetch(`/api/mortality?region=${region}&year=${year}`)
         .then(response => response.json())
         .then(data => {
           if (geoJsonLayer) {
@@ -111,13 +111,13 @@
     }
     
     // Initial load for the default year.
-    loadDataForYear("{{ max_year }}");
+    loadDataForYear("{{ region }}", "{{ max_year }}");
     
     // Update map data when the slider changes.
     document.getElementById('yearSlider').addEventListener('input', function() {
       const selectedYear = this.value;
       document.getElementById('yearLabel').innerText = selectedYear;
-      loadDataForYear(selectedYear);
+      loadDataForYear(region, selectedYear);
     });
   </script>
 </body>
