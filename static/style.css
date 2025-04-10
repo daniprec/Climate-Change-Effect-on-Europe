@@ -84,3 +84,23 @@ h1 {
 #yearSlider {
   width: 300px;
 }
+
+/* Footer */
+footer {
+  text-align: left;
+  padding: 15px 0;
+  background-color: #e9e9e9;
+  font-size: 0.9em;
+  color: #555;
+  margin-top: 40px;
+  text-indent: 40px;
+}
+
+footer a {
+  color: #000066;
+  text-decoration: none;
+}
+
+footer a:hover {
+  text-decoration: underline;
+}
