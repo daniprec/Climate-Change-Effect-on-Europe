@@ -14,8 +14,8 @@ DATA_AUSTRIA_PATH = os.path.join(BASE_DIR, "data", "austria.geojson")
 gdf = gpd.read_file(DATA_PATH)
 gdf_austria = gpd.read_file(DATA_AUSTRIA_PATH)
 dict_gdf = {
-    "europe": gdf,
-    "austria": gdf_austria,
+    "Europe": gdf,
+    "Austria": gdf_austria,
 }
 
 
@@ -29,7 +29,7 @@ def index():
         center_lat=50,
         center_lon=5,
         zoom=4,
-        region="europe",
+        region="Europe",
     )
 
 
@@ -43,7 +43,7 @@ def index_austria():
         center_lat=47.5,
         center_lon=13,
         zoom=7,
-        region="austria",
+        region="Austria",
     )
 
 

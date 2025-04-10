@@ -58,7 +58,13 @@
               };
             },
             onEachFeature: (feature, layer) => {
-              layer.bindPopup(`<b>${feature.properties.name}</b><br>Mortality: ${feature.properties.mortality}`);
+              // If the region name is "Austria", a button will be added to the popup.
+              // When clicked, it takes the user to the "austria" subpage.
+              if (feature.properties.name === "Austria") {
+                layer.bindPopup(`<b>${feature.properties.name}</b><br>Mortality: ${feature.properties.mortality}<br><button onclick="window.location.href='/austria'">Go to Austria</button>`);
+              } else {
+                layer.bindPopup(`<b>${feature.properties.name}</b><br>Mortality: ${feature.properties.mortality}`);
+              }
               // When the user clicks a region, plot its mortality history.
               layer.on('click', () => plotGraph(feature.properties));
             }
