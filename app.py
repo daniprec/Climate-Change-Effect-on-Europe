@@ -16,12 +16,12 @@ gdf = gpd.read_file(DATA_PATH)
 @app.route("/")
 def index():
     # Render the base HTML page; the page can load data via AJAX.
-    return render_template("index.html", min_year=2012, max_year=2023)
+    return render_template("index.html", min_year=2012, max_year=2023, center=[50, 5], zoom=4)
 
 @app.route("/austria")
 def index_austria():
     # Render the country-specific HTML page; the page can load data via AJAX.
-    return render_template("index.html", min_year=2012, max_year=2023)
+    return render_template("index.html", min_year=2012, max_year=2023, center=[47.5, 13], zoom=7)
 
 
 @app.route("/api/mortality")

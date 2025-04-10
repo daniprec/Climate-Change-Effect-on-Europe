@@ -24,7 +24,7 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     // Initialize the Leaflet map
-    const map = L.map('map').setView([50, 5], 4);
+    const map = L.map('map').setView({{ center | tojson }}, {{ zoom }});
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
     let geoJsonLayer = null;
 
