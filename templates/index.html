@@ -120,11 +120,17 @@
     loadDataForYear("{{ region }}", "{{ max_year }}");
     
     // Update map data when the slider changes.
+    // Debounce slider input - wait 300ms after the last input before calling the function.
+    // This prevents excessive calls to the function when the user is sliding the slider.
+    let debounceTimer;
     document.getElementById('yearSlider').addEventListener('input', function() {
-      const selectedYear = this.value;
-      document.getElementById('yearLabel').innerText = selectedYear;
-      const region = "{{ region }}"; // Define the region variable from the backend
-      loadDataForYear(region, selectedYear);
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        const selectedYear = this.value;
+        document.getElementById('yearLabel').innerText = selectedYear;
+        const region = "{{ region }}"; // Define the region variable from the backend
+        loadDataForYear(region, selectedYear);
+      }, 300); // 300ms debounce delay
     });
   </script>
 </body>
