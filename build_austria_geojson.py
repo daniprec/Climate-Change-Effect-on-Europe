@@ -5,6 +5,7 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 import requests
+from shapely.geometry import Polygon
 
 
 def download_file(url, local_path):
@@ -33,6 +34,38 @@ def extract_zip(zip_path, extract_to):
     print("[INFO] Extraction complete.")
 
 
+def line_to_polygon(geom: gpd.GeoSeries) -> gpd.GeoSeries:
+    """
+    Given a Shapely geometry, convert a LineString or MultiLineString
+    to a Polygon by ensuring the coordinate sequence is closed.
+
+    If the geometry is already a Polygon, it's returned unchanged.
+    """
+    if geom.geom_type == "Polygon":
+        # Already a polygon; nothing to do.
+        return geom
+    elif geom.geom_type == "LineString":
+        coords = list(geom.coords)
+        # Ensure the ring is closed.
+        if coords[0] != coords[-1]:
+            coords.append(coords[0])
+        return Polygon(coords)
+    elif geom.geom_type == "MultiLineString":
+        # For a MultiLineString, one common approach is to merge all parts into a single set of coordinates.
+        # This assumes all parts belong to one boundary.
+        merged_coords = []
+        for line in geom.geoms:
+            merged_coords.extend(list(line.coords))
+        # Sometimes the parts might not be ordered correctly. One may need to sort or reassemble the ring.
+        # Here we use the simplest approach: assume the parts come in order.
+        if merged_coords[0] != merged_coords[-1]:
+            merged_coords.append(merged_coords[0])
+        return Polygon(merged_coords)
+    else:
+        # For any other geometry type, return it unchanged.
+        return geom
+
+
 def build_austria_geojson():
     """
     Downloads the Eurostat NUTS boundaries shapefile,
@@ -48,7 +81,7 @@ def build_austria_geojson():
     # ------------------------------------------------------
     # The following URL points to the 2024 reference dataset.
     # Download a low resolution (options are 1:1, 1:3, 1:10, 1:20, 1:60)
-    nuts_url = "https://gisco-services.ec.europa.eu/distribution/v2/nuts/download/ref-nuts-2024-03m.shp.zip"
+    nuts_url = "https://gisco-services.ec.europa.eu/distribution/v2/nuts/download/ref-nuts-2024-01m.shp.zip"
     data_dir = "data"
     os.makedirs(data_dir, exist_ok=True)
 
@@ -99,16 +132,14 @@ def build_austria_geojson():
     ].copy()
     print(f"[INFO] Filtered to {len(gdf_at)} NUTS-3 regions in Austria.")
 
-    # The coordinates are in EPSG:3035 (ETRS89 / LAEA Europe)
-    # We need to convert them to EPSG:4326 (WGS 84) for GeoJSON
-    gdf_at = gdf_at.to_crs(epsg=4326)
     # Next, to convert from LineString to Polygon, we need to close the polygons
     # by adding the first point to the end of the list of points.
     # This is done automatically by GeoPandas when converting to Polygon.
     # However, we need to ensure that the geometry is of type Polygon.
-    gdf_at["geometry"] = gdf_at["geometry"].apply(
-        lambda geom: geom if geom.geom_type == "Polygon" else geom.convex_hull
-    )
+    gdf_at["geometry"] = gdf_at["geometry"].apply(line_to_polygon)
+    # The coordinates are in EPSG:3035 (ETRS89 / LAEA Europe)
+    # We need to convert them to EPSG:4326 (WGS 84) for GeoJSON
+    gdf_at = gdf_at.to_crs(epsg=4326)
     print("[INFO] Converted coordinates to EPSG:4326 (WGS 84).")
 
     # ------------------------------------------------------
