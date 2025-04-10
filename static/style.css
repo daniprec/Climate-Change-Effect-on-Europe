@@ -1,19 +1,43 @@
 /* Basic styling for the map and page */
 body {
-    margin: 0;
-    padding: 0;
-    font-family: sans-serif;
-  }
+  font-family: Arial, sans-serif;
+  background-color: #f4f4f4;
+  margin: 0;
+  padding: 0;
+  color: #333;
+}
   
 h1 {
   text-align: center;
-  color: #000066;
+  margin-top: 20px;
+}
+
+/* Center the slider controls with extra space */
+#controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 15px;
+  margin: 20px 0;
 }
 
 #map {
-  width: 100%;
+  width: 80%;
   height: 500px;
   margin: 0 auto;
+  border: 2px solid #ccc;
+  border-radius: 8px;
+}
+
+/* Graph container styling */
+#graph {
+  width: 80%;
+  height: 300px;
+  margin: 20px auto;
+  padding: 10px;
+  background-color: #fff;
+  border: 2px solid #ccc;
+  border-radius: 8px;
 }
 
 .slidecontainer {
@@ -54,4 +78,8 @@ h1 {
   border-radius: 50%; /* Rounded slider handle */
   background: #000066; /* Blue background */
   cursor: pointer; /* Cursor on hover */
+}
+
+#yearSlider {
+  width: 300px;
 }

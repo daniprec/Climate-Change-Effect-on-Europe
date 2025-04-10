@@ -9,54 +9,13 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <!-- Include Chart.js for plotting graphs -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #f4f4f4;
-      margin: 0;
-      padding: 0;
-      color: #333;
-    }
-    h1 {
-      text-align: center;
-      margin-top: 20px;
-    }
-    /* Center the slider controls with extra space */
-    #controls {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 15px;
-      margin: 20px 0;
-    }
-    #yearSlider {
-      width: 300px;
-    }
-    #map {
-      width: 80%;
-      height: 500px;
-      margin: 0 auto;
-      border: 2px solid #ccc;
-      border-radius: 8px;
-    }
-    /* Graph container styling */
-    #graph {
-      width: 80%;
-      height: 300px;
-      margin: 20px auto;
-      padding: 10px;
-      background-color: #fff;
-      border: 2px solid #ccc;
-      border-radius: 8px;
-    }
-  </style>
 </head>
 <body>
   <h1>Flask Demo</h1>
   <div id="controls">
     <label for="yearSlider">Select Year:</label>
-    <input type="range" class="slider" min="2012" max="2023" value="2023" step="1" id="yearSlider">
-    <span id="yearLabel">2023</span>
+    <input type="range" class="slider" min="{{ min_year }}" max="{{ max_year }}" value="{{ max_year }}" step="1" id="yearSlider">
+    <span id="yearLabel">{{ max_year }}</span>
   </div>
   <div id="map"></div>
   <div id="graph"></div>
@@ -65,7 +24,7 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     // Initialize the Leaflet map
-    const map = L.map('map').setView([47, 5], 5);
+    const map = L.map('map').setView([50, 5], 4);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
     let geoJsonLayer = null;
 
@@ -104,7 +63,7 @@
       // Create arrays for years and mortality values
       const years = [];
       const deaths = [];
-      for (let y = 2012; y <= 2023; y++) {
+      for (let y = "{{ min_year }}"; y <= "{{ max_year }}"; y++) {
         years.push(y);
         // Each property should be like "mortality_2023" etc.
         deaths.push(properties[`mortality_${y}`] || 0);
@@ -143,8 +102,8 @@
       });
     }
 
-    // Initial load for the default year (2023)
-    loadDataForYear("2023");
+    // Initial load for the default year
+    loadDataForYear("{{ max_year }}");
 
     // Update data when the slider changes
     document.getElementById('yearSlider').addEventListener('input', function() {
