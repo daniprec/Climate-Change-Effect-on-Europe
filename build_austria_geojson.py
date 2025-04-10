@@ -1,9 +1,10 @@
 import os
 import zipfile
+from io import BytesIO
+from zipfile import ZIP_DEFLATED, ZipFile
 
 import geopandas as gpd
 import numpy as np
-import pandas as pd
 import requests
 from shapely.geometry import Polygon
 
@@ -77,66 +78,42 @@ def build_austria_geojson():
     """
 
     # ------------------------------------------------------
-    # Download Eurostat NUTS Boundaries Shapefile
+    # Download NUTS Boundaries Shapefile
     # ------------------------------------------------------
-    # The following URL points to the 2024 reference dataset.
-    # Download a low resolution (options are 1:1, 1:3, 1:10, 1:20, 1:60)
-    nuts_url = "https://gisco-services.ec.europa.eu/distribution/v2/nuts/download/ref-nuts-2024-01m.shp.zip"
+    # Source: https://github.com/roboes/at-shapefile
+
     data_dir = "data"
     os.makedirs(data_dir, exist_ok=True)
+    shapefile_dir = os.path.join(data_dir, "shapefiles")
 
-    zip_path = os.path.join(data_dir, "ref-nuts.shp.zip")
-    shapefile_dir = os.path.join(data_dir, "ref-nuts")
-    download_file(nuts_url, zip_path)
-    if not os.path.exists(shapefile_dir):
-        os.makedirs(shapefile_dir, exist_ok=True)
-        extract_zip(zip_path, shapefile_dir)
-
-    # Some shp files are still zipped as zip files, so we need to check for that.
-    # If the zip file is not extracted, we need to extract it.
-    for f in os.listdir(shapefile_dir):
-        if f.endswith(".zip"):
-            zip_file_path = os.path.join(shapefile_dir, f)
-            extract_zip(zip_file_path, shapefile_dir)
-            os.remove(zip_file_path)
-            print(f"[INFO] Removed zip file: {zip_file_path}")
-
-    # Identify the .shp file in the extracted folder
-    shp_files = [f for f in os.listdir(shapefile_dir) if f.endswith(".shp")]
-    if not shp_files:
-        raise FileNotFoundError("No .shp file found in the extracted NUTS folder.")
-    shp_path = os.path.join(shapefile_dir, shp_files[0])
-    print(f"[INFO] Reading NUTS shapefile: {shp_path}")
-    gdf_nuts = gpd.read_file(shp_path)
-    print(f"[INFO] Loaded {len(gdf_nuts)} NUTS features.")
-
-    # The codes are contained in the csv columns "NUTS_ID" and "NUTS_NAME"
-    # We will use the column "LEFT_NUTS3" from the gdf_nuts dataframe
-    # to filter the NUTS-3 regions in Austria.
-    df_codes = pd.read_csv(
-        os.path.join(shapefile_dir, "NUTS_AT_2024.csv"),
-        sep=",",
-        encoding="utf-8",
+    # Download Shapefile
+    bytesfile = BytesIO(
+        initial_bytes=requests.get(
+            url="https://data.statistik.gv.at/data/OGDEXT_NUTS_1_STATISTIK_AUSTRIA_NUTS3_20250101.zip",
+            headers=None,
+            timeout=5,
+            verify=True,
+        ).content,
     )
-    # Rename the column
-    gdf_nuts = gdf_nuts.rename({"LEFT_NUTS3": "NUTS_ID"}, axis=1)
-    print(f"[INFO] Loaded {len(df_codes)} NUTS codes.")
-    gdf_nuts = gdf_nuts.merge(df_codes, on="NUTS_ID")
-    print("[INFO] Merged NUTS codes into GeoDataFrame.")
-    # Create the "CNTR_CODE" column for filtering
-    gdf_nuts["CNTR_CODE"] = gdf_nuts["NUTS_ID"].str[:2]
+    with ZipFile(file=bytesfile, mode="r", compression=ZIP_DEFLATED) as zip_file:
+        zip_file.extractall(path=shapefile_dir)
 
-    # Filter to Austria only (CNTR_CODE == "AT") and level 3 regions:
-    gdf_at = gdf_nuts[
-        (gdf_nuts["CNTR_CODE"] == "AT") & (gdf_nuts["LEVL_CODE"] == 3)
-    ].copy()
-    print(f"[INFO] Filtered to {len(gdf_at)} NUTS-3 regions in Austria.")
+    # Import
+    filename = os.path.join(shapefile_dir, "STATISTIK_AUSTRIA_NUTS3_20250101.shp")
+    gdf_at = (
+        gpd.read_file(
+            filename=filename,
+            layer="STATISTIK_AUSTRIA_NUTS3_20250101",
+            columns=["g_id", "g_name", "geometry"],
+            driver=None,
+            encoding="utf-8",
+        )
+        # Rename columns
+        .rename(columns={"g_id": "NUTS_ID", "g_name": "name"})
+        # Change dtypes
+        .astype(dtype={"NUTS_ID": "str"})
+    )
 
-    # Next, to convert from LineString to Polygon, we need to close the polygons
-    # by adding the first point to the end of the list of points.
-    # This is done automatically by GeoPandas when converting to Polygon.
-    # However, we need to ensure that the geometry is of type Polygon.
-    gdf_at["geometry"] = gdf_at["geometry"].apply(line_to_polygon)
     # The coordinates are in EPSG:3035 (ETRS89 / LAEA Europe)
     # We need to convert them to EPSG:4326 (WGS 84) for GeoJSON
     gdf_at = gdf_at.to_crs(epsg=4326)
@@ -150,13 +127,6 @@ def build_austria_geojson():
     # and fill them with random values for demonstration purposes.
     for year in range(2012, 2024):
         gdf_at[f"mortality_{year}"] = np.random.randint(0, 15, size=len(gdf_at))
-
-    # Create the "name" field for the GeoJSON from a suitable column, e.g., "NUTS_NAME"
-    # (The actual column name may vary; check the shapefile attributes.)
-    if "NUTS_NAME" in gdf_at.columns:
-        gdf_at["name"] = gdf_at["NUTS_NAME"].str.strip()
-    else:
-        gdf_at["name"] = gdf_at["NUTS_ID"].str.strip()
 
     # Choose the columns for the output; keep "name", "geometry", and all mortality columns.
     mortality_columns = [col for col in gdf_at.columns if col.startswith("mortality_")]
