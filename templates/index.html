@@ -13,158 +13,200 @@
 <body>
   <!-- Logo in the top right -->
   <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" class="logo"
-  style="position: absolute; top: 10px; right: 10px; width: 100px; height: auto; cursor: pointer;"
-  onclick="window.location.href='https://ixlabs.ie.edu/';">
-  
+       style="position: absolute; top: 10px; right: 10px; width: 100px; height: auto; cursor: pointer;"
+       onclick="window.location.href='https://ixlabs.ie.edu/';">
+
   <h1>Flask Demo</h1>
+
+  <!-- *** CONTROLS *** -->
   <div id="controls">
     <label for="yearSlider">Select Year:</label>
     <input type="range" class="slider" min="{{ min_year }}" max="{{ max_year }}" value="{{ max_year }}" step="1" id="yearSlider">
     <span id="yearLabel">{{ max_year }}</span>
+
+    <!-- NEW: metric selector -->
+    <label for="metricSelect" style="margin-left:2rem">Dataset:</label>
+    <select id="metricSelect">
+      <option value="mortality" selected>Mortality</option>
+      <option value="popdensity">Population Density</option>
+    </select>
   </div>
+
+  <!-- *** MAP & GRAPH SECTION *** -->
   <div id="map"></div>
   <div id="graph-container" style="display: flex; align-items: flex-start; width: 80%; align-self: center; margin: auto auto;">
     <div id="graph" style="flex: 1;"></div>
-    <div id="info-popup" style="flex: 0.5;">
-      <h3>Statistics</h3>
+    <div id="info-popup" style="flex: 0.5; display:none">
+      <h3 id="info-title">Statistics</h3>
       <p><strong>Region Name:</strong> <span id="regionName"></span></p>
-      <p><strong>Estimated Mortality (Next Years):</strong> <span id="estimatedMortality"></span></p>
+      <p><strong><span id="metricLabelPopup">Estimated Mortality (Next Year):</span></strong> <span id="estimatedValue"></span></p>
       <p><strong>Estimated Change:</strong> <span id="percentageChange"></span>%</p>
     </div>
   </div>
-  
+
   <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    // Initialize the Leaflet map using backend values for center and zoom.
+    /* ------------------------- GLOBAL STATE ------------------------- */
+    // Current dataset the user wants to visualise. Either "mortality" or "popdensity".
+    let currentMetric = 'mortality';
+
+    // Initialise Leaflet map using backend values
     const default_zoom = parseInt("{{ zoom }}", 10);
-    // Center coordinates for the map, passed from Flask backend.
     const default_center = [parseFloat("{{ center_lat }}"), parseFloat("{{ center_lon }}")];
-    // Create the map and set its view to the specified center and zoom level.
     const map = L.map('map').setView(default_center, default_zoom);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+
     let geoJsonLayer = null;
-    
-    // Function to fetch mortality data for the selected year and update the map.
+
+    /* ------------------------- DATA LOADING ------------------------- */
+    // Fetch data for a given region/year/metric and refresh the layer
     function loadDataForYear(region, year) {
-      fetch(`/api/mortality?region=${region}&year=${year}`)
+      fetch(`/api/data?region=${region}&year=${year}&metric=${currentMetric}`)
         .then(response => response.json())
         .then(data => {
           if (geoJsonLayer) {
             map.removeLayer(geoJsonLayer);
           }
+
           geoJsonLayer = L.geoJSON(data, {
-            style: feature => {
-              const deaths = feature.properties.mortality || 0;
-              // Calculate intensity based on squared value (adjust as needed for your data)
-              let intensity = Math.min(deaths ** 2, 255);
-              return {
-                fillColor: `rgb(0, ${intensity}, 0)`,
-                fillOpacity: 0.7,
-                weight: 1,
-                color: '#999'
-              };
-            },
-            onEachFeature: (feature, layer) => {
-              // If the region name is "Austria", a button will be added to the popup.
-              // When clicked, it takes the user to the "austria" subpage.
-              if (feature.properties.name === "Austria") {
-                layer.bindPopup(`<b>${feature.properties.name}</b><br>Mortality: ${feature.properties.mortality}<br><button onclick="window.location.href='/austria'">Go to Austria</button>`);
-              } else {
-                layer.bindPopup(`<b>${feature.properties.name}</b><br>Mortality: ${feature.properties.mortality}`);
-              }
-              // When the user clicks a region, plot its mortality history.
-              layer.on('click', () => plotGraph(feature.properties));
-            }
+            style: feature => featureStyle(feature),
+            onEachFeature: (feature, layer) => onEachRegion(feature, layer)
           }).addTo(map);
         })
         .catch(error => console.error('Error fetching data:', error));
     }
-    
-    // Function to update the info popup with region details.
-  function updateInfoPopup(properties) {
-    const regionName = properties.name;
-    const currentMortality = properties[`mortality_{{ max_year }}`] || 0;
-    const percentageChange = (Math.random() * 5 + 1).toFixed(2); // Random value between 1 and 10
-    const estimatedMortality = (currentMortality * (1 + percentageChange/100)).toFixed(0);
-    
 
-    // Update the popup content.
-    document.getElementById('regionName').innerText = regionName;
-    document.getElementById('estimatedMortality').innerText = estimatedMortality;
-    document.getElementById('percentageChange').innerText = percentageChange;
+    // Colour/opacity rules depending on the selected metric
+    function featureStyle(feature) {
+      const props = feature.properties;
+      let value = 0;
+      let fillColor = '#999';
 
-    // Show the popup.
-    document.getElementById('info-popup').style.display = 'block';
-  }
-
-  // Update the plotGraph function to also update the info popup.
-  function plotGraph(properties) {
-    const minYear = parseInt("{{ min_year }}", 10);
-    const maxYear = parseInt("{{ max_year }}", 10);
-    const years = [];
-    const deaths = [];
-    for (let y = minYear; y <= maxYear; y++) {
-      years.push(y);
-      deaths.push(properties[`mortality_${y}`] || 0);
-    }
-    const graphDiv = document.getElementById("graph");
-    // Clear any previous graph.
-    graphDiv.innerHTML = "";
-    // Create a canvas element for Chart.js.
-    const canvas = document.createElement("canvas");
-    graphDiv.appendChild(canvas);
-    const ctx = canvas.getContext("2d");
-    new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: years,
-        datasets: [{
-          label: `Mortality for ${properties.name} (per thousand)`,
-          data: deaths,
-          borderColor: '#6dc201',
-          backgroundColor: '#6dc2014D', // 30% opacity
-          fill: true,
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          y: {
-            beginAtZero: true,
-            min: 0,
-            max: 25,
-          }
-        }
+      if (currentMetric === 'mortality') {
+        value = props.mortality || 0;                       // deaths per thousand
+        const intensity = Math.min(value ** 2, 255);        // nonlinear scale for better contrast
+        fillColor = `rgb(0, ${intensity}, 0)`;              // green ramp
+      } else if (currentMetric === 'popdensity') {
+        value = props.popdensity || 0;                      // pop per km2
+        const intensity = Math.min(value, 255);         // linear-ish scale
+        fillColor = `rgb(0, ${intensity}, 0)`;              // red ramp
       }
+
+      return {
+        fillColor,
+        fillOpacity: 0.7,
+        weight: 1,
+        color: '#666'
+      };
+    }
+
+    /* ------------------------- INTERACTION ------------------------- */
+    function onEachRegion(feature, layer) {
+      const props = feature.properties;
+      const metricLabel = currentMetric === 'mortality' ? 'Mortality' : 'Population Density (km2)';
+      const metricVal   = currentMetric === 'mortality' ? props.mortality : props.popdensity;
+
+      // Special-case navigation example for Austria (kept from the original template)
+      if (props.name === 'Austria') {
+        layer.bindPopup(`<b>${props.name}</b><br>${metricLabel}: ${metricVal}<br><button onclick="window.location.href='/austria'">Go to Austria</button>`);
+      } else {
+        layer.bindPopup(`<b>${props.name}</b><br>${metricLabel}: ${metricVal}`);
+      }
+
+      // Click → show graph and stats
+      layer.on('click', () => plotGraph(props));
+    }
+
+    // Update the info side‑panel
+    function updateInfoPopup(properties) {
+      const metricWord  = currentMetric === 'mortality' ? 'Mortality' : 'Population Density';
+      const metricKey   = currentMetric === 'mortality' ? `mortality_{{ max_year }}` : `popdensity_{{ max_year }}`;
+      const currentVal  = properties[metricKey] || 0;
+      const percentageChange = (Math.random() * 5 + 1).toFixed(2); // — placeholder demo —
+      const estimatedVal = (currentVal * (1 + percentageChange/100)).toFixed(0);
+
+      document.getElementById('regionName').innerText      = properties.name;
+      document.getElementById('metricLabelPopup').innerText = `Estimated ${metricWord} (Next Year):`;
+      document.getElementById('estimatedValue').innerText   = estimatedVal;
+      document.getElementById('percentageChange').innerText = percentageChange;
+      document.getElementById('info-popup').style.display   = 'block';
+    }
+
+    // Draw line‑chart for selected region using Chart.js
+    function plotGraph(properties) {
+      const minYear = parseInt("{{ min_year }}", 10);
+      const maxYear = parseInt("{{ max_year }}", 10);
+      const years   = [];
+      const values  = [];
+
+      for (let y = minYear; y <= maxYear; y++) {
+        years.push(y);
+        const key = currentMetric === 'mortality' ? `mortality_${y}` : `popdensity_${y}`;
+        values.push(properties[key] || 0);
+      }
+
+      // Clear previous graph and create new canvas
+      const graphDiv = document.getElementById('graph');
+      graphDiv.innerHTML = '';
+      const canvas = document.createElement('canvas');
+      graphDiv.appendChild(canvas);
+      const ctx = canvas.getContext('2d');
+
+      const metricWord = currentMetric === 'mortality' ? 'Mortality (per ‰)' : 'Population Density (per km²)';
+
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: years,
+          datasets: [{
+            label: `${metricWord} for ${properties.name}`,
+            data: values,
+            borderColor: '#6dc201',
+            backgroundColor: '#6dc2014D', // 30% opacity
+            fill: true,
+            tension: 0.2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: { y: { beginAtZero: true, min: 0 } }
+        }
+      });
+
+      updateInfoPopup(properties);
+    }
+
+    /* ------------------------- EVENT HANDLERS ------------------------- */
+    // Year slider (with debounce)
+    let debounceTimer;
+    document.getElementById('yearSlider').addEventListener('input', function () {
+      clearTimeout(debounceTimer);
+      const year = this.value;
+      document.getElementById('yearLabel').innerText = year;
+      debounceTimer = setTimeout(() => {
+        loadDataForYear("{{ region }}", year);
+      }, 300);
     });
 
-    // Update the info popup with region details.
-    updateInfoPopup(properties);
-  }
-    
-    // Initial load for the default year.
-    loadDataForYear("{{ region }}", "{{ max_year }}");
-    
-    // Update map data when the slider changes.
-    // Debounce slider input - wait 300ms after the last input before calling the function.
-    // This prevents excessive calls to the function when the user is sliding the slider.
-    let debounceTimer;
-    document.getElementById('yearSlider').addEventListener('input', function() {
-      clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(() => {
-        const selectedYear = this.value;
-        document.getElementById('yearLabel').innerText = selectedYear;
-        const region = "{{ region }}"; // Define the region variable from the backend
-        loadDataForYear(region, selectedYear);
-      }, 300); // 300ms debounce delay
+    // Metric dropdown
+    document.getElementById('metricSelect').addEventListener('change', function () {
+      currentMetric = this.value;
+      // Refresh map layer for current year
+      const selectedYear = document.getElementById('yearSlider').value;
+      loadDataForYear("{{ region }}", selectedYear);
+      // Clear graph/info panel until user clicks again
+      document.getElementById('graph').innerHTML = '';
+      document.getElementById('info-popup').style.display = 'none';
     });
+
+    /* ------------------------- INITIALISATION ------------------------- */
+    loadDataForYear("{{ region }}", "{{ max_year }}");
   </script>
 </body>
 <!-- Footer Section -->
 <footer>
-  <p>Demo done by <a href="http://danielprecioso.com" target="_blank">Daniel Precioso</a> for IE University. 
-  This tool is for demonstration purposes only. The data displayed may not represent real-world scenarios.</p>
+  <p>Demo by <a href="http://danielprecioso.com" target="_blank">Daniel Precioso</a> for IE University. This tool is for demonstration purposes only. The data displayed may not represent real‑world scenarios.</p>
 </footer>
 </html>

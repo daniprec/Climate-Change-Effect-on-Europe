@@ -47,16 +47,14 @@ def index_austria():
     )
 
 
-@app.route("/api/mortality")
-def get_mortality():
-    # Get the requested year; default to 2023 if not provided
-    year = request.args.get("year", "2023")
-    property_name = f"mortality_{year}"
-    # Check if the requested year is valid
-    if property_name not in gdf.columns:
-        return jsonify({"error": f"No data available for year {year}"}), 400
-
+@app.get("/api/data")
+def api_data():
     region = request.args.get("region", "europe")
+    year = request.args.get("year", "2023")
+    metric = request.args.get("metric", "mortality")
+
+    property_name = f"{metric}_{year}"
+
     # Check if the requested region is valid
     if region not in dict_gdf:
         return jsonify({"error": "Invalid region specified"}), 400
@@ -64,8 +62,13 @@ def get_mortality():
     # Create a copy so we don't modify the original
     gdf_year = dict_gdf[region].copy()
 
-    # Assign the mortality value for the selected year to a common property.
-    gdf_year["mortality"] = gdf_year[property_name]
+    # Check if the requested year is valid
+    if property_name not in gdf_year.columns:
+        return jsonify({"error": f"No data available for year {year}"}), 400
+
+    # Assign the column value for the selected year to a common property.
+    gdf_year[metric] = gdf_year[property_name]
+    print(gdf_year[metric].min(), gdf_year[metric].max())
 
     # Return the processed GeoJSON.
     return gdf_year.to_json()
