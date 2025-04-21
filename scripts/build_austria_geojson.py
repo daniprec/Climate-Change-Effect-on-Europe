@@ -138,28 +138,26 @@ def build_austria_geojson():
     # ------------------------------------------------------
 
     # Download population density data
-    df_population_density = download_population_density(data_dir)
+    df_popdensity = download_population_density(data_dir)
     # Rename columns
-    df_population_density = df_population_density.rename(
+    df_popdensity = df_popdensity.rename(
         columns={
             "TIME_PERIOD": "year",
-            "OBS_VALUE": "population_density",
+            "OBS_VALUE": "popdensity",
             "geo": "NUTS_ID",
         }
     )
     # Convert year to int
-    df_population_density["year"] = df_population_density["year"].astype(int)
+    df_popdensity["year"] = df_popdensity["year"].astype(int)
     # Choose only rows for Austria (NUTS_ID starts with "AT")
-    df_population_density = df_population_density[
-        df_population_density["NUTS_ID"].str.startswith("AT")
-    ]
+    df_popdensity = df_popdensity[df_popdensity["NUTS_ID"].str.startswith("AT")]
 
     for year in range(2012, 2024):
         # Filter for the current year
-        df_year = df_population_density[df_population_density["year"] == year]
-        # Rename the column to "population_density_YYYY"
-        col = f"population_density_{year}"
-        df_year = df_year.rename(columns={"population_density": col})
+        df_year = df_popdensity[df_popdensity["year"] == year]
+        # Rename the column to "popdensity_YYYY"
+        col = f"popdensity_{year}"
+        df_year = df_year.rename(columns={"popdensity": col})
         # Merge with the merged_gdf DataFrame on NUTS_ID
         gdf_at = gdf_at.merge(df_year[["NUTS_ID", col]], how="left", on="NUTS_ID")
         columns_to_keep.append(col)
