@@ -1,38 +1,39 @@
 import os
-import zipfile
 from io import BytesIO
 from zipfile import ZIP_DEFLATED, ZipFile
 
 import geopandas as gpd
 import numpy as np
+import pandas as pd
 import requests
 from shapely.geometry import Polygon
 
 
-def download_file(url, local_path):
+def download_population_density(data_dir: str) -> pd.DataFrame:
     """
-    Downloads a file from `url` to `local_path`.
-    If it already exists, we skip re-downloading.
-    """
-    if os.path.exists(local_path):
-        print(f"[INFO] {local_path} already exists, skipping download.")
-        return
-    print(f"[INFO] Downloading {url} ...")
-    r = requests.get(url)
-    r.raise_for_status()
-    with open(local_path, "wb") as f:
-        f.write(r.content)
-    print(f"[INFO] Saved to {local_path}")
+    Columns:
+    DATAFLOW, LAST UPDATE, freq, unit, geo, TIME_PERIOD, OBS_VALUE, OBS_FLAG, CONF_STATUS
+    https://data.europa.eu/data/datasets/gngfvpqmfu5n6akvxqkpw?locale=en
 
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with population density data for EU countries.
+    """
+    url = "https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data/demo_r_d3dens?format=SDMX-CSV&compressed=true"
+    path_file = os.path.join(data_dir, "estat_demo_r_d3dens_en.csv.gz")
+    response = requests.get(url)
+    if response.status_code == 200:
+        with open(path_file, "wb") as file:
+            file.write(response.content)
+    else:
+        print(f"Failed to download file: {response.status_code}")
 
-def extract_zip(zip_path, extract_to):
-    """
-    Extracts all contents of a zip file to the specified directory.
-    """
-    print(f"[INFO] Extracting {zip_path} into {extract_to} ...")
-    with zipfile.ZipFile(zip_path, "r") as z:
-        z.extractall(extract_to)
-    print("[INFO] Extraction complete.")
+    df = pd.read_csv(path_file, compression="gzip", encoding="utf-8", sep=",")
+
+    # Remove the gzip file after reading
+    os.remove(path_file)
+    return df
 
 
 def line_to_polygon(geom: gpd.GeoSeries) -> gpd.GeoSeries:
@@ -131,11 +132,42 @@ def build_austria_geojson():
     # Choose the columns for the output; keep "name", "geometry", and all mortality columns.
     mortality_columns = [col for col in gdf_at.columns if col.startswith("mortality_")]
     columns_to_keep = ["name", "geometry"] + mortality_columns
-    merged_gdf = gdf_at[columns_to_keep]
+
+    # ------------------------------------------------------
+    # Merge with Population Density Data
+    # ------------------------------------------------------
+
+    # Download population density data
+    df_population_density = download_population_density(data_dir)
+    # Rename columns
+    df_population_density = df_population_density.rename(
+        columns={
+            "TIME_PERIOD": "year",
+            "OBS_VALUE": "population_density",
+            "geo": "NUTS_ID",
+        }
+    )
+    # Convert year to int
+    df_population_density["year"] = df_population_density["year"].astype(int)
+    # Choose only rows for Austria (NUTS_ID starts with "AT")
+    df_population_density = df_population_density[
+        df_population_density["NUTS_ID"].str.startswith("AT")
+    ]
+
+    for year in range(2012, 2024):
+        # Filter for the current year
+        df_year = df_population_density[df_population_density["year"] == year]
+        # Rename the column to "population_density_YYYY"
+        col = f"population_density_{year}"
+        df_year = df_year.rename(columns={"population_density": col})
+        # Merge with the merged_gdf DataFrame on NUTS_ID
+        gdf_at = gdf_at.merge(df_year[["NUTS_ID", col]], how="left", on="NUTS_ID")
+        columns_to_keep.append(col)
 
     # ------------------------------------------------------
     # Export Final GeoJSON
     # ------------------------------------------------------
+    merged_gdf = gdf_at[columns_to_keep]
     output_geojson = os.path.join(data_dir, "austria.geojson")
     merged_gdf.to_file(output_geojson, driver="GeoJSON")
     print(f"[INFO] Successfully wrote {len(merged_gdf)} features to {output_geojson}!")
