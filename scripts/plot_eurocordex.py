@@ -94,8 +94,9 @@ def main():
     # Plot the Euro-CORDEX data
     for year in range(2021, 2031):
         for month in range(1, 13):
-            # Create a date string for the first day of the month
-            date = f"{year}-{month:02d}-01"
+            # Create a date string for the tenth day of the month
+            # (easier to break ties when the reference is the middle of the month)
+            date = f"{year}-{month:02d}-10"
             file = plot_eurocordex_data(ds, date=date)
             ls_files.append(file)
 
