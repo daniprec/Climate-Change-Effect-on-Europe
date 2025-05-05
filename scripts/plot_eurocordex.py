@@ -104,7 +104,7 @@ def main():
     ls_files = sorted(list(set(ls_files)))
 
     # Create a gif from the png files
-    with imageio.get_writer("output/tas.gif", mode="I") as writer:
+    with imageio.get_writer("output/tas.gif", mode="I", loop=0) as writer:
         for filename in ls_files:
             image = imageio.imread(filename)
             writer.append_data(image)
