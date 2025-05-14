@@ -1,6 +1,5 @@
 import os
 
-import numpy as np
 import pandas as pd
 import requests
 
@@ -47,10 +46,13 @@ def download_eurostat_data(dataset: str) -> pd.DataFrame:
     # If a column name has "\", drop all after the first "\" in that column name
     df.columns = df.columns.str.split("\\").str[0]
 
-    # Convert ":" to NaN
+    # The columns which name starts with any year "YYYY" are all numeric
+    # We force that numeric columns to be float64
     for col in df.columns:
-        if df[col].dtype == "object":
-            df[col] = df[col].str.strip().replace(":", np.nan)
+        # Check the column name matches our criteria
+        if col.startswith(tuple(str(year) for year in range(1900, 2100))):
+            # Convert the column to numeric, forcing errors to NaN
+            df[col] = pd.to_numeric(df[col], errors="coerce")
 
     # Remove the gzip file after reading
     try:

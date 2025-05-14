@@ -3,7 +3,6 @@ import sys
 import zipfile
 
 import geopandas as gpd
-import pandas as pd
 import requests
 
 sys.path.append(".")
@@ -115,8 +114,6 @@ def build_europe_geojson():
         year = col_old.strip()
         col = f"mortality_{year}"
         df.rename(columns={col_old: col}, inplace=True)
-        # Convert the column to numeric (ignore the letters if any)
-        df[col] = pd.to_numeric(df[col], errors="coerce")
         # Replace NaNs with -1
         df[col].fillna(-1, inplace=True)
 
