@@ -53,6 +53,8 @@ def download_eurostat_data(dataset: str) -> pd.DataFrame:
         if col.startswith(tuple(str(year) for year in range(1900, 2100))):
             # Convert the column to numeric, forcing errors to NaN
             df[col] = pd.to_numeric(df[col], errors="coerce")
+        # Some columns have trailing spaces, we remove them
+        df.rename(columns={col: col.rstrip()}, inplace=True)
 
     # Remove the gzip file after reading
     try:
