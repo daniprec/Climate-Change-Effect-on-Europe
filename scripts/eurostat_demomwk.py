@@ -87,8 +87,8 @@ def main():
     # Convert the index and resample to weekly
     ser_cordex.index = pd.to_datetime(ser_cordex.index)
     ser_cordex = ser_cordex.resample("W").mean()
-    # Fill NaN values by forward filling
-    ser_cordex = ser_cordex.ffill()
+    # Fill NaN values interpolating
+    ser_cordex.interpolate(method="linear", inplace=True)
     # Make sure each week has the first day of the week as the index
     ser_cordex.index = ser_cordex.index - pd.to_timedelta(
         ser_cordex.index.weekday, unit="d"
