@@ -1,11 +1,13 @@
-import gzip
 import os
-import shutil
+import sys
 import zipfile
 
 import geopandas as gpd
 import pandas as pd
 import requests
+
+sys.path.append(".")
+from utils.eurostat import download_eurostat_data
 
 ISO_A2_COUNTRY_CODES = {
     "France": "FR",
@@ -87,30 +89,10 @@ def build_europe_geojson():
     print(f"[INFO] Filtered to {len(gdf_europe)} countries in Europe (by CONTINENT).")
 
     # ------------------------------------------------------
-    # 2. Download Eurostat mortality data
-    # ------------------------------------------------------
-    # Eurostat mortality data
-    # https://ec.europa.eu/eurostat/databrowser/view/tps00029/default/table?lang=en&category=t_demo.t_demo_mor
-    eurostat_url = "https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data/tps00029?format=TSV&compressed=true"
-    eurostat_tsv_gz = os.path.join(data_dir, "mortality.tsv.gz")
-    download_file(eurostat_url, eurostat_tsv_gz)
-
-    # We need to decompress the GZ into a .tsv file
-    eurostat_tsv = os.path.join(data_dir, "mortality.tsv")
-    if not os.path.exists(eurostat_tsv):
-        print(f"[INFO] Decompressing {eurostat_tsv_gz} to {eurostat_tsv} ...")
-        with (
-            gzip.open(eurostat_tsv_gz, "rb") as gz_in,
-            open(eurostat_tsv, "wb") as tsv_out,
-        ):
-            shutil.copyfileobj(gz_in, tsv_out)
-        print("[INFO] Decompression complete.")
-
-    # ------------------------------------------------------
-    # 3. Parse the Eurostat TSV (COMPLETED STEP)
+    # 2. Download Eurostat data
     # ------------------------------------------------------
     print("[INFO] Reading Eurostat data into Pandas...")
-    df = pd.read_csv(eurostat_tsv, sep="\t", na_values=":", dtype=str)
+    df = download_eurostat_data(dataset="tps00029", fmt="TSV", sep="\t")
 
     # The first column is something like "freq,indic_de,geo\TIME_PERIOD"
     # 3.1 Split that into separate columns
@@ -148,7 +130,7 @@ def build_europe_geojson():
     print(df.head(10))
 
     # ------------------------------------------------------
-    # 4. Match Eurostat "geo" codes to Natural Earth country names
+    # 3. Match Eurostat "geo" codes to Natural Earth country names
     # ------------------------------------------------------
     # We will do a left join on ISO_A2 = geo
     gdf_europe["ISO_A2"] = gdf_europe["ISO_A2"].str.strip()
@@ -172,7 +154,7 @@ def build_europe_geojson():
     merged_gdf = merged_gdf[columns_to_keep]
 
     # ------------------------------------------------------
-    # 5. Export final GeoJSON
+    # 4. Export final GeoJSON
     # ------------------------------------------------------
     output_geojson = os.path.join(data_dir, "europe_regions.geojson")
     merged_gdf.to_file(output_geojson, driver="GeoJSON")
@@ -181,14 +163,12 @@ def build_europe_geojson():
     )
 
     # -------------------------------------------------------
-    # 6. Cleanup (optional)
+    # 5. Cleanup (optional)
     # -------------------------------------------------------
     os.remove(zip_path)
     for f in os.listdir(shapefile_dir):
         os.remove(os.path.join(shapefile_dir, f))
     os.rmdir(shapefile_dir)
-    os.remove(eurostat_tsv_gz)
-    os.remove(eurostat_tsv)
     print(f"[INFO] Cleaned up temporary files in {data_dir}.")
 
 

@@ -4,7 +4,9 @@ import pandas as pd
 import requests
 
 
-def download_eurostat_data(dataset: str, fmt: str = "TSV") -> pd.DataFrame:
+def download_eurostat_data(
+    dataset: str, fmt: str = "TSV", sep: str = ","
+) -> pd.DataFrame:
     """
     Download Eurostat data from the given dataset URL.
 
@@ -14,6 +16,8 @@ def download_eurostat_data(dataset: str, fmt: str = "TSV") -> pd.DataFrame:
         The dataset name to download from Eurostat.
     fmt : str
         The format of the data to download. Default is "TSV".
+    sep : str
+        The separator used in the data. Default is ",".
 
     Returns
     -------
@@ -38,7 +42,13 @@ def download_eurostat_data(dataset: str, fmt: str = "TSV") -> pd.DataFrame:
     else:
         print(f"Failed to download file: {response.status_code}")
 
-    df = pd.read_csv(path_file, compression="gzip", encoding="utf-8", sep=",")
+    df = pd.read_csv(
+        path_file,
+        compression="gzip",
+        encoding="utf-8",
+        sep=sep,
+        na_values=":",
+    )
 
     # Remove the gzip file after reading
     try:
