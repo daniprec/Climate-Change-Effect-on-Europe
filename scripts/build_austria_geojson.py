@@ -1,39 +1,15 @@
 import os
+import sys
 from io import BytesIO
 from zipfile import ZIP_DEFLATED, ZipFile
 
 import geopandas as gpd
 import numpy as np
-import pandas as pd
 import requests
 from shapely.geometry import Polygon
 
-
-def download_population_density(data_dir: str) -> pd.DataFrame:
-    """
-    Columns:
-    DATAFLOW, LAST UPDATE, freq, unit, geo, TIME_PERIOD, OBS_VALUE, OBS_FLAG, CONF_STATUS
-    https://data.europa.eu/data/datasets/gngfvpqmfu5n6akvxqkpw?locale=en
-
-    Returns
-    -------
-    pd.DataFrame
-        DataFrame with population density data for EU countries.
-    """
-    url = "https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data/demo_r_d3dens?format=SDMX-CSV&compressed=true"
-    path_file = os.path.join(data_dir, "estat_demo_r_d3dens_en.csv.gz")
-    response = requests.get(url)
-    if response.status_code == 200:
-        with open(path_file, "wb") as file:
-            file.write(response.content)
-    else:
-        print(f"Failed to download file: {response.status_code}")
-
-    df = pd.read_csv(path_file, compression="gzip", encoding="utf-8", sep=",")
-
-    # Remove the gzip file after reading
-    os.remove(path_file)
-    return df
+sys.path.append(".")
+from utils.eurostat import download_eurostat_data
 
 
 def line_to_polygon(geom: gpd.GeoSeries) -> gpd.GeoSeries:
@@ -138,7 +114,7 @@ def build_austria_geojson():
     # ------------------------------------------------------
 
     # Download population density data
-    df_popdensity = download_population_density(data_dir)
+    df_popdensity = download_eurostat_data(dataset="demo_r_d3dens", fmt="SDMX-CSV")
     # Rename columns
     df_popdensity = df_popdensity.rename(
         columns={

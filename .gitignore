@@ -1,5 +1,6 @@
 *.nc
 *.zip
 
+cache/
 notebooks/
 output/*
