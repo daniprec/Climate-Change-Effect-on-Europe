@@ -4,9 +4,7 @@ import pandas as pd
 import requests
 
 
-def download_eurostat_data(
-    dataset: str, fmt: str = "TSV", sep: str = ","
-) -> pd.DataFrame:
+def download_eurostat_data(dataset: str) -> pd.DataFrame:
     """
     Download Eurostat data from the given dataset URL.
 
@@ -14,10 +12,6 @@ def download_eurostat_data(
     ----------
     dataset : str
         The dataset name to download from Eurostat.
-    fmt : str
-        The format of the data to download. Default is "TSV".
-    sep : str
-        The separator used in the data. Default is ",".
 
     Returns
     -------
@@ -27,9 +21,7 @@ def download_eurostat_data(
     url = (
         "https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data/"
         + dataset
-        + "?format="
-        + fmt
-        + "&compressed=true"
+        + "?format=TSV&compressed=true"
     )
     # Create a cache directory if it doesn't exist
     cache_dir = "cache"
@@ -46,9 +38,13 @@ def download_eurostat_data(
         path_file,
         compression="gzip",
         encoding="utf-8",
-        sep=sep,
+        sep=",|\t",
         na_values=":",
+        engine="python",
     )
+
+    # If a column name has "\", drop all after the first "\" in that column name
+    df.columns = df.columns.str.split("\\").str[0]
 
     # Remove the gzip file after reading
     try:

@@ -92,14 +92,7 @@ def build_europe_geojson():
     # 2. Download Eurostat data
     # ------------------------------------------------------
     print("[INFO] Reading Eurostat data into Pandas...")
-    df = download_eurostat_data(dataset="tps00029", fmt="TSV", sep="\t")
-
-    # The first column is something like "freq,indic_de,geo\TIME_PERIOD"
-    # 3.1 Split that into separate columns
-    df[["freq", "indic_de", "geo"]] = df.iloc[:, 0].str.split(",", expand=True)
-
-    # Drop the now-redundant combined column
-    df = df.iloc[:, 1:]
+    df = download_eurostat_data(dataset="tps00029")
 
     # DEATH_NR = Deaths - number
     # GDEATHRT_THSP = Crude death rate - per thousand persons

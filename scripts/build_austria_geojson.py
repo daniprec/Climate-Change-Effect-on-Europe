@@ -114,29 +114,18 @@ def build_austria_geojson():
     # ------------------------------------------------------
 
     # Download population density data
-    df_popdensity = download_eurostat_data(dataset="demo_r_d3dens", fmt="SDMX-CSV")
-    # Rename columns
-    df_popdensity = df_popdensity.rename(
-        columns={
-            "TIME_PERIOD": "year",
-            "OBS_VALUE": "popdensity",
-            "geo": "NUTS_ID",
-        }
-    )
-    # Convert year to int
-    df_popdensity["year"] = df_popdensity["year"].astype(int)
-    # Choose only rows for Austria (NUTS_ID starts with "AT")
-    df_popdensity = df_popdensity[df_popdensity["NUTS_ID"].str.startswith("AT")]
-
-    for year in range(2012, 2024):
-        # Filter for the current year
-        df_year = df_popdensity[df_popdensity["year"] == year]
-        # Rename the column to "popdensity_YYYY"
-        col = f"popdensity_{year}"
-        df_year = df_year.rename(columns={"popdensity": col})
-        # Merge with the merged_gdf DataFrame on NUTS_ID
-        gdf_at = gdf_at.merge(df_year[["NUTS_ID", col]], how="left", on="NUTS_ID")
-        columns_to_keep.append(col)
+    df_popdensity = download_eurostat_data(dataset="demo_r_d3dens")
+    df_popdensity.rename(columns={"geo": "NUTS_ID"}, inplace=True)
+    # Rename year columns to "popdensity_YYYY"
+    for col in df_popdensity.columns:
+        # Check for year columns
+        if col.strip().isdigit():
+            year = col.strip()
+            col_new = f"popdensity_{year}"
+            df_popdensity.rename(columns={col: col_new}, inplace=True)
+            columns_to_keep.append(col_new)
+    # Merge with the merged_gdf DataFrame on NUTS_ID
+    gdf_at = gdf_at.merge(df_popdensity, how="left", on="NUTS_ID")
 
     # ------------------------------------------------------
     # Export Final GeoJSON
