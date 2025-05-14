@@ -1,5 +1,6 @@
 import os
 
+import numpy as np
 import pandas as pd
 import requests
 
@@ -45,6 +46,11 @@ def download_eurostat_data(dataset: str) -> pd.DataFrame:
 
     # If a column name has "\", drop all after the first "\" in that column name
     df.columns = df.columns.str.split("\\").str[0]
+
+    # Convert ":" to NaN
+    for col in df.columns:
+        if df[col].dtype == "object":
+            df[col] = df[col].str.strip().replace(":", np.nan)
 
     # Remove the gzip file after reading
     try:

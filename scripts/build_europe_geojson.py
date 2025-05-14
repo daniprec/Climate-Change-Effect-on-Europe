@@ -115,9 +115,11 @@ def build_europe_geojson():
         year = col_old.strip()
         col = f"mortality_{year}"
         df.rename(columns={col_old: col}, inplace=True)
-        # Convert that data into a numeric column
-        df[col] = df[col].str.strip().replace(":", "-1")
-        df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0).astype(int)
+        # Convert the column to numeric (ignore the letters if any)
+        df[col] = pd.to_numeric(df[col], errors="coerce")
+        # Replace NaNs with -1
+        df[col].fillna(-1, inplace=True)
+        print(df[col])
 
     print("[INFO] Final parsed DataFrame sample:")
     print(df.head(10))
