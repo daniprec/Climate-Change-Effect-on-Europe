@@ -119,7 +119,6 @@ def build_europe_geojson():
         df[col] = pd.to_numeric(df[col], errors="coerce")
         # Replace NaNs with -1
         df[col].fillna(-1, inplace=True)
-        print(df[col])
 
     print("[INFO] Final parsed DataFrame sample:")
     print(df.head(10))
