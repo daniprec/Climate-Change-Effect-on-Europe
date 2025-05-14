@@ -15,3 +15,9 @@ python app.py
 ```
 
 Open the browser to [http://127.0.0.1:5000/](http://127.0.0.1:5000/) and you should see the map.
+
+## Download CORDEX Data
+
+```bash
+bash ./data/wget-20250429165912.sh
+```

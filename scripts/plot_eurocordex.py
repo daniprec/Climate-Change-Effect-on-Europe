@@ -1,4 +1,5 @@
 import datetime as dt
+import sys
 from pathlib import Path
 
 import cartopy.crs as ccrs
@@ -6,28 +7,8 @@ import imageio
 import matplotlib.pyplot as plt
 import xarray as xr
 
-
-def load_eurocordex_data(fin: str = "./data") -> xr.Dataset:
-    """
-    Load the Euro-CORDEX data from the specified folder.
-    The data is expected to be in NetCDF format.
-    """
-    # Define the folder containing the data
-    folder = Path(fin)
-
-    # Choose the nc file containing "202101-203012" in its name
-    files = list(folder.glob("*.nc"))
-    files = [f for f in files if "202101-203012" in str(f)]
-    if len(files) != 1:
-        raise ValueError(
-            "There should be exactly one file with '202101-203012' in its name."
-        )
-
-    # Open the file with xarray
-    file = files[0]
-    ds = xr.open_dataset(file)
-
-    return ds
+sys.path.append(".")
+from utils.cordex import load_eurocordex_data
 
 
 def plot_eurocordex_data(
