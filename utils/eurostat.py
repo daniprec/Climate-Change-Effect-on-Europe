@@ -4,13 +4,21 @@ import pandas as pd
 import requests
 
 
-def download_eurostat_data(dataset: str, fmt: str = "TSV"):
+def download_eurostat_data(dataset: str, fmt: str = "TSV") -> pd.DataFrame:
     """
     Download Eurostat data from the given dataset URL.
 
-    Args:
-        data_dir (str): The directory to save the downloaded data.
-        dataset (str): The Eurostat dataset URL.
+    Parameters
+    ----------
+    dataset : str
+        The dataset name to download from Eurostat.
+    fmt : str
+        The format of the data to download. Default is "TSV".
+
+    Returns
+    -------
+    pd.DataFrame
+        A DataFrame containing the downloaded data.
     """
     url = (
         "https://ec.europa.eu/eurostat/api/dissemination/sdmx/2.1/data/"
