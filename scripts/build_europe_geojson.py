@@ -52,7 +52,7 @@ def build_europe_geojson():
     """
 
     # ------------------------------------------------------
-    # 1. Download Natural Earth Admin 0 Shapefile (1:50m)
+    # Download Natural Earth Admin 0 Shapefile (1:50m)
     # ------------------------------------------------------
     # Reliable NACIS CDN link for 1:50m Admin 0 Countries
     ne_url = (
@@ -88,7 +88,7 @@ def build_europe_geojson():
     print(f"[INFO] Filtered to {len(gdf_europe)} countries in Europe (by CONTINENT).")
 
     # ------------------------------------------------------
-    # 2. Download Eurostat data
+    # Download Eurostat data
     # ------------------------------------------------------
     print("[INFO] Reading Eurostat data into Pandas...")
     df = download_eurostat_data(dataset="tps00029")
@@ -102,7 +102,7 @@ def build_europe_geojson():
     print(df["geo"])
 
     # Next columns typically contain data for various years, e.g. "2020 ", "2021 "
-    # 3.2 Identify those year columns
+    # Identify those year columns
     year_cols = [col for col in df.columns if col.strip().isdigit()]
     if not year_cols:
         raise ValueError(
@@ -121,7 +121,7 @@ def build_europe_geojson():
     print(df.head(10))
 
     # ------------------------------------------------------
-    # 3. Match Eurostat "geo" codes to Natural Earth country names
+    # Match Eurostat "geo" codes to Natural Earth country names
     # ------------------------------------------------------
     # We will do a left join on ISO_A2 = geo
     gdf_europe["ISO_A2"] = gdf_europe["ISO_A2"].str.strip()
@@ -145,7 +145,7 @@ def build_europe_geojson():
     merged_gdf = merged_gdf[columns_to_keep]
 
     # ------------------------------------------------------
-    # 4. Export final GeoJSON
+    # Export final GeoJSON
     # ------------------------------------------------------
     output_geojson = os.path.join(data_dir, "europe_regions.geojson")
     merged_gdf.to_file(output_geojson, driver="GeoJSON")
@@ -154,7 +154,7 @@ def build_europe_geojson():
     )
 
     # -------------------------------------------------------
-    # 5. Cleanup (optional)
+    # Cleanup (optional)
     # -------------------------------------------------------
     os.remove(zip_path)
     for f in os.listdir(shapefile_dir):
