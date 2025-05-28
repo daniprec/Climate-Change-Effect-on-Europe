@@ -63,20 +63,12 @@ def api_data():
 
     # Check if the requested information exists in the DataFrame
     if (metric not in df.columns) or (df.empty):
-        return jsonify({"error": f"No data available for {year:04d}-W{week:02d}"}), 400
+        return jsonify({"error": f"No data available for {year}-W{week}"}), 400
 
     # Match the NUTS_ID with the GeoDataFrame
     gdf_region = gdf[gdf["NUTS_ID"].isin(df["NUTS_ID"])].copy()
     # Merge the DataFrame with the GeoDataFrame
     gdf_region = gdf_region.merge(df, on="NUTS_ID", how="left")
-
-    # Print the difference between gdf and df NUTS_IDs for debugging
-    # NUTS_IDS in gdf that are not in df
-    missing_nuts_ids = sorted(set(gdf["NUTS_ID"]) - set(df["NUTS_ID"]))
-    # NUTS_IDS in df that are not in gdf
-    missing_nuts_ids_df = sorted(set(df["NUTS_ID"]) - set(gdf["NUTS_ID"]))
-    print(f"Missing NUTS_IDs in DataFrame for {region}: {missing_nuts_ids_df}")
-    print(f"Missing NUTS_IDs in GeoDataFrame for {region}: {missing_nuts_ids}")
 
     # Return the processed GeoJSON.
     return gdf_region.to_json()

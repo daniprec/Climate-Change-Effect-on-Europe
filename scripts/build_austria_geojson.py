@@ -1,10 +1,11 @@
 import os
 import sys
 from io import BytesIO
+from typing import List
 from zipfile import ZIP_DEFLATED, ZipFile
 
 import geopandas as gpd
-import numpy as np
+import pandas as pd
 import requests
 from shapely.geometry import Polygon
 
@@ -44,7 +45,7 @@ def line_to_polygon(geom: gpd.GeoSeries) -> gpd.GeoSeries:
         return geom
 
 
-def build_austria_geojson():
+def build_austria_geojson(spatial_geojson: str = "./data/regions.geojson") -> None:
     """
     Downloads the Eurostat NUTS boundaries shapefile,
     filters to Austria's NUTS-3 regions (district level),
@@ -53,6 +54,8 @@ def build_austria_geojson():
     merges the mortality data to the boundaries via NUTS_ID,
     and writes a final GeoJSON.
     """
+    # Define columns to keep in the final output
+    columns_to_keep: List[str] = ["NUTS_ID", "name", "geometry"]
 
     # ------------------------------------------------------
     # Download NUTS Boundaries Shapefile
@@ -94,20 +97,59 @@ def build_austria_geojson():
     # The coordinates are in EPSG:3035 (ETRS89 / LAEA Europe)
     # We need to convert them to EPSG:4326 (WGS 84) for GeoJSON
     gdf_at = gdf_at.to_crs(epsg=4326)
+    gdf_at = gdf_at[["NUTS_ID", "name", "geometry"]]
     print("[INFO] Converted coordinates to EPSG:4326 (WGS 84).")
 
-    # ------------------------------------------------------
-    # Merge Mortality Data with Austrian Municipalities
-    # ------------------------------------------------------
+    # Check if the spatial data is available
+    if os.path.exists(spatial_geojson):
+        gdf_spatial = gpd.read_file(spatial_geojson)
+        # Stack both datasets, and in case of duplicated NUTS_ID, keep ours
+        gdf_spatial = pd.concat([gdf_at, gdf_spatial], ignore_index=True)
+        gdf_spatial = gdf_spatial.drop_duplicates(subset=["NUTS_ID"])
+    else:
+        gdf_spatial = gdf_at
 
-    # Create new columns named "mortality_YYYY" for each year in the mortality data
-    # and fill them with random values for demonstration purposes.
-    for year in range(2012, 2024):
-        gdf_at[f"mortality_{year}"] = np.random.randint(0, 15, size=len(gdf_at))
+    # Store the NUTS-3 data in the spatial data
+    gdf_spatial.sort_values(by="NUTS_ID", inplace=True)
+    gdf_spatial.to_file(spatial_geojson, driver="GeoJSON")
 
-    # Choose the columns for the output; keep "name", "geometry", and all mortality columns.
-    mortality_columns = [col for col in gdf_at.columns if col.startswith("mortality_")]
-    columns_to_keep = ["name", "geometry"] + mortality_columns
+    # Clean up temporary files
+    for f in os.listdir(shapefile_dir):
+        os.remove(os.path.join(shapefile_dir, f))
+    os.rmdir(shapefile_dir)
+    print(f"[INFO] Cleaned up temporary files in {data_dir}.")
+
+    # ------------------------------------------------------
+    # Mortality - Download Eurostat data
+    # ------------------------------------------------------
+    print("[INFO] Reading Eurostat data into Pandas...")
+
+    # Mortality data
+    df_demomwk = download_eurostat_data(dataset="demo_r_mwk3_t")
+    df_demomwk.rename(columns={"geo": "NUTS_ID"}, inplace=True)
+
+    # Match the NUTS_ID with the GeoDataFrame
+    df_demomwk = df_demomwk[df_demomwk["NUTS_ID"].isin(gdf_at["NUTS_ID"])].copy()
+
+    # The column names are like "2015-W01"
+    # We will turn the dataframe into a long format:
+    # Columns will be "NUTS_ID", "year", "week", "mortality"
+    # Drop columns "freq" and "unit" first
+    df_demomwk.drop(columns=["freq", "unit"], inplace=True)
+    df_demomwk = df_demomwk.melt(
+        id_vars=["NUTS_ID"],
+        var_name="year_week",
+        value_name="mortality",
+    )
+    # Extract year and week from "year_week"
+    df_demomwk["year"] = df_demomwk["year_week"].str[:4].astype(int)
+    df_demomwk["week"] = df_demomwk["year_week"].str[6:].astype(int)
+    # Drop the "year_week" column
+    df_demomwk.drop(columns=["year_week"], inplace=True)
+    # Drop NaNs in "mortality"
+    df_demomwk.dropna(subset=["mortality"], inplace=True)
+    # Sort column order: NUTS_ID, year, week, mortality
+    df_demomwk = df_demomwk[["NUTS_ID", "year", "week", "mortality"]]
 
     # ------------------------------------------------------
     # Merge with Population Density Data
@@ -116,33 +158,38 @@ def build_austria_geojson():
     # Download population density data
     df_popdensity = download_eurostat_data(dataset="demo_r_d3dens")
     df_popdensity.rename(columns={"geo": "NUTS_ID"}, inplace=True)
-    # Rename year columns to "popdensity_YYYY"
-    for col in df_popdensity.columns:
-        # Check for year columns
-        if col.strip().isdigit():
-            year = col.strip()
-            col_new = f"popdensity_{year}"
-            df_popdensity.rename(columns={col: col_new}, inplace=True)
-            columns_to_keep.append(col_new)
-    # Merge with the merged_gdf DataFrame on NUTS_ID
-    gdf_at = gdf_at.merge(df_popdensity, how="left", on="NUTS_ID")
+    df_popdensity.drop(columns=["freq", "unit"], inplace=True)
+    # Filter for Austria's NUTS-3 regions
+    df_popdensity = df_popdensity[
+        df_popdensity["NUTS_ID"].isin(gdf_at["NUTS_ID"])
+    ].copy()
+    # Melt the DataFrame to long format
+    df_popdensity = df_popdensity.melt(
+        id_vars=["NUTS_ID"],
+        var_name="year",
+        value_name="population_density",
+    )
+    # Drop NaNs in "population_density"
+    df_popdensity.dropna(subset=["population_density"], inplace=True)
+    # Convert year to integer
+    df_popdensity["year"] = df_popdensity["year"].astype(int)
+    # Sort column order: NUTS_ID, year, population_density
+    df_popdensity = df_popdensity[["NUTS_ID", "year", "population_density"]]
 
     # ------------------------------------------------------
-    # Export Final GeoJSON
+    # Store the dataframe
     # ------------------------------------------------------
-    merged_gdf = gdf_at[columns_to_keep]
-    output_geojson = os.path.join(data_dir, "austria.geojson")
-    merged_gdf.to_file(output_geojson, driver="GeoJSON")
-    print(f"[INFO] Successfully wrote {len(merged_gdf)} features to {output_geojson}!")
 
-    # -------------------------------------------------------
-    # Cleanup (optional)
-    # -------------------------------------------------------
-    # os.remove(zip_path)
-    for f in os.listdir(shapefile_dir):
-        os.remove(os.path.join(shapefile_dir, f))
-    os.rmdir(shapefile_dir)
-    print(f"[INFO] Cleaned up temporary files in {data_dir}.")
+    # Add the population density to the mortality data, for each week present in the mortality data
+    df = df_demomwk.merge(
+        df_popdensity,
+        on=["NUTS_ID", "year"],
+        how="left",
+    )
+    df.sort_values(by=["NUTS_ID", "year", "week"], inplace=True)
+    output_csv = os.path.join(data_dir, "austria.csv")
+    df.to_csv(output_csv, index=False)
+    print(f"[INFO] Successfully wrote {len(df)} records to {output_csv}!")
 
 
 if __name__ == "__main__":

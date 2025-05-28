@@ -101,7 +101,7 @@ def build_europe_geojson(spatial_geojson: str = "./data/regions.geojson"):
     gdf_spatial.sort_values(by="NUTS_ID", inplace=True)
     gdf_spatial.to_file(spatial_geojson, driver="GeoJSON")
 
-    # Cleanup
+    # Clean up temporary files
     os.remove(zip_path)
     for f in os.listdir(shapefile_dir):
         os.remove(os.path.join(shapefile_dir, f))

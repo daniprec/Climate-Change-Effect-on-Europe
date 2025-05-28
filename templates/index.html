@@ -28,7 +28,7 @@
     <label for="metricSelect" style="margin-left:2rem">Dataset:</label>
     <select id="metricSelect">
       <option value="mortality" selected>Mortality</option>
-      <option value="popdensity">Population Density</option>
+      <option value="population_density">Population Density</option>
     </select>
   </div>
 
@@ -48,7 +48,7 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     /* ------------------------- GLOBAL STATE ------------------------- */
-    // Current dataset the user wants to visualise. Either "mortality" or "popdensity".
+    // Current dataset the user wants to visualise. Either "mortality" or "population_density".
     let currentMetric = 'mortality';
 
     // Initialise Leaflet map using backend values
@@ -87,8 +87,8 @@
         value = props.mortality || 0;                       // deaths per thousand
         const intensity = Math.min(value ** 2, 255);        // nonlinear scale for better contrast
         fillColor = `rgb(0, ${intensity}, 0)`;              // green ramp
-      } else if (currentMetric === 'popdensity') {
-        value = props.popdensity || 0;                      // pop per km2
+      } else if (currentMetric === 'population_density') {
+        value = props.population_density || 0;                      // pop per km2
         const intensity = Math.min(value, 255);         // linear-ish scale
         fillColor = `rgb(0, ${intensity}, 0)`;              // red ramp
       }
@@ -105,7 +105,7 @@
     function onEachRegion(feature, layer) {
       const props = feature.properties;
       const metricLabel = currentMetric === 'mortality' ? 'Mortality' : 'Population Density (km2)';
-      const metricVal   = currentMetric === 'mortality' ? props.mortality : props.popdensity;
+      const metricVal   = currentMetric === 'mortality' ? props.mortality : props.population_density;
 
       // Special-case navigation example for Austria (kept from the original template)
       if (props.name === 'Austria') {
@@ -121,7 +121,7 @@
     // Update the info side‑panel
     function updateInfoPopup(properties) {
       const metricWord  = currentMetric === 'mortality' ? 'Mortality' : 'Population Density';
-      const metricKey   = currentMetric === 'mortality' ? `mortality_{{ max_year }}` : `popdensity_{{ max_year }}`;
+      const metricKey   = currentMetric === 'mortality' ? `mortality_{{ max_year }}` : `population_density_{{ max_year }}`;
       const currentVal  = properties[metricKey] || 0;
       const percentageChange = (Math.random() * 5 + 1).toFixed(2); // — placeholder demo —
       const estimatedVal = (currentVal * (1 + percentageChange/100)).toFixed(0);
@@ -142,7 +142,7 @@
 
       for (let y = minYear; y <= maxYear; y++) {
         years.push(y);
-        const key = currentMetric === 'mortality' ? `mortality_${y}` : `popdensity_${y}`;
+        const key = currentMetric === 'mortality' ? `mortality_${y}` : `population_density_${y}`;
         values.push(properties[key] || 0);
       }
 
