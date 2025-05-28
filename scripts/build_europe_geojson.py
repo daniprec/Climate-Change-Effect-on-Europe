@@ -17,7 +17,7 @@ ISO_A2_COUNTRY_CODES = {
 }
 
 
-def download_file(url, local_path):
+def download_file(url: str, local_path: str) -> None:
     """
     Downloads a file from `url` to `local_path`.
     If it already exists, we skip re-downloading.
@@ -33,7 +33,7 @@ def download_file(url, local_path):
     print(f"[INFO] Saved to {local_path}")
 
 
-def extract_zip(zip_path, extract_to):
+def extract_zip(zip_path: str, extract_to: str) -> None:
     """
     Extracts all contents of a zip file to the specified directory.
     """
@@ -163,9 +163,5 @@ def build_europe_geojson():
     print(f"[INFO] Cleaned up temporary files in {data_dir}.")
 
 
-def main():
-    build_europe_geojson()
-
-
 if __name__ == "__main__":
-    main()
+    build_europe_geojson()

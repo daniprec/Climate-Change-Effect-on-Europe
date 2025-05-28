@@ -145,9 +145,5 @@ def build_austria_geojson():
     print(f"[INFO] Cleaned up temporary files in {data_dir}.")
 
 
-def main():
-    build_austria_geojson()
-
-
 if __name__ == "__main__":
-    main()
+    build_austria_geojson()
