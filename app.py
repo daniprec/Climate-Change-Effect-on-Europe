@@ -74,5 +74,40 @@ def api_data():
     return gdf_region.to_json()
 
 
+@app.route("/api/data/ts")
+def app_data_time_series():
+    region = request.args.get("region", "europe")
+    metric = request.args.get("metric", "mortality")
+    nuts_id = request.args.get("nuts_id", "AT")
+
+    # Check if the requested region is valid
+    if region not in dict_df:
+        return jsonify({"error": "Invalid region specified"}), 400
+
+    # Load the DataFrame for the specified region
+    df = pd.read_csv(dict_df[region])
+
+    # Filter by NUTS_ID
+    df = df[df["NUTS_ID"] == nuts_id]
+
+    # Validate metric
+    if metric not in df.columns:
+        return jsonify({"error": f"No data available for metric '{metric}'"}), 400
+
+    # Prepare structured JSON
+    time_series_data = (
+        df[["year", "week", metric]]
+        .sort_values(["year", "week"])
+        .rename(columns={metric: "value"})
+        .to_dict(orient="records")
+    )
+
+    return jsonify(
+        {
+            "data": time_series_data,
+        }
+    )
+
+
 if __name__ == "__main__":
     app.run(debug=True)

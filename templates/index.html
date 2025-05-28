@@ -134,7 +134,7 @@
       }
 
       // Click → show graph and stats
-      layer.on('click', () => plotGraph(props));
+      layer.on('click', () => plotGraphFromAPI(props.NUTS_ID, props.name));
     }
 
     // Update the info side‑panel
@@ -152,50 +152,59 @@
       document.getElementById('info-popup').style.display   = 'block';
     }
 
-    // Draw line‑chart for selected region using Chart.js
-    function plotGraph(properties) {
-      const minYear = parseInt("{{ min_year }}", 10);
-      const maxYear = parseInt("{{ max_year }}", 10);
-      const years   = [];
-      const values  = [];
+    // Draw line‑chart for selected region using /api/data/ts
+  function plotGraphFromAPI(nuts_id, name) {
+    const metricWord = currentMetric === 'mortality' ? 'Mortality' : 'Population Density (per km²)';
 
-      for (let y = minYear; y <= maxYear; y++) {
-        years.push(y);
-        const key = currentMetric === 'mortality' ? `mortality_${y}` : `population_density_${y}`;
-        values.push(properties[key] || 0);
-      }
+    fetch(`/api/data/ts?region={{ region }}&metric=${currentMetric}&nuts_id=${nuts_id}`)
+      .then(response => response.json())
+      .then(result => {
+        if (!result.data) return;
 
-      // Clear previous graph and create new canvas
-      const graphDiv = document.getElementById('graph');
-      graphDiv.innerHTML = '';
-      const canvas = document.createElement('canvas');
-      graphDiv.appendChild(canvas);
-      const ctx = canvas.getContext('2d');
+        const labels = result.data.map(d => `${d.year}-W${String(d.week).padStart(2, '0')}`);
+        const values = result.data.map(d => d.value);
 
-      const metricWord = currentMetric === 'mortality' ? 'Mortality (per ‰)' : 'Population Density (per km²)';
+        // Clear previous graph and create new canvas
+        const graphDiv = document.getElementById('graph');
+        graphDiv.innerHTML = '';
+        const canvas = document.createElement('canvas');
+        graphDiv.appendChild(canvas);
+        const ctx = canvas.getContext('2d');
 
-      new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: years,
-          datasets: [{
-            label: `${metricWord} for ${properties.name}`,
-            data: values,
-            borderColor: '#6dc201',
-            backgroundColor: '#6dc2014D', // 30% opacity
-            fill: true,
-            tension: 0.2
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: { y: { beginAtZero: true, min: 0 } }
-        }
-      });
-
-      updateInfoPopup(properties);
-    }
+        new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: `${metricWord} for ${name}`,
+              data: values,
+              borderColor: '#6dc201',
+              backgroundColor: '#6dc2014D',
+              fill: true,
+              tension: 0.2
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              x: {
+                ticks: {
+                  autoSkip: true,
+                  maxTicksLimit: 12
+                }
+              },
+              y: {
+                beginAtZero: true,
+                min: 0
+              }
+            }
+          }
+        });
+        updateInfoPopup(properties);
+      })
+      .catch(error => console.error("Error loading time series:", error));
+  }
 
     /* ------------------------- EVENT HANDLERS ------------------------- */
     // Year slider (with debounce)
