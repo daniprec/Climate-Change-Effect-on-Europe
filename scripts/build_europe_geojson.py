@@ -3,18 +3,11 @@ import sys
 import zipfile
 
 import geopandas as gpd
+import pandas as pd
 import requests
 
 sys.path.append(".")
 from utils.eurostat import download_eurostat_data
-
-ISO_A2_COUNTRY_CODES = {
-    "France": "FR",
-    "Germany": "DE",
-    "United Kingdom": "GB",
-    "Norway": "NO",
-    "Kosovo": "XK",
-}
 
 
 def download_file(url: str, local_path: str) -> None:
@@ -43,7 +36,7 @@ def extract_zip(zip_path: str, extract_to: str) -> None:
     print("[INFO] Extraction complete.")
 
 
-def build_europe_geojson():
+def build_europe_geojson(spatial_geojson: str = "./data/regions.geojson"):
     """
     Downloads Natural Earth data for Admin 0 countries,
     downloads Eurostat mortality data,
@@ -87,80 +80,75 @@ def build_europe_geojson():
     gdf_europe = gdf[gdf["CONTINENT"] == "Europe"].copy()
     print(f"[INFO] Filtered to {len(gdf_europe)} countries in Europe (by CONTINENT).")
 
-    # ------------------------------------------------------
-    # Download Eurostat data
-    # ------------------------------------------------------
-    print("[INFO] Reading Eurostat data into Pandas...")
-    df = download_eurostat_data(dataset="tps00029")
+    # If any value in "ISO_A2" is empty, fill it with "ISO_A2_EH" (European Union)
+    gdf_europe["ISO_A2"] = gdf_europe["ISO_A2"].fillna(gdf_europe["ISO_A2_EH"])
 
-    # DEATH_NR = Deaths - number
-    # GDEATHRT_THSP = Crude death rate - per thousand persons
-    # Choose "GDEATHRT_THSP" as the indicator
-    df = df[df["indic_de"] == "GDEATHRT_THSP"].copy()
-    # We can drop the "indic_de" and "freq" columns now
-    df.drop(columns=["indic_de", "freq"], inplace=True)
-    print(df["geo"])
+    # Filter columns and rename
+    gdf_europe = gdf_europe.rename(columns={"ISO_A2": "NUTS_ID", "NAME_SORT": "name"})[
+        ["NUTS_ID", "name", "geometry"]
+    ]
 
-    # Next columns typically contain data for various years, e.g. "2020 ", "2021 "
-    # Identify those year columns
-    year_cols = [col for col in df.columns if col.strip().isdigit()]
-    if not year_cols:
-        raise ValueError(
-            "No year columns found in the downloaded TSV. The structure may have changed."
-        )
+    # Check if the spatial data is available
+    if os.path.exists(spatial_geojson):
+        gdf_spatial = gpd.read_file(spatial_geojson)
+        # Stack both datasets, and in case of duplicated NUTS_ID, keep ours
+        gdf_spatial = pd.concat([gdf_europe, gdf_spatial], ignore_index=True)
+        gdf_spatial = gdf_spatial.drop_duplicates(subset=["NUTS_ID"])
+    else:
+        gdf_spatial = gdf_europe
 
-    # Rename the year columns to "mortality_YYYY"
-    for col_old in year_cols:
-        year = col_old.strip()
-        col = f"mortality_{year}"
-        df.rename(columns={col_old: col}, inplace=True)
-        # Replace NaNs with -1
-        df[col].fillna(-1, inplace=True)
+    # Store the spatial data
+    gdf_spatial.sort_values(by="NUTS_ID", inplace=True)
+    gdf_spatial.to_file(spatial_geojson, driver="GeoJSON")
 
-    print("[INFO] Final parsed DataFrame sample:")
-    print(df.head(10))
-
-    # ------------------------------------------------------
-    # Match Eurostat "geo" codes to Natural Earth country names
-    # ------------------------------------------------------
-    # We will do a left join on ISO_A2 = geo
-    gdf_europe["ISO_A2"] = gdf_europe["ISO_A2"].str.strip()
-    # Some countries are missing ISO_A2 codes, e.g. "FR" for France
-    # We will use their "NAME_EN" to match them, using the ISO_A2_COUNTRY_CODES dict
-    # to fill in the missing codes
-    for country, iso_code in ISO_A2_COUNTRY_CODES.items():
-        gdf_europe.loc[gdf_europe["NAME_EN"] == country, "ISO_A2"] = iso_code
-    print(gdf_europe[["NAME_EN", "ISO_A2"]])
-
-    merged_gdf = gdf_europe.merge(df, left_on="ISO_A2", right_on="geo", how="left")
-
-    # Create the "name" column for GeoJSON
-    merged_gdf["name"] = merged_gdf["NAME_EN"].str.strip()
-
-    # Choose the columns we want to keep in the final GeoJSON
-    columns_to_keep = [
-        "name",
-        "geometry",
-    ] + [col for col in merged_gdf.columns if col.startswith("mortality_")]
-    merged_gdf = merged_gdf[columns_to_keep]
-
-    # ------------------------------------------------------
-    # Export final GeoJSON
-    # ------------------------------------------------------
-    output_geojson = os.path.join(data_dir, "europe_regions.geojson")
-    merged_gdf.to_file(output_geojson, driver="GeoJSON")
-    print(
-        f"[INFO] Successfully wrote {len(merged_gdf)} European features to {output_geojson}!"
-    )
-
-    # -------------------------------------------------------
-    # Cleanup (optional)
-    # -------------------------------------------------------
+    # Cleanup
     os.remove(zip_path)
     for f in os.listdir(shapefile_dir):
         os.remove(os.path.join(shapefile_dir, f))
     os.rmdir(shapefile_dir)
     print(f"[INFO] Cleaned up temporary files in {data_dir}.")
+
+    # ------------------------------------------------------
+    # Mortality - Download Eurostat data
+    # ------------------------------------------------------
+    print("[INFO] Reading Eurostat data into Pandas...")
+
+    # Mortality data
+    df_demomwk = download_eurostat_data(dataset="demo_r_mwk3_t")
+    df_demomwk.rename(columns={"geo": "NUTS_ID"}, inplace=True)
+
+    # Match the NUTS_ID with the GeoDataFrame
+    df_demomwk = df_demomwk[df_demomwk["NUTS_ID"].isin(gdf_europe["NUTS_ID"])].copy()
+
+    # The column names are like "2015-W01"
+    # We will turn the dataframe into a long format:
+    # Columns will be "NUTS_ID", "year", "week", "mortality"
+    # Drop columns "freq" and "unit" first
+    df_demomwk.drop(columns=["freq", "unit"], inplace=True)
+    df_demomwk = df_demomwk.melt(
+        id_vars=["NUTS_ID"],
+        var_name="year_week",
+        value_name="mortality",
+    )
+    # Extract year and week from "year_week"
+    df_demomwk["year"] = df_demomwk["year_week"].str[:4].astype(int)
+    df_demomwk["week"] = df_demomwk["year_week"].str[6:].astype(int)
+    # Drop the "year_week" column
+    df_demomwk.drop(columns=["year_week"], inplace=True)
+    # Drop NaNs in "mortality"
+    df_demomwk.dropna(subset=["mortality"], inplace=True)
+    # Sort column order: NUTS_ID, year, week, mortality
+    df_demomwk = df_demomwk[["NUTS_ID", "year", "week", "mortality"]]
+
+    # ------------------------------------------------------
+    # Store the dataframe
+    # ------------------------------------------------------
+
+    df = df_demomwk
+    df.sort_values(by=["NUTS_ID", "year", "week"], inplace=True)
+    output_csv = os.path.join(data_dir, "europe.csv")
+    df.to_csv(output_csv, index=False)
+    print(f"[INFO] Successfully wrote {len(df)} records to {output_csv}!")
 
 
 if __name__ == "__main__":
