@@ -75,7 +75,7 @@ def build_austria_geojson():
     with ZipFile(file=bytesfile, mode="r", compression=ZIP_DEFLATED) as zip_file:
         zip_file.extractall(path=shapefile_dir)
 
-    # Import
+    # Load the shapefile
     filename = os.path.join(shapefile_dir, "STATISTIK_AUSTRIA_NUTS3_20250101.shp")
     gdf_at = (
         gpd.read_file(
