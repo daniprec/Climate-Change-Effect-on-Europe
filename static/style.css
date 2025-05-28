@@ -16,10 +16,11 @@ h1 {
 /* Center the slider controls with extra space */
 #controls {
   display: flex;
-  justify-content: center;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 80%;
   gap: 15px;
-  margin: 20px 0;
+  margin: 20px auto;
 }
 
 #map {
@@ -93,6 +94,10 @@ h1 {
 }
 
 #yearSlider {
+  width: 300px;
+}
+
+#weekSlider {
   width: 300px;
 }
 

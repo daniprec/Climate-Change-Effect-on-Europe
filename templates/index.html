@@ -20,16 +20,35 @@
 
   <!-- *** CONTROLS *** -->
   <div id="controls">
-    <label for="yearSlider">Select Year:</label>
-    <input type="range" class="slider" min="{{ min_year }}" max="{{ max_year }}" value="{{ max_year }}" step="1" id="yearSlider">
-    <span id="yearLabel">{{ max_year }}</span>
 
-    <!-- NEW: metric selector -->
-    <label for="metricSelect" style="margin-left:2rem">Dataset:</label>
-    <select id="metricSelect">
-      <option value="mortality" selected>Mortality</option>
-      <option value="population_density">Population Density</option>
-    </select>
+    <!-- Top row: year slider + metric selector -->
+    <div style="display: flex; justify-content: flex-start; align-items: center; gap: 2rem; width: 100%;">
+      
+      <!-- Year slider -->
+      <div style="display: flex; align-items: center; gap: 0.5rem; flex-grow: 1;">
+        <label for="yearSlider">Select Year:</label>
+        <input type="range" class="slider" min="{{ min_year }}" max="{{ max_year }}" value="{{ max_year }}" step="1" id="yearSlider">
+        <span id="yearLabel">{{ max_year }}</span>
+      </div>
+
+      <!-- Metric selector -->
+      <div style="display: flex; align-items: center; gap: 0.5rem;">
+        <label for="metricSelect">Dataset:</label>
+        <select id="metricSelect">
+          <option value="mortality" selected>Mortality</option>
+          <option value="population_density">Population Density</option>
+        </select>
+      </div>
+
+    </div>
+
+    <!-- Bottom row: week slider -->
+    <div style="display: flex; align-items: center; gap: 0.5rem; width: 100%;">
+      <label for="weekSlider">Select Week:</label>
+      <input type="range" class="slider" min="1" max="52" value="1" step="1" id="weekSlider">
+      <span id="weekLabel">1</span>
+    </div>
+
   </div>
 
   <!-- *** MAP & GRAPH SECTION *** -->
@@ -61,8 +80,8 @@
 
     /* ------------------------- DATA LOADING ------------------------- */
     // Fetch data for a given region/year/metric and refresh the layer
-    function loadDataForYear(region, year) {
-      fetch(`/api/data?region=${region}&year=${year}&metric=${currentMetric}`)
+    function loadDataForYear(region, year, week) {
+      fetch(`/api/data?region=${region}&year=${year}&week=${week}&metric=${currentMetric}`)
         .then(response => response.json())
         .then(data => {
           if (geoJsonLayer) {
@@ -186,23 +205,33 @@
       const year = this.value;
       document.getElementById('yearLabel').innerText = year;
       debounceTimer = setTimeout(() => {
-        loadDataForYear("{{ region }}", year);
+        loadDataForYear("{{ region }}", year, document.getElementById('weekSlider').value);
+      }, 300);
+    });
+
+    // Week slider
+    document.getElementById('weekSlider').addEventListener('input', function () {
+      const week = this.value;
+      document.getElementById('weekLabel').innerText = week;
+      debounceTimer = setTimeout(() => {
+        loadDataForYear("{{ region }}", document.getElementById('yearSlider').value, week);
       }, 300);
     });
 
     // Metric dropdown
     document.getElementById('metricSelect').addEventListener('change', function () {
       currentMetric = this.value;
-      // Refresh map layer for current year
+      // Refresh map layer for current year and week
       const selectedYear = document.getElementById('yearSlider').value;
-      loadDataForYear("{{ region }}", selectedYear);
+      const selectedWeek = document.getElementById('weekSlider').value;
+      loadDataForYear("{{ region }}", selectedYear, selectedWeek);
       // Clear graph/info panel until user clicks again
       document.getElementById('graph').innerHTML = '';
       document.getElementById('info-popup').style.display = 'none';
     });
 
     /* ------------------------- INITIALISATION ------------------------- */
-    loadDataForYear("{{ region }}", "{{ max_year }}");
+    loadDataForYear("{{ region }}", "{{ max_year }}", 1);
   </script>
 </body>
 <!-- Footer Section -->
