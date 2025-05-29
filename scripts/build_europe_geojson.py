@@ -137,17 +137,44 @@ def build_europe_geojson(spatial_geojson: str = "./data/regions.geojson"):
     df_demomwk.drop(columns=["year_week"], inplace=True)
     # Drop NaNs in "mortality"
     df_demomwk.dropna(subset=["mortality"], inplace=True)
+
     # Sort column order: NUTS_ID, year, week, mortality
     df_demomwk = df_demomwk[["NUTS_ID", "year", "week", "mortality"]]
+
+    # ----------------------------------------
+    # Population - Download Eurostat data
+    # ----------------------------------------
+    print("[INFO] Reading Eurostat population data into Pandas...")
+    # Population data
+    df_pop = download_eurostat_data(dataset="tps00001")
+    df_pop.rename(columns={"geo": "NUTS_ID"}, inplace=True)
+    df_pop.drop(columns=["freq", "indic_de"], inplace=True)
+
+    # The column names are like "2020"
+    # We will turn the dataframe into a long format:
+    # Columns will be "name", "year", "population"
+    df_pop = df_pop.melt(
+        id_vars=["NUTS_ID"],
+        var_name="year",
+        value_name="population",
+    )
+
+    # Convert "year" to integer
+    df_pop["year"] = df_pop["year"].astype(int)
+
+    # Merge population data with mortality data
+    df = df_demomwk.merge(df_pop, on=["NUTS_ID", "year"], how="left")
+
+    # Use the mortality and population to calculate the mortality rate
+    df["mortality_rate"] = 100000 * df["mortality"] / df["population"]
 
     # ------------------------------------------------------
     # Store the dataframe
     # ------------------------------------------------------
 
-    df = df_demomwk
     df.sort_values(by=["NUTS_ID", "year", "week"], inplace=True)
     output_csv = os.path.join(data_dir, "europe.csv")
-    df.to_csv(output_csv, index=False)
+    df.to_csv(output_csv, index=False, float_format="%.1f")
     print(f"[INFO] Successfully wrote {len(df)} records to {output_csv}!")
 
 

@@ -17,14 +17,19 @@ dict_df = {
     "Austria": os.path.join(BASE_DIR, "data", "austria.csv"),
 }
 
+# Get minimum and maximum year
+df = pd.read_csv(dict_df["Europe"])
+min_year = df["year"].min()
+max_year = df["year"].max()
+
 
 @app.route("/")
 def index():
     # Render the base HTML page; the page can load data via AJAX.
     return render_template(
         "index.html",
-        min_year=2012,
-        max_year=2023,
+        min_year=min_year,
+        max_year=max_year,
         center_lat=50,
         center_lon=5,
         zoom=4,
@@ -37,8 +42,8 @@ def index_austria():
     # Render the country-specific HTML page; the page can load data via AJAX.
     return render_template(
         "index.html",
-        min_year=2012,
-        max_year=2023,
+        min_year=min_year,
+        max_year=max_year,
         center_lat=47.5,
         center_lon=13,
         zoom=7,
@@ -51,7 +56,7 @@ def api_data():
     region = request.args.get("region", "europe")
     year = request.args.get("year", "2023")
     week = request.args.get("week", "1")
-    metric = request.args.get("metric", "mortality")
+    metric = request.args.get("metric", "mortality_rate")
 
     # Check if the requested region is valid
     if region not in dict_df:
@@ -77,7 +82,7 @@ def api_data():
 @app.route("/api/data/ts")
 def app_data_time_series():
     region = request.args.get("region", "europe")
-    metric = request.args.get("metric", "mortality")
+    metric = request.args.get("metric", "mortality_rate")
     nuts_id = request.args.get("nuts_id", "AT")
 
     # Check if the requested region is valid
@@ -99,6 +104,7 @@ def app_data_time_series():
         df[["year", "week", metric]]
         .sort_values(["year", "week"])
         .rename(columns={metric: "value"})
+        .dropna()
         .to_dict(orient="records")
     )
 
