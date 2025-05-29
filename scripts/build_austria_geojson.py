@@ -1,7 +1,6 @@
 import os
 import sys
 from io import BytesIO
-from typing import List
 from zipfile import ZIP_DEFLATED, ZipFile
 
 import geopandas as gpd
@@ -54,8 +53,6 @@ def build_austria_geojson(spatial_geojson: str = "./data/regions.geojson") -> No
     merges the mortality data to the boundaries via NUTS_ID,
     and writes a final GeoJSON.
     """
-    # Define columns to keep in the final output
-    columns_to_keep: List[str] = ["NUTS_ID", "name", "geometry"]
 
     # ------------------------------------------------------
     # Download NUTS Boundaries Shapefile
@@ -176,16 +173,48 @@ def build_austria_geojson(spatial_geojson: str = "./data/regions.geojson") -> No
     # Sort column order: NUTS_ID, year, population_density
     df_popdensity = df_popdensity[["NUTS_ID", "year", "population_density"]]
 
-    # ------------------------------------------------------
-    # Store the dataframe
-    # ------------------------------------------------------
-
     # Add the population density to the mortality data, for each week present in the mortality data
     df = df_demomwk.merge(
         df_popdensity,
         on=["NUTS_ID", "year"],
         how="left",
     )
+
+    # ----------------------------------------
+    # Population - Download Eurostat data
+    # ----------------------------------------
+    print("[INFO] Reading Eurostat population data into Pandas...")
+    # Population data
+    df_pop = download_eurostat_data(dataset="demo_r_pjanaggr3")
+    # Filter for total sex and age class
+    mask_sex = df_pop["sex"] == "Total"
+    mask_age = df_pop["age"] == "Total"
+    df_pop = df_pop[mask_sex & mask_age].copy()
+    df_pop.rename(columns={"geo": "NUTS_ID"}, inplace=True)
+    df_pop.drop(columns=["freq", "unit", "sex", "age"], inplace=True)
+
+    # The column names are like "2020"
+    # We will turn the dataframe into a long format:
+    # Columns will be "name", "year", "population"
+    df_pop = df_pop.melt(
+        id_vars=["NUTS_ID"],
+        var_name="year",
+        value_name="population",
+    )
+
+    # Convert "year" to integer
+    df_pop["year"] = df_pop["year"].astype(int)
+
+    # Merge population data with all prior data
+    df = df.merge(df_pop, on=["NUTS_ID", "year"], how="left")
+
+    # Use the mortality and population to calculate the mortality rate
+    df["mortality_rate"] = 100000 * df["mortality"] / df["population"]
+
+    # ------------------------------------------------------
+    # Store the dataframe
+    # ------------------------------------------------------
+
     df.sort_values(by=["NUTS_ID", "year", "week"], inplace=True)
     output_csv = os.path.join(data_dir, "austria.csv")
     df.to_csv(output_csv, index=False)
