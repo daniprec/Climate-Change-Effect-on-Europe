@@ -10,8 +10,8 @@
     },
     "notebook.formatOnSave.enabled": true,
     "notebook.codeActionsOnSave": {
-        "source.fixAll.ruff": "explicit",
-        "source.organizeImports.ruff": "explicit"
+        "noteboook.source.fixAll.ruff": "explicit",
+        "noteboook.source.organizeImports.ruff": "explicit"
     },
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,
