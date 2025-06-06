@@ -85,7 +85,14 @@ def download_eurostat_mortality(ls_ids: list[str] | None = None) -> pd.DataFrame
 
     # Match the NUTS_ID with the GeoDataFrame
     if ls_ids is not None:
+        ls_all = df_demomwk["NUTS_ID"].unique().tolist()
+        ls_out = sorted([x for x in ls_all if x not in ls_ids])
+        ls_out2 = sorted([x for x in ls_ids if x not in ls_all])
         df_demomwk = df_demomwk[df_demomwk["NUTS_ID"].isin(ls_ids)].copy()
+        print("The following IDs were dropped from Eurostat data:")
+        print(", ".join(ls_out))
+        print("The following IDs were not found in Eurostat data:")
+        print(", ".join(ls_out2))
 
     # The column names are like "2015-W01"
     # We will turn the dataframe into a long format:
@@ -136,12 +143,19 @@ def download_eurostat_population_density(
     return df_popdensity
 
 
-def download_eurostat_nuts2_population() -> pd.DataFrame:
+def download_eurostat_nuts2_population(
+    ls_ids: list[str] | None = None,
+) -> pd.DataFrame:
     print("[INFO] Reading Eurostat population data into Pandas...")
     # Population data
     df_pop = download_eurostat_data(dataset="tps00001")
     df_pop.rename(columns={"geo": "NUTS_ID"}, inplace=True)
     df_pop.drop(columns=["freq", "indic_de"], inplace=True)
+
+    # Filter for NUTS-2 regions only
+    if ls_ids is not None:
+        # Filter for NUTS-2 regions
+        df_pop = df_pop[df_pop["NUTS_ID"].isin(ls_ids)].copy()
 
     # The column names are like "2020"
     # We will turn the dataframe into a long format:
@@ -158,7 +172,9 @@ def download_eurostat_nuts2_population() -> pd.DataFrame:
     return df_pop
 
 
-def download_eurostat_nuts3_population() -> pd.DataFrame:
+def download_eurostat_nuts3_population(
+    ls_ids: list[str] | None = None,
+) -> pd.DataFrame:
     print("[INFO] Reading Eurostat population data into Pandas...")
     # Population data
     df_pop = download_eurostat_data(dataset="demo_r_pjanaggr3")
@@ -168,6 +184,11 @@ def download_eurostat_nuts3_population() -> pd.DataFrame:
     df_pop = df_pop[mask_sex & mask_age].copy()
     df_pop.rename(columns={"geo": "NUTS_ID"}, inplace=True)
     df_pop.drop(columns=["freq", "unit", "sex", "age"], inplace=True)
+
+    # If ls_ids is provided, filter for NUTS-3 regions
+    if ls_ids is not None:
+        # Filter for NUTS-3 regions
+        df_pop = df_pop[df_pop["NUTS_ID"].isin(ls_ids)].copy()
 
     # The column names are like "2020"
     # We will turn the dataframe into a long format:
@@ -206,8 +227,8 @@ def main(path_data: str = "./data", path_geojson: str = "./data/regions.geojson"
     df_pop = df_pop.drop_duplicates(subset=["NUTS_ID", "year"], keep="last")
 
     # Merge all of them by NUTS_ID and year
-    df = df_demomwk.merge(df_popdensity, on=["NUTS_ID", "year"], how="left")
-    df = df.merge(df_pop, on=["NUTS_ID", "year"], how="left")
+    df = df_demomwk.merge(df_popdensity, on=["NUTS_ID", "year"], how="outer")
+    df = df.merge(df_pop, on=["NUTS_ID", "year"], how="outer")
 
     # Use the mortality and population to calculate the mortality rate
     df["mortality_rate"] = 100000 * df["mortality"] / df["population"]
@@ -247,7 +268,7 @@ def main(path_data: str = "./data", path_geojson: str = "./data/regions.geojson"
 
     # Store the Austria DataFrame
     output_csv_at = os.path.join(path_data, "austria.csv")
-    df_at.to_csv(output_csv_at, index=False)
+    df_at.to_csv(output_csv_at, index=False, float_format="%.1f")
     print(f"[INFO] Successfully wrote {len(df_at)} records to {output_csv_at}!")
 
     # Store the Europe DataFrame

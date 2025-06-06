@@ -8,6 +8,8 @@ import pandas as pd
 import requests
 from shapely.geometry import Polygon
 
+DICT_NUTS = {"GB": "UK"}
+
 
 def download_file(url: str, local_path: str) -> None:
     """
@@ -124,6 +126,9 @@ def build_europe_map(
         gdf_spatial = gdf_spatial.drop_duplicates(subset=["NUTS_ID"])
     else:
         gdf_spatial = gdf_europe
+
+    # Rename some NUTS_IDs for consistency
+    gdf_spatial["NUTS_ID"] = gdf_spatial["NUTS_ID"].replace(DICT_NUTS)
 
     # Store the spatial data
     gdf_spatial.sort_values(by="NUTS_ID", inplace=True)
