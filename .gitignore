@@ -6,4 +6,4 @@ build/
 cache/
 notebooks/
 output/*
-*.egg_info/
+*.egg-info/

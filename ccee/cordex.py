@@ -3,8 +3,10 @@ from datetime import datetime
 from pathlib import Path
 
 import cartopy.crs as ccrs
+import geopandas as gpd
 import matplotlib.pyplot as plt
 import xarray as xr
+from pyproj import CRS, Transformer
 
 
 def load_eurocordex_data(fin: str = "./data", year: int = 2025) -> xr.Dataset:
@@ -113,3 +115,102 @@ def plot_eurocordex_data(
     plt.tight_layout()
 
     return fig, ax
+
+
+import pandas as pd
+import xarray as xr
+
+
+def cordex_tas_to_dataframe_per_region(
+    path_geojson: str = "./data/regions.geojson",
+    fin: str = "../data",
+    year: int = 2025,
+    week_label: str = "W-MON",  # choose "W-MON", "W-SUN"…
+):
+    """
+    Return a DataFrame with columns NUTS_ID, year, week, temperature (°C)
+    where temperature is the ISO-week mean of CORDEX tas sampled at each
+    region's centroid.
+
+    Parameters
+    ----------
+    path_geojson : str
+        GeoJSON with polygons and a `NUTS_ID` column.
+    fin : str
+        Folder or file pattern understood by `load_eurocordex_data`.
+    year : int
+        Year to open from the CORDEX archive.
+    week_label : str
+        Pandas/xarray resample code (default 'W-MON' = ISO weeks ending Monday).
+    """
+    # ------------------------------------------------------------------ #
+    # 1.  Region centroids
+    # ------------------------------------------------------------------ #
+    gdf = gpd.read_file(path_geojson).set_crs(4326)
+
+    centroids = gdf.to_crs(3035).geometry.centroid.to_crs(
+        4326
+    )  # metric CRS for a trustworthy centroid
+    gdf["lon"] = centroids.x
+    gdf["lat"] = centroids.y
+
+    # ------------------------------------------------------------------ #
+    # 2.  Load CORDEX tas  (monthly)  → °C
+    # ------------------------------------------------------------------ #
+    cor = load_eurocordex_data(fin=fin, year=year)  # user-supplied loader
+    tas = cor["tas"] - 273.15  # Kelvin → Celsius
+
+    # ------------------------------------------------------------------ #
+    # 3.  Transform lon/lat → rotated-pole grid coords
+    # ------------------------------------------------------------------ #
+    tfm = Transformer.from_crs(
+        CRS.from_epsg(4326),
+        CRS.from_cf(cor.rotated_pole.attrs),
+        always_xy=True,
+    )
+    rlon, rlat = tfm.transform(gdf["lon"].values, gdf["lat"].values)
+
+    # ------------------------------------------------------------------ #
+    # 4.  Sample tas at each centroid  (dims: point × time)
+    # ------------------------------------------------------------------ #
+    samp = tas.interp(
+        rlon=xr.DataArray(rlon, dims="point"),
+        rlat=xr.DataArray(rlat, dims="point"),
+        method="nearest",
+    ).transpose("point", "time")
+
+    # ------------------------------------------------------------------ #
+    # 5.  MONTHLY -> DAILY (linear) -> WEEKLY (mean)
+    # ------------------------------------------------------------------ #
+    # build a full daily index spanning the monthly series
+    # We grab the first day of the first year and the last day of the last year
+    # to ensure we cover the entire range of the time series.
+    start_year = pd.to_datetime(tas.time.values[0]).replace(day=1, month=1, hour=0)
+    end_year = pd.to_datetime(tas.time.values[-1]).replace(day=31, month=12, hour=23)
+    daily_index = pd.date_range(
+        start=start_year,
+        end=end_year,
+        freq="1D",
+    )
+
+    samp_daily = samp.interp(time=daily_index)  # linear time interp
+    samp_week = samp_daily.resample(time=week_label).mean()  # weekly mean
+
+    # ------------------------------------------------------------------ #
+    # 6.  Long-format DataFrame
+    # ------------------------------------------------------------------ #
+    df_long = (
+        samp_week.to_dataframe(name="temperature")  # point | time | temperature
+        .reset_index()
+        .merge(
+            gdf[["NUTS_ID"]].reset_index().rename(columns={"index": "point"}),
+            on="point",
+            how="left",
+        )
+    )
+
+    iso = df_long["time"].dt.isocalendar()  # ISO year/week/day
+    df_long["year"] = iso.year
+    df_long["week"] = iso.week
+
+    return df_long[["NUTS_ID", "year", "week", "temperature"]]
