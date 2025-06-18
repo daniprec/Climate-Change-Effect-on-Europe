@@ -35,8 +35,9 @@
       <div style="display: flex; align-items: center; gap: 0.5rem;">
         <label for="metricSelect">Dataset:</label>
         <select id="metricSelect">
-          <option value="mortality_rate" selected>Mortality</option>
+          <option value="mortality_rate">Mortality</option>
           <option value="population_density">Population Density</option>
+          <option value="temperature" selected>Temperature</option>
         </select>
       </div>
 
@@ -58,7 +59,7 @@
     <div id="info-popup" style="flex: 0.5; display:none">
       <h3 id="info-title">Statistics</h3>
       <p><strong>Region Name:</strong> <span id="regionName"></span></p>
-      <p><strong><span id="metricLabelPopup">Estimated Mortality (Next Year):</span></strong> <span id="estimatedValue"></span></p>
+      <p><strong><span id="metricLabelPopup">Estimated Value (Next Year):</span></strong> <span id="estimatedValue"></span></p>
       <p><strong>Estimated Change:</strong> <span id="percentageChange"></span>%</p>
     </div>
   </div>
@@ -67,8 +68,8 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     /* ------------------------- GLOBAL STATE ------------------------- */
-    // Current dataset the user wants to visualise. Either "mortality_rate" or "population_density".
-    let currentMetric = 'mortality_rate';
+    // Current dataset the user wants to visualise.
+    let currentMetric = 'temperature';
 
     // Initialise Leaflet map using backend values
     const default_zoom = parseInt("{{ zoom }}", 10);
@@ -103,13 +104,20 @@
       let fillColor = '#999';
 
       if (currentMetric === 'mortality_rate') {
-        value = props.mortality_rate || 0;                       // deaths per thousand
-        const intensity = Math.min(value * 5, 255);        // nonlinear scale for better contrast
-        fillColor = `rgb(0, ${intensity}, 0)`;              // green ramp
+        value = props.mortality_rate || 0;           // deaths per thousand
+        const intensity = Math.min(value * 5, 255);
+        fillColor = `rgb(0, ${intensity}, 0)`;       // green ramp
       } else if (currentMetric === 'population_density') {
-        value = props.population_density || 0;                      // pop per km2
-        const intensity = Math.min(value, 255);         // linear-ish scale
-        fillColor = `rgb(0, ${intensity}, 0)`;              // red ramp
+        value = props.population_density || 0;       // pop per km²
+        const intensity = Math.min(value, 255);
+        fillColor = `rgb(${intensity}, 0, 0)`;       // red ramp
+      } else if (currentMetric === 'temperature') {
+        value = props.temperature || 0;             // °C
+        // Map -20 -> 0 °C to blue, 0 -> 20 °C to light blue, 20 -> 40 °C to red-ish
+        const norm   = Math.max(Math.min(value + 20, 40), 0); // 0–40
+        const red    = Math.round((norm / 40) * 255);
+        const blue   = 255 - red;
+        fillColor = `rgb(${red}, 0, ${blue})`;
       }
 
       return {
@@ -123,88 +131,96 @@
     /* ------------------------- INTERACTION ------------------------- */
     function onEachRegion(feature, layer) {
       const props = feature.properties;
-      const metricLabel = currentMetric === 'mortality_rate' ? 'Mortality' : 'Population Density (km2)';
-      const metricVal   = currentMetric === 'mortality_rate' ? props.mortality_rate : props.population_density;
 
-      // Special-case navigation example for Austria (kept from the original template)
-      if (props.name === 'Austria') {
-        layer.bindPopup(`<b>${props.name}</b><br>${metricLabel}: ${metricVal}<br><button onclick="window.location.href='/austria'">Go to Austria</button>`);
+      let metricLabel, metricVal;
+      if (currentMetric === 'mortality_rate') {
+        metricLabel = 'Mortality';
+        metricVal   = props.mortality_rate;
+      } else if (currentMetric === 'population_density') {
+        metricLabel = 'Population Density (km²)';
+        metricVal   = props.population_density;
       } else {
-        layer.bindPopup(`<b>${props.name}</b><br>${metricLabel}: ${metricVal}`);
+        metricLabel = 'Temperature (°C)';
+        metricVal   = props.temperature;
       }
 
+      const valueText = metricVal !== undefined && metricVal !== null ? metricVal.toFixed(1) : 'N/A';
+
+      // Popup
+      layer.bindPopup(`<b>${props.name}</b><br>${metricLabel}: ${valueText}`);
+
       // Click -> show graph and stats
-      layer.on('click', () => plotGraphFromAPI(props.NUTS_ID, props.name));
+      layer.on('click', () => plotGraphFromAPI(props.NUTS_ID, props.name, metricLabel));
     }
 
     // Update the info side‑panel
-    function updateInfoPopup(properties) {
-      const metricWord  = currentMetric === 'mortality_rate' ? 'Mortality' : 'Population Density';
-      const metricKey   = currentMetric === 'mortality_rate' ? `mortality_{{ max_year }}` : `population_density_{{ max_year }}`;
-      const currentVal  = properties[metricKey] || 0;
-      const percentageChange = (Math.random() * 5 + 1).toFixed(2); // — placeholder demo —
-      const estimatedVal = (currentVal * (1 + percentageChange/100)).toFixed(0);
+    function updateInfoPopup(properties, metricLabel, metricKey) {
+      const currentVal = properties[metricKey] || 0;
+      const percentageChange = (Math.random() * 5 + 1).toFixed(2); // placeholder demo
+      const estimatedVal     = (currentVal * (1 + percentageChange / 100)).toFixed(1);
 
-      document.getElementById('regionName').innerText      = properties.name;
-      document.getElementById('metricLabelPopup').innerText = `Estimated ${metricWord} (Next Year):`;
+      document.getElementById('regionName').innerText       = properties.name;
+      document.getElementById('metricLabelPopup').innerText = `Estimated ${metricLabel} (Next Year):`;
       document.getElementById('estimatedValue').innerText   = estimatedVal;
       document.getElementById('percentageChange').innerText = percentageChange;
       document.getElementById('info-popup').style.display   = 'block';
     }
 
     // Draw line‑chart for selected region using /api/data/ts
-  function plotGraphFromAPI(nuts_id, name) {
-    const metricWord = currentMetric === 'mortality_rate' ? 'Mortality (per 100,000)' : 'Population Density (per km²)';
+    function plotGraphFromAPI(nuts_id, name, metricLabel) {
+      fetch(`/api/data/ts?region={{ region }}&metric=${currentMetric}&nuts_id=${nuts_id}`)
+        .then(response => response.json())
+        .then(result => {
+          if (!result.data) return;
 
-    fetch(`/api/data/ts?region={{ region }}&metric=${currentMetric}&nuts_id=${nuts_id}`)
-      .then(response => response.json())
-      .then(result => {
-        if (!result.data) return;
+          const labels = result.data.map(d => `${d.year}-W${String(d.week).padStart(2, '0')}`);
+          const values = result.data.map(d => d.value);
 
-        const labels = result.data.map(d => `${d.year}-W${String(d.week).padStart(2, '0')}`);
-        const values = result.data.map(d => d.value);
+          // Clear previous graph and create new canvas
+          const graphDiv = document.getElementById('graph');
+          graphDiv.innerHTML = '';
+          const canvas = document.createElement('canvas');
+          graphDiv.appendChild(canvas);
+          const ctx = canvas.getContext('2d');
 
-        // Clear previous graph and create new canvas
-        const graphDiv = document.getElementById('graph');
-        graphDiv.innerHTML = '';
-        const canvas = document.createElement('canvas');
-        graphDiv.appendChild(canvas);
-        const ctx = canvas.getContext('2d');
-
-        new Chart(ctx, {
-          type: 'line',
-          data: {
-            labels: labels,
-            datasets: [{
-              label: `${metricWord} for ${name}`,
-              data: values,
-              borderColor: '#6dc201',
-              backgroundColor: '#6dc2014D',
-              fill: true,
-              tension: 0.2
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-              x: {
-                ticks: {
-                  autoSkip: true,
-                  maxTicksLimit: 12
+          new Chart(ctx, {
+            type: 'line',
+            data: {
+              labels: labels,
+              datasets: [{
+                label: `${metricLabel} for ${name}`,
+                data: values,
+                borderColor: '#6dc201',
+                backgroundColor: '#6dc2014D',
+                fill: true,
+                tension: 0.2
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              scales: {
+                x: {
+                  ticks: {
+                    autoSkip: true,
+                    maxTicksLimit: 12
+                  }
+                },
+                y: {
+                  beginAtZero: false
                 }
-              },
-              y: {
-                beginAtZero: true,
-                min: 0
               }
             }
-          }
-        });
-        updateInfoPopup(properties);
-      })
-      .catch(error => console.error("Error loading time series:", error));
-  }
+          });
+
+          // Update side‑panel with the latest datapoint
+          const latest = result.data[result.data.length - 1] || {};
+          const propsForInfo = { name: name };
+          propsForInfo[metricLabel] = latest.value;
+          updateInfoPopup(propsForInfo, metricLabel, metricLabel);
+        })
+        .catch(error => console.error("Error loading time series:", error));
+    }
 
     /* ------------------------- EVENT HANDLERS ------------------------- */
     // Year slider (with debounce)
@@ -230,7 +246,6 @@
     // Metric dropdown
     document.getElementById('metricSelect').addEventListener('change', function () {
       currentMetric = this.value;
-      // Refresh map layer for current year and week
       const selectedYear = document.getElementById('yearSlider').value;
       const selectedWeek = document.getElementById('weekSlider').value;
       loadDataForYear("{{ region }}", selectedYear, selectedWeek);
