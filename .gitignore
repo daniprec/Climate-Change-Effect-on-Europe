@@ -2,6 +2,8 @@
 *.zip
 *.pyc
 
+build/
 cache/
 notebooks/
 output/*
+*.egg_info/

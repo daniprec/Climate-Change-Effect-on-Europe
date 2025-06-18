@@ -1,6 +1,9 @@
+import datetime as dt
 from datetime import datetime
 from pathlib import Path
 
+import cartopy.crs as ccrs
+import matplotlib.pyplot as plt
 import xarray as xr
 
 
@@ -62,3 +65,51 @@ def load_eurocordex_data(fin: str = "./data", year: int = 2025) -> xr.Dataset:
     ds = xr.open_dataset(closest_file)
 
     return ds
+
+
+def plot_eurocordex_data(
+    ds: xr.Dataset, date: str = "2028-01-01"
+) -> tuple[plt.Figure, plt.Axes]:
+    """
+    Plot the Euro-CORDEX data.
+    The data is expected to be in a rotated pole projection.
+    """
+    # Select the surface air temperature variable
+    tas = ds["tas"]
+
+    # Pick the date closest to the specified date
+    # Convert the date to a datetime object
+    ts_target = dt.datetime.strptime(date, "%Y-%m-%d")
+    # Find the closest time index to the target date
+    ts = tas.sel(time=ts_target, method="nearest").time.values
+    tas_at_t0 = tas.sel(time=ts)
+
+    # The dataset is in a rotated pole projection
+    # Get the rotated pole attributes
+    dict_rotated_pole = ds.rotated_pole.attrs
+    lat = dict_rotated_pole["grid_north_pole_latitude"]
+    lon = dict_rotated_pole["grid_north_pole_longitude"]
+
+    # Create a rotated pole projection
+    # The pole latitude and longitude are in degrees
+    rp = ccrs.RotatedPole(
+        pole_longitude=lon,
+        pole_latitude=lat,
+        globe=ccrs.Globe(semimajor_axis=6370000, semiminor_axis=6370000),
+    )
+
+    # Create a figure with a rotated pole projection
+    fig = plt.figure(figsize=(10, 6), dpi=300)
+    ax = fig.add_subplot(1, 1, 1, projection=rp)
+    ax.coastlines("50m", linewidth=0.8)
+
+    # Plot the temperature with lower and upper bounds (in Kelvin)
+    tas_at_t0.plot(ax=ax, transform=rp, cmap="coolwarm", vmin=235, vmax=320)
+
+    # Add title
+    ax.set_title(f"Surface Air Temperature ({ts.astype('datetime64[M]').astype(str)})")
+
+    # Tight layout to avoid overlapping labels
+    plt.tight_layout()
+
+    return fig, ax
