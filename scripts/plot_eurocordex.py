@@ -1,5 +1,4 @@
 import datetime as dt
-import sys
 from pathlib import Path
 
 import cartopy.crs as ccrs
@@ -7,8 +6,7 @@ import imageio
 import matplotlib.pyplot as plt
 import xarray as xr
 
-sys.path.append(".")
-from src.cordex import load_eurocordex_data
+from ccee.cordex import load_eurocordex_data
 
 
 def plot_eurocordex_data(

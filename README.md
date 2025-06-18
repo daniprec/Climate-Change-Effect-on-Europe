@@ -12,6 +12,7 @@
 This Flask application visualizes European population, mortality, and temperature data interactively on a map. It supports multi-scale zoom and analysis, with additional granularity for Vienna at the NUTS-3 level.
 
 ## 📑 Table of Contents
+
 - [About](#-about)
 - [How to Build](#-how-to-build)
 - [How to Download Data](#-how-to-download-data)
@@ -20,7 +21,7 @@ This Flask application visualizes European population, mortality, and temperatur
 
 ## 🚀 About
 
-This project provides an interactive dashboard using **Flask** and **Folium** to explore demographic and climate statistics across Europe:
+This project provides an interactive dashboard using **Flask** and **Folium** to explore the Climate Change Effect on Europe (CCEE):
 
 - **Population & Mortality**: Monthly data per capita, visualized regionally.
 - **Temperature (tas)**: Monthly near-surface air temperature data.

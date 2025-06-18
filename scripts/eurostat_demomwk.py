@@ -1,12 +1,9 @@
-import sys
-
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-sys.path.append(".")
-from src.cordex import load_eurocordex_data
-from src.eurostat import download_eurostat_data
+from ccee.cordex import load_eurocordex_data
+from ccee.eurostat import download_eurostat_data
 
 
 def main():
