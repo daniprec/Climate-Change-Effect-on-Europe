@@ -127,6 +127,7 @@ def cordex_tas_to_dataframe_per_region(
     fin: str = "../data",
     year: int = 2025,
     week_label: str = "W-MON",  # choose "W-MON", "W-SUN"…
+    rcp: int = 85,  # Representative Concentration Pathway (RCP) scenario
 ):
     """
     Return a DataFrame with columns NUTS_ID, year, week, temperature (°C)
@@ -158,7 +159,7 @@ def cordex_tas_to_dataframe_per_region(
     # ------------------------------------------------------------------ #
     # 2.  Load CORDEX tas  (monthly)  -> °C
     # ------------------------------------------------------------------ #
-    cor = load_eurocordex_data(fin=fin, year=year)  # user-supplied loader
+    cor = load_eurocordex_data(fin=fin, year=year, rcp=rcp)  # user-supplied loader
     tas = cor["tas"] - 273.15  # Kelvin -> Celsius
 
     # ------------------------------------------------------------------ #

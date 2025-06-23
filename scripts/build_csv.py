@@ -42,21 +42,30 @@ def main(path_data: str = "./data", path_geojson: str = "./data/regions.geojson"
     df["mortality_rate"] = 100000 * df["mortality"] / df["population"]
 
     # Include CORDEX temperature data
-    ls_df = []
-    for year in range(2006, 2100, 10):
-        df_tas = cordex_tas_to_dataframe_per_region(
-            path_geojson=path_geojson, fin=path_data, year=year
+    for rcp in [45, 85]:
+        ls_df = []
+        for year in range(2006, 2100, 10):
+            df_tas = cordex_tas_to_dataframe_per_region(
+                path_geojson=path_geojson, fin=path_data, year=year, rcp=rcp
+            )
+            ls_df.append(df_tas)
+        df_tas = pd.concat(ls_df, ignore_index=True)
+
+        # Merge the temperature data
+        df = df.merge(df_tas, on=["NUTS_ID", "year", "week"], how="outer")
+
+        # Interpolate up to 3 weeks of missing data
+        df["temperature"] = df.groupby("NUTS_ID")["temperature"].transform(
+            lambda x: x.interpolate(method="linear", limit=3, limit_direction="both")
         )
-        ls_df.append(df_tas)
-    df_tas = pd.concat(ls_df, ignore_index=True)
 
-    # Merge the temperature data
-    df = df.merge(df_tas, on=["NUTS_ID", "year", "week"], how="outer")
+        # Rename "temperature" to avoid confusion
+        df.rename(columns={"temperature": f"temperature_rcp{rcp}"}, inplace=True)
 
-    # Interpolate up to 3 weeks of missing data
-    df["temperature"] = df.groupby("NUTS_ID")["temperature"].transform(
-        lambda x: x.interpolate(method="linear", limit=3, limit_direction="both")
-    )
+    # Drop any year after 2100, as we only consider the 21st century
+    df = df[df["year"] <= 2100].copy()
+    # Reset the index after all merges
+    df.reset_index(drop=True, inplace=True)
 
     # ------------------------------------------------------
     # Fill missing dates
