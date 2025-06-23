@@ -1,4 +1,4 @@
-cartopy
+cartopy==0.24.1
 Flask==3.1.0
 geopandas==1.0.1
 gitpython
