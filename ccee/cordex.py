@@ -5,6 +5,7 @@ from pathlib import Path
 import cartopy.crs as ccrs
 import geopandas as gpd
 import matplotlib.pyplot as plt
+import pandas as pd
 import xarray as xr
 from pyproj import CRS, Transformer
 
@@ -115,10 +116,6 @@ def plot_eurocordex_data(
     plt.tight_layout()
 
     return fig, ax
-
-
-import pandas as pd
-import xarray as xr
 
 
 def cordex_tas_to_dataframe_per_region(
