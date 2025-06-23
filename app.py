@@ -1,9 +1,6 @@
-import hashlib
-import hmac
 import os
 
 import geopandas as gpd
-import git
 import pandas as pd
 from dotenv import load_dotenv
 from flask import Flask, jsonify, render_template, request
@@ -119,34 +116,6 @@ def app_data_time_series():
             "data": time_series_data,
         }
     )
-
-
-@app.route("/update_server", methods=["POST"])
-def webhook():
-    secret = os.environ.get("GITHUB_WEBHOOK_SECRET")
-    if secret is None:
-        return "Webhook secret not configured", 500
-
-    signature_header = request.headers.get("X-Hub-Signature")
-    if signature_header is None:
-        return "Missing signature", 403
-
-    sha_name, signature = signature_header.split("=")
-    if sha_name != "sha1":
-        return "Unsupported signature method", 501
-
-    # Compute and compare HMAC
-    mac = hmac.new(secret.encode(), msg=request.data, digestmod=hashlib.sha1)
-    if not hmac.compare_digest(mac.hexdigest(), signature):
-        return "Invalid signature", 403
-
-    # Pull changes from GitHub
-    repo_path = os.path.abspath(os.path.dirname(__file__))  # path to your repo
-    repo = git.Repo(repo_path)
-    origin = repo.remotes.origin
-    origin.pull()
-
-    return "Repository updated and server reloaded", 200
 
 
 if __name__ == "__main__":
