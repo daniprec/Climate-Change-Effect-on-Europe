@@ -2,13 +2,14 @@ from pathlib import Path
 
 import imageio
 import matplotlib.pyplot as plt
+import typer
 
 from ccee.cordex import load_eurocordex_data, plot_eurocordex_data
 
 
-def main(fout: str = "output"):
+def main(fout: str = "output", rcp: int = 85):
     # Load the Euro-CORDEX data
-    ds = load_eurocordex_data()
+    ds = load_eurocordex_data(rcp=rcp)
 
     ls_files = []
 
@@ -36,7 +37,7 @@ def main(fout: str = "output"):
     ls_files = sorted(list(set(ls_files)))
 
     # Create a gif from the png files
-    with imageio.get_writer("output/tas.gif", mode="I", loop=0) as writer:
+    with imageio.get_writer(f"output/tas_rcp{rcp}.gif", mode="I", loop=0) as writer:
         for filename in ls_files:
             image = imageio.imread(filename)
             writer.append_data(image)
@@ -46,4 +47,4 @@ def main(fout: str = "output"):
 
 
 if __name__ == "__main__":
-    main()
+    typer.run(main)

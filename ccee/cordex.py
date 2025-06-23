@@ -10,7 +10,9 @@ import xarray as xr
 from pyproj import CRS, Transformer
 
 
-def load_eurocordex_data(fin: str = "./data", year: int = 2025) -> xr.Dataset:
+def load_eurocordex_data(
+    fin: str = "./data", year: int = 2025, rcp: int = 85
+) -> xr.Dataset:
     """
     Load the Euro-CORDEX data from the specified folder.
     The data is expected to be in NetCDF format.
@@ -28,7 +30,7 @@ def load_eurocordex_data(fin: str = "./data", year: int = 2025) -> xr.Dataset:
         The loaded dataset from the closest matching file
     """
     # Define the folder containing the data
-    folder = Path(fin)
+    folder = Path(fin) / f"rcp{rcp}"
 
     # The file names end with "YYYYMM-YYYYMM.nc" where YYYY is the year
     # and MM is the month. The first element is the start date and the second
