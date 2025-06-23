@@ -80,7 +80,7 @@ def plot_eurocordex_data(
     The data is expected to be in a rotated pole projection.
     """
     # Select the surface air temperature variable
-    tas = ds["tas"]
+    tas = ds["tas"].copy()  # Copy to avoid modifying the original dataset
 
     # Pick the date closest to the specified date
     # Convert the date to a datetime object
@@ -88,6 +88,8 @@ def plot_eurocordex_data(
     # Find the closest time index to the target date
     ts = tas.sel(time=ts_target, method="nearest").time.values
     tas_at_t0 = tas.sel(time=ts)
+    # Convert from Kelvin to Celsius
+    tas_at_t0 = tas_at_t0 - 273.15
 
     # The dataset is in a rotated pole projection
     # Get the rotated pole attributes
@@ -108,8 +110,8 @@ def plot_eurocordex_data(
     ax = fig.add_subplot(1, 1, 1, projection=rp)
     ax.coastlines("50m", linewidth=0.8)
 
-    # Plot the temperature with lower and upper bounds (in Kelvin)
-    tas_at_t0.plot(ax=ax, transform=rp, cmap="coolwarm", vmin=235, vmax=320)
+    # Plot the temperature with lower and upper bounds (in Celsius)
+    tas_at_t0.plot(ax=ax, transform=rp, cmap="coolwarm", vmin=-40, vmax=50)
 
     # Add title
     ax.set_title(f"Surface Air Temperature ({ts.astype('datetime64[M]').astype(str)})")
@@ -154,13 +156,13 @@ def cordex_tas_to_dataframe_per_region(
     gdf["lat"] = centroids.y
 
     # ------------------------------------------------------------------ #
-    # 2.  Load CORDEX tas  (monthly)  → °C
+    # 2.  Load CORDEX tas  (monthly)  -> °C
     # ------------------------------------------------------------------ #
     cor = load_eurocordex_data(fin=fin, year=year)  # user-supplied loader
-    tas = cor["tas"] - 273.15  # Kelvin → Celsius
+    tas = cor["tas"] - 273.15  # Kelvin -> Celsius
 
     # ------------------------------------------------------------------ #
-    # 3.  Transform lon/lat → rotated-pole grid coords
+    # 3.  Transform lon/lat -> rotated-pole grid coords
     # ------------------------------------------------------------------ #
     tfm = Transformer.from_crs(
         CRS.from_epsg(4326),

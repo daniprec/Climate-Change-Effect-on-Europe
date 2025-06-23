@@ -42,18 +42,13 @@ def main(path_data: str = "./data", path_geojson: str = "./data/regions.geojson"
     df["mortality_rate"] = 100000 * df["mortality"] / df["population"]
 
     # Include CORDEX temperature data
-    df_tas_2006_2010 = cordex_tas_to_dataframe_per_region(
-        path_geojson=path_geojson, fin=path_data, year=2006
-    )
-    df_tas_2011_2020 = cordex_tas_to_dataframe_per_region(
-        path_geojson=path_geojson, fin=path_data, year=2012
-    )
-    df_tas_2021_2030 = cordex_tas_to_dataframe_per_region(
-        path_geojson=path_geojson, fin=path_data, year=2022
-    )
-    df_tas = pd.concat(
-        [df_tas_2006_2010, df_tas_2011_2020, df_tas_2021_2030], ignore_index=True
-    )
+    ls_df = []
+    for year in range(2006, 2100, 10):
+        df_tas = cordex_tas_to_dataframe_per_region(
+            path_geojson=path_geojson, fin=path_data, year=year
+        )
+        ls_df.append(df_tas)
+    df_tas = pd.concat(ls_df, ignore_index=True)
 
     # Merge the temperature data
     df = df.merge(df_tas, on=["NUTS_ID", "year", "week"], how="outer")
