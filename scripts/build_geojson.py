@@ -3,6 +3,7 @@ from io import BytesIO
 from zipfile import ZIP_DEFLATED, ZipFile
 
 import geopandas as gpd
+import numpy as np
 import pandas as pd
 import requests
 
@@ -57,6 +58,14 @@ def build_europe_map(
     gdf_europe = gdf_europe.rename(columns={"ISO_A2": "NUTS_ID", "NAME_SORT": "name"})[
         ["NUTS_ID", "name", "geometry"]
     ]
+
+    # Replace -99 NUTS_IDs with None (missing values)
+    gdf_europe["NUTS_ID"] = gdf_europe["NUTS_ID"].replace("-99", np.nan)
+
+    # If any NUTS_ID is empty, fill it with the first two characters of the name
+    gdf_europe["NUTS_ID"] = gdf_europe["NUTS_ID"].fillna(
+        gdf_europe["name"].str[:2].str.upper()
+    )
 
     # Check if the spatial data is available
     if os.path.exists(path_geojson):
