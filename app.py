@@ -2,10 +2,7 @@ import os
 
 import geopandas as gpd
 import pandas as pd
-from dotenv import load_dotenv
 from flask import Flask, jsonify, render_template, request
-
-load_dotenv()
 
 app = Flask(__name__)
 
