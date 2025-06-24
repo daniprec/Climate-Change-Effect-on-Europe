@@ -54,6 +54,18 @@ const METRIC_CFG = {
       color: '#666'
     };
   }
+
+  /* ---------- helper: show placeholder text ---------- */
+  function resetGraph() {
+    const holder = document.getElementById('graph');
+    holder.innerHTML =
+      '<div style="color:#555;font:14px/1.4em system-ui, sans-serif;'+
+      'text-align:center;padding-top:40%;opacity:0.8;">'+
+      'Click on a region to display its information</div>';
+  }
+  
+  /* call it once at startup */
+  resetGraph();
   
   /* =================== POPUP + CHART ===================== */
   function onEachFeature(feature, layer) {
@@ -153,6 +165,8 @@ const METRIC_CFG = {
   metricSelect.addEventListener('change', () => {
     currentMetric = metricSelect.value;
     loadGeoJSON(yearSlider.value, weekSlider.value);
+    if (currentChart) { currentChart.destroy(); currentChart = null; }
+    resetGraph();                         // show hint again
     document.getElementById('graph').innerHTML = '';
     document.getElementById('info-popup').style.display = 'none';
   });
