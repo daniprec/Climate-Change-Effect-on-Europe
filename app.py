@@ -31,7 +31,7 @@ def index():
         min_year=min_year,
         max_year=max_year,
         center_lat=50,
-        center_lon=5,
+        center_lon=20,
         zoom=4,
         region="Europe",
     )

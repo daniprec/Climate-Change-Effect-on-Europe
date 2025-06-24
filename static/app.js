@@ -11,12 +11,12 @@ const METRIC_CFG = {
       colour: v => `rgb(0, ${Math.min(v, 255)}, 0)`
     },
     temperature_rcp45: {
-      label: 'Temperature RCP 4.5 (°C)',
+      label: 'Temperature (RCP 4.5) (°C)',
       value: p => p.temperature_rcp45 ?? 0,
       colour: v => `rgb(${Math.min((v + 20) * 5, 255)}, 0, 0)`
     },
     temperature_rcp85: {
-      label: 'Temperature RCP 8.5 (°C)',
+      label: 'Temperature (RCP 8.5) (°C)',
       value: p => p.temperature_rcp85 ?? 0,
       colour: v => `rgb(${Math.min((v + 20) * 5, 255)}, 0, 0)`
     }
@@ -58,18 +58,29 @@ const METRIC_CFG = {
   /* =================== POPUP + CHART ===================== */
   function onEachFeature(feature, layer) {
     const p = feature.properties;
-    const popup = [
-      `<b>${p.name}</b>`,
-      `Mortality: ${p.mortality_rate ?? 'n/a'} per 100 k`,
-      `Population Density: ${p.population_density ?? 'n/a'} per km²`,
-      `Temp RCP 4.5: ${p.temperature_rcp45 ?? 'n/a'} °C`,
-      `Temp RCP 8.5: ${p.temperature_rcp85 ?? 'n/a'} °C`
-    ];
-    if (p.name === 'Austria') popup.push('<button onclick="window.location.href=\'/austria\'">Go to Austria</button>');
-    layer.bindPopup(popup.join('<br>'));
   
-    layer.on('click', () => {drawTimeSeries(p.NUTS_ID, p.name)});
-  }
+    // Build the list only with fields that exist
+    const popupLines = [`<b>${p.name}</b>`];
+  
+    if (p.mortality_rate   != null) popupLines.push(`Mortality: ${p.mortality_rate} per 100 k`);
+    if (p.population_density != null) popupLines.push(`Population Density: ${p.population_density} per km²`);
+    if (p.temperature_rcp45 != null) popupLines.push(`Temp (RCP 4.5): ${p.temperature_rcp45} °C`);
+    if (p.temperature_rcp85 != null) popupLines.push(`Temp (RCP 8.5): ${p.temperature_rcp85} °C`);
+  
+    // Optional navigation button for Austria
+    if (p.name === 'Austria') {
+      popupLines.push(
+        '<button onclick="window.location.href=\'/austria\'">Go to Austria</button>'
+      );
+    }
+  
+    layer.bindPopup(popupLines.join('<br>'));
+  
+    // Click ⇒ show time-series
+    layer.on('click', () => {
+      drawTimeSeries(p.NUTS_ID, p.name);
+    });
+  }  
 
   /* global to hold the active chart */
   let currentChart = null;
