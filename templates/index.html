@@ -33,7 +33,7 @@
         <select id="metricSelect">
           <option value="mortality_rate">Mortality</option>
           <option value="population_density">Population Density</option>
-          <option value="temperature_rcp45" selected>Temperature (RCP 4.5)</option>
+          <option value="temperature_rcp45">Temperature (RCP 4.5)</option>
           <option value="temperature_rcp85" selected>Temperature (RCP 8.5)</option>
         </select>
       </div>
@@ -53,9 +53,11 @@
     <div id="info-popup" style="flex:0.5;display:none">
       <h3>Statistics</h3>
       <p><strong>Region Name:</strong> <span id="regionName"></span></p>
-      <p><strong><span id="metricLabelPopup">Estimated Metric (Next Year):</span></strong> <span id="estimatedValue"></span></p>
-      <p><strong>Estimated Change:</strong> <span id="percentageChange"></span>%</p>
-    </div>
+      <p>
+        <strong><span id="metricLabel"></span>:</strong>
+        <span id="metricValue"></span>
+      </p>
+    </div>    
   </div>
 
   <!-- ===================== DATA SOURCES ===================== -->
@@ -68,108 +70,24 @@
     </ul>
   </div>
 
-  <!-- ===================== SCRIPTS ===================== -->
+  <!-- Leaflet core JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Pass server vars to JS -->
   <script>
-    /* ---------- GLOBAL STATE ---------- */
-    let currentMetric = 'temperature_rcp85';
-    const map = L.map('map').setView([parseFloat("{{ center_lat }}"), parseFloat("{{ center_lon }}")], parseInt("{{ zoom }}",10));
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
-    let geoJsonLayer = null;
-
-    /* ---------- DATA LOADING ---------- */
-    function loadDataForYear(region, year, week){
-      fetch(`/api/data?region=${region}&year=${year}&week=${week}&metric=${currentMetric}`)
-        .then(r=>r.json())
-        .then(data=>{
-          if(geoJsonLayer) map.removeLayer(geoJsonLayer);
-          geoJsonLayer=L.geoJSON(data,{
-            style: featureStyle,
-            onEachFeature: onEachRegion
-          }).addTo(map);
-        })
-        .catch(err=>console.error('Error fetching data:',err));
-    }
-
-    /* ---------- STYLING ---------- */
-    function featureStyle(feat){
-      const p = feat.properties;
-      let fill='#999', val=0;
-      if(currentMetric==='mortality_rate'){
-        val=p.mortality_rate??0; fill=`rgb(0,${Math.min(val*5,255)},0)`;
-      }else if(currentMetric==='population_density'){
-        val=p.population_density??0; fill=`rgb(${Math.min(val,255)},0,0)`;
-      }else if(currentMetric==='temperature_rcp45'){
-        val=p.temperature_rcp45??0; fill=`rgb(${Math.min((val+20)*5,255)},0,0)`;
-      }
-      else if(currentMetric==='temperature_rcp85'){
-        val=p.temperature_rcp85??0; fill=`rgb(${Math.min((val+20)*5,255)},0,0)`;
-      }
-      return{fillColor:fill,fillOpacity:0.7,weight:1,color:'#666'};
-    }
-
-    /* ---------- POPUPS & INTERACTION ---------- */
-    function onEachRegion(feat,layer){
-      const p=feat.properties;
-      const lines=[
-        `<b>${p.name}</b>`,
-        `Mortality: ${p.mortality_rate??'n/a'} per 100k`,
-        `Population Density: ${p.population_density??'n/a'} per km²`,
-        `Temperature (RCP 4.5): ${p.temperature_rcp45??'n/a'} °C`,
-        `Temperature (RCP 8.5): ${p.temperature_rcp85??'n/a'} °C`
-      ];
-      if(p.name==='Austria') lines.push(`<button onclick=\"window.location.href='/austria'\">Go to Austria</button>`);
-      layer.bindPopup(lines.join('<br>'));
-      layer.on('click',()=>plotGraphFromAPI(p.NUTS_ID,p.name));
-    }
-
-    /* ---------- GRAPH & INFO PANEL ---------- */
-    function updateInfoPopup(word,name,val,pct){
-      document.getElementById('regionName').innerText=name;
-      document.getElementById('metricLabelPopup').innerText=`Estimated ${word} (Next Year):`;
-      document.getElementById('estimatedValue').innerText=val;
-      document.getElementById('percentageChange').innerText=pct;
-      document.getElementById('info-popup').style.display='block';
-    }
-
-    function plotGraphFromAPI(nuts_id,name){
-      const word=currentMetric==='mortality_rate'?'Mortality (per 100k)':currentMetric==='population_density'?'Population Density (km²)':'Temperature (°C)';
-      fetch(`/api/data/ts?region={{ region }}&metric=${currentMetric}&nuts_id=${nuts_id}`)
-        .then(r=>r.json())
-        .then(res=>{
-          if(!res.data) return;
-          const labels=res.data.map(d=>`${d.year}-W${String(d.week).padStart(2,'0')}`);
-          const values=res.data.map(d=>d.value);
-          const gDiv=document.getElementById('graph'); gDiv.innerHTML='';
-          const canvas=document.createElement('canvas'); gDiv.appendChild(canvas);
-          new Chart(canvas.getContext('2d'),{
-            type:'line',data:{labels,datasets:[{label:`${word} for ${name}`,data:values,borderColor:'#6dc201',backgroundColor:'#6dc2014D',fill:true,tension:0.2}]},
-            options:{responsive:true,maintainAspectRatio:false,scales:{x:{ticks:{autoSkip:true,maxTicksLimit:12}},y:{beginAtZero:true}}}
-          });
-          const pct=(Math.random()*5+1).toFixed(2); const cur=values[values.length-1]; const est=(cur*(1+pct/100)).toFixed(2);
-          updateInfoPopup(word,name,est,pct);
-        }).catch(err=>console.error('Error loading TS:',err));
-    }
-
-    /* ---------- EVENT HANDLERS ---------- */
-    let timer;
-    document.getElementById('yearSlider').addEventListener('input',function(){
-      clearTimeout(timer); const y=this.value; document.getElementById('yearLabel').innerText=y;
-      timer=setTimeout(()=>loadDataForYear("{{ region }}",y,document.getElementById('weekSlider').value),300);
-    });
-    document.getElementById('weekSlider').addEventListener('input',function(){
-      clearTimeout(timer); const w=this.value; document.getElementById('weekLabel').innerText=w;
-      timer=setTimeout(()=>loadDataForYear("{{ region }}",document.getElementById('yearSlider').value,w),300);
-    });
-    document.getElementById('metricSelect').addEventListener('change',function(){
-      currentMetric=this.value; const y=document.getElementById('yearSlider').value; const w=document.getElementById('weekSlider').value;
-      loadDataForYear("{{ region }}",y,w); document.getElementById('graph').innerHTML=''; document.getElementById('info-popup').style.display='none';
-    });
-
-    /* ---------- INITIALISATION ---------- */
-    loadDataForYear("{{ region }}","{{ max_year }}",1);
+    window.FLASK_CTX = {
+      centerLat:  parseFloat("{{ center_lat }}"),
+      centerLon:  parseFloat("{{ center_lon }}"),
+      zoom:       parseInt("{{ zoom }}", 10),
+      regionSlug: "{{ region }}",
+      maxYear:    "{{ max_year }}"
+    };
   </script>
+
+  <!-- Application logic -->
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
 </body>
+
 <footer>
   <p>Demo by <a href="http://danielprecioso.com" target="_blank">Daniel Precioso</a> for IE University. For demonstration purposes only.</p>
 </footer>
