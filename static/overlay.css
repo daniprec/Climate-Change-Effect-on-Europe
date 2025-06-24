@@ -1,0 +1,72 @@
+/* full-page map */
+html, body {
+    height: 100%;
+    margin: 0;
+    overflow: hidden;                 /* prevent page scroll */
+  }
+  #map {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;                       /* keep below overlays */
+  }
+  
+  /* translucent panels */
+  .overlay {
+    position: absolute;
+    z-index: 1000;
+    background: rgba(255, 255, 255, 0.8);
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    backdrop-filter: blur(4px);       /* subtle glass look */
+    transition: background 0.2s ease;
+    font-family: system-ui, sans-serif;
+  }
+  .overlay:hover,
+  .overlay:focus-within {
+    background: rgba(255, 255, 255, 1.0);
+  }
+  
+  /* place corners */
+  #controls   { top: 20px;  left: 20px;  max-width: 240px; }
+  #info-popup { bottom: 20px; right: 20px; max-width: 260px; }
+  
+  /* hidden until a region is clicked */
+  .hidden { display: none; }
+  
+  #logo {
+    top: 20px;
+    right: 20px;
+    width: 90px;              /* adjust as needed   */
+    pointer-events: auto;     /* keep clickable     */
+    background: transparent;         /* no white box       */
+    cursor: pointer;       /* pointer cursor     */
+  }
+
+  /* info badge (little circle) */
+  .info-badge {
+    bottom: 20px;
+    left: 20px;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    font: 700 15px/26px system-ui, sans-serif;
+    text-align: center;
+    background: rgba(0,0,0,0.45);
+    color: #fff;
+    cursor: pointer;
+    transition: background .2s;
+  }
+  .info-badge:hover { background: rgba(0,0,0,0.7); }
+
+  /* info panel itself */
+  .info-panel {
+    bottom: 60px;                 /* floats above badge */
+    left: 20px;
+    max-width: 230px;
+    display: none;                /* hidden until hover */
+  }
+  /* show the panel only while the badge or panel is hovered */
+  #infoToggle:hover  + #infoPanel,
+  #infoPanel:hover     { display: block; }

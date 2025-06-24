@@ -24,7 +24,8 @@ const METRIC_CFG = {
   
   /* ======================= MAP INIT ======================= */
   let currentMetric = 'temperature_rcp85';
-  const map = L.map('map').setView([FLASK_CTX.centerLat, FLASK_CTX.centerLon], FLASK_CTX.zoom);
+  const map = L.map('map', { zoomControl: false })
+    .setView([FLASK_CTX.centerLat, FLASK_CTX.centerLon], FLASK_CTX.zoom);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
   let geoJsonLayer = null;
   
@@ -67,47 +68,43 @@ const METRIC_CFG = {
     if (p.name === 'Austria') popup.push('<button onclick="window.location.href=\'/austria\'">Go to Austria</button>');
     layer.bindPopup(popup.join('<br>'));
   
-    layer.on('click', () => {
-      const cfg = METRIC_CFG[currentMetric];
-      const val = cfg.value(p);
-      updateInfo(p.name, cfg.label, val);
-      drawTimeSeries(p.NUTS_ID, p.name);
-    });
+    layer.on('click', () => {drawTimeSeries(p.NUTS_ID, p.name)});
   }
 
-  function updateInfo(name, label, value) {
-    document.getElementById('regionName').innerText = name;
-    document.getElementById('metricLabel').innerText = label;
-    document.getElementById('metricValue').innerText = value;
-    document.getElementById('info-popup').style.display = 'block';
-  }
+  /* global to hold the active chart */
+  let currentChart = null;
   
   function drawTimeSeries(nutsId, regionName) {
     const cfg = METRIC_CFG[currentMetric];
+  
     fetch(`/api/data/ts?region=${FLASK_CTX.regionSlug}&metric=${currentMetric}&nuts_id=${nutsId}`)
       .then(r => r.json())
       .then(res => {
-        if (!res.data) return;
+        if (!res.data || !res.data.length) return;
   
+        /* labels & values */
         const labels = res.data.map(d => `${d.year}-W${String(d.week).padStart(2, '0')}`);
         const values = res.data.map(d => d.value);
   
-        const gDiv = document.getElementById('graph');
-        gDiv.innerHTML = '';
+        /* prepare a fresh canvas each click */
+        const holder = document.getElementById('graph');
+        holder.innerHTML = '';                          // remove any previous canvas
         const canvas = document.createElement('canvas');
-        gDiv.appendChild(canvas);
+        holder.appendChild(canvas);
   
         new Chart(canvas.getContext('2d'), {
           type: 'line',
           data: {
             labels,
             datasets: [{
-              label: `${cfg.label} for ${regionName}`,
-              data: values,
-              borderColor: '#6dc201',
-              backgroundColor: '#6dc2014D',
-              fill: true,
-              tension: 0.2
+              label : `${cfg.label} – ${regionName}`,
+              data  : values,
+              borderColor   : '#6dc201',
+              backgroundColor: '#6dc2014d',
+              fill  : true,
+              tension: 0.25,
+              pointRadius: 0,
+              pointHitRadius: 20
             }]
           },
           options: {
@@ -119,9 +116,10 @@ const METRIC_CFG = {
             }
           }
         });
-        })
+      })
       .catch(err => console.error('Error loading TS:', err));
   }
+  
   
   /* ==================== EVENT HANDLERS =================== */
   const yearSlider = document.getElementById('yearSlider');

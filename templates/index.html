@@ -1,94 +1,90 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>Dashboard</title>
-  <!-- Leaflet CSS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <!-- Custom CSS -->
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <meta charset="utf-8" />
+  <title>VIG Climate-Risk Map</title>
+
+  <!-- Leaflet -->
+  <link rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <!-- Overlay styling -->
+  <link rel="stylesheet"
+        href="{{ url_for('static', filename='overlay.css') }}" />
+
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-  <!-- Logo -->
-  <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" class="logo"
-       style="position: absolute; top: 10px; right: 10px; width: 100px; cursor:pointer;"
-       onclick="window.location.href='https://ixlabs.ie.edu/';">
 
-  <h1>Dashboard</h1>
+  <!-- MAP (full-screen) -->
+  <div id="map"></div>
 
-  <!-- ===================== CONTROLS ===================== -->
-  <div id="controls">
-    <div style="display:flex;justify-content:flex-start;align-items:center;gap:2rem;width:100%;">
-      <!-- Year slider -->
-      <div style="display:flex;align-items:center;gap:0.5rem;flex-grow:1;">
-        <label for="yearSlider">Select Year:</label>
-        <input type="range" class="slider" min="{{ min_year }}" max="{{ max_year }}" value="2025" step="1" id="yearSlider">
-        <span id="yearLabel">2025</span>
-      </div>
-      <!-- Metric selector -->
-      <div style="display:flex;align-items:center;gap:0.5rem;">
-        <label for="metricSelect">Dataset:</label>
-        <select id="metricSelect">
-          <option value="mortality_rate">Mortality</option>
-          <option value="population_density">Population Density</option>
-          <option value="temperature_rcp45">Temperature (RCP 4.5)</option>
-          <option value="temperature_rcp85" selected>Temperature (RCP 8.5)</option>
-        </select>
-      </div>
-    </div>
-    <!-- Week slider -->
-    <div style="display:flex;align-items:center;gap:0.5rem;width:100%;">
-      <label for="weekSlider">Select Week:</label>
-      <input type="range" class="slider" min="1" max="52" value="1" step="1" id="weekSlider">
-      <span id="weekLabel">1</span>
-    </div>
-  </div>
+  <!-- LOGO  (top-right, z-stacked above map) -->
+  <img id="logo"
+      src="{{ url_for('static', filename='logo.png') }}"
+      alt="VIG logo"
+      class="overlay logo"
+      onclick="location.href='https://ixlabs.ie.edu/'"
+  />
 
-  <!-- ===================== MAP & GRAPH ===================== -->
-  <div id="map" style="height:600px;"></div>
-  <div id="graph-container" style="display:flex;align-items:flex-start;width:80%;margin:auto;">
-    <div id="graph" style="flex:1;height:300px;"></div>
-    <div id="info-popup" style="flex:0.5;display:none">
-      <h3>Statistics</h3>
-      <p><strong>Region Name:</strong> <span id="regionName"></span></p>
-      <p>
-        <strong><span id="metricLabel"></span>:</strong>
-        <span id="metricValue"></span>
-      </p>
-    </div>    
-  </div>
+  <!-- INFO BADGE (bottom-left) -->
+  <div id="infoToggle" class="overlay info-badge">i</div>
 
-  <!-- ===================== DATA SOURCES ===================== -->
-  <div style="width:80%;margin:1rem auto 0;text-align:left;">
-    <h3>Data Sources</h3>
-    <ul id="data-sources" style="margin:0;font-size:0.9rem;color:#555;list-style:none;padding-left:1rem;">
-      <li><strong>Temperature:</strong> EURO-CORDEX <code>tas</code> projections. Originally monthly, the weekly data has been interpolated.</li>
-      <li><strong>Mortality:</strong> Eurostat <code>demomwk</code> weekly deaths.</li>
-      <li><strong>Demography:</strong> Eurostat EUROPOP 2023 baseline. Originally yearly, the population is assumed constant per year.</li>
+  <!-- INFO PANEL  (initially hidden) -->
+  <div id="infoPanel" class="overlay info-panel">
+    <h6 class="m-0 mb-1">Data Sources</h6>
+    <ul class="m-0 ps-3 small">
+      <li>EURO-CORDEX <code>tas</code></li>
+      <li>Copernicus ERA5 re-analysis</li>
+      <li>Eurostat <code>demomwk</code></li>
+      <li>Eurostat EUROPOP 2023</li>
+      <li>Copernicus CAMS AQ</li>
     </ul>
   </div>
 
-  <!-- Leaflet core JS -->
+  <!-- CONTROLS (top-left) -->
+  <div id="controls" class="overlay">
+    <label for="yearSlider">Year</label>
+    <input id="yearSlider" type="range"
+           min="{{ min_year }}" max="{{ max_year }}"
+           value="2025" />
+    <span id="yearLabel">2025</span>
+    <br />
+
+    <label for="weekSlider">Week</label>
+    <input id="weekSlider" type="range"
+           min="1" max="52" value="1" />
+    <span id="weekLabel">1</span>
+    <br />
+
+    <label for="metricSelect">Dataset</label>
+    <select id="metricSelect">
+      <option value="mortality_rate">Mortality</option>
+      <option value="population_density">Population Density</option>
+      <option value="temperature_rcp45">Temp RCP 4.5</option>
+      <option value="temperature_rcp85" selected>Temp RCP 8.5</option>
+    </select>
+  </div>
+
+  <!-- TIME-SERIES (bottom-right) -->
+  <div id="graph" class="overlay rounded shadow" style="height:300px; right:20px; bottom:20px;"></div>
+
+  <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  <!-- Pass server vars to JS -->
+  <!-- Pass server vars -->
   <script>
     window.FLASK_CTX = {
-      centerLat:  parseFloat("{{ center_lat }}"),
-      centerLon:  parseFloat("{{ center_lon }}"),
-      zoom:       parseInt("{{ zoom }}", 10),
+      centerLat : parseFloat("{{ center_lat }}"),
+      centerLon : parseFloat("{{ center_lon }}"),
+      zoom      : parseInt("{{ zoom }}", 10),
       regionSlug: "{{ region }}",
-      maxYear:    "{{ max_year }}"
+      maxYear   : "{{ max_year }}"
     };
   </script>
 
-  <!-- Application logic -->
+  <!-- Your existing application logic -->
   <script src="{{ url_for('static', filename='app.js') }}"></script>
 </body>
-
-<footer>
-  <p>Demo by <a href="http://danielprecioso.com" target="_blank">Daniel Precioso</a> for IE University. For demonstration purposes only.</p>
-</footer>
 </html>
