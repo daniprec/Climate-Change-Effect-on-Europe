@@ -73,7 +73,7 @@ html, body {
   .info-panel {
     bottom: 60px;                 /* floats above badge */
     left: 20px;
-    max-width: 230px;
+    max-width: 600px;
     display: none;                /* hidden until hover */
   }
   /* show the panel only while the badge or panel is hovered */
