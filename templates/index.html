@@ -12,6 +12,10 @@
   <link rel="stylesheet"
         href="{{ url_for('static', filename='overlay.css') }}" />
 
+  <!-- General style -->
+  <link rel="stylesheet"
+        href="{{ url_for('static', filename='style.css') }}" />
+
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -36,21 +40,19 @@
 
   <!-- CONTROLS (top-left) -->
   <div id="controls" class="overlay">
-    <label for="yearSlider">Year</label>
-    <input id="yearSlider" type="range"
+    <label for="yearSlider">Year: <span id="yearLabel" class="mutableValue">2025</span></label>
+    <input id="yearSlider" class="slider" type="range"
            min="{{ min_year }}" max="{{ max_year }}"
-           value="2025" />
-    <span id="yearLabel">2025</span>
+           value="2024" />
     <br />
 
-    <label for="weekSlider">Week</label>
-    <input id="weekSlider" type="range"
+    <label for="weekSlider">Week: <span id="weekLabel" class="mutableValue">1</span></label>
+    <input id="weekSlider" class="slider" type="range"
            min="1" max="52" value="1" />
-    <span id="weekLabel">1</span>
     <br />
 
-    <label for="metricSelect">Dataset</label>
-    <select id="metricSelect">
+    <label for="metricSelect">Dataset: </label>
+    <select id="metricSelect" class="select">
       <option value="mortality_rate">Mortality</option>
       <option value="population_density">Population Density</option>
       <option value="temperature_rcp45">Temp RCP 4.5</option>

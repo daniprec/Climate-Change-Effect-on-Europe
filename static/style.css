@@ -18,12 +18,16 @@ h1 {
 .slider {
   appearance: none;
   width: 100%;
+  min-width: 320px;   /* never shrink below 320 px */
+  max-width: 800px;   /* never grow beyond 800 px */
   height: 10px;
   border-radius: 5px;
   background: #6dc201;
   outline: none;
   opacity: 0.7;
   transition: opacity .2s;
+  margin-top: 10px;
+  margin-bottom: 15px;
 }
 .slider:hover { opacity: 1; }
 
@@ -35,6 +39,25 @@ h1 {
   background: #000066;
   cursor: pointer;
 }
+
+.mutableValue {
+  color: #000066;
+}
+
+/* ---------- 3. select ---------- */
+
+.select {
+  width: 100%;
+  min-width: 320px;   /* never shrink below 320 px */
+  max-width: 800px;   /* never grow beyond 800 px */
+  padding: 10px;
+  border-radius: 5px;
+  background: #fff;
+  border: 1px solid #ccc;
+  color: #333;
+  margin-top: 10px;
+}
+
 
 /* ---------- 4. buttons ---------- */
 button {
