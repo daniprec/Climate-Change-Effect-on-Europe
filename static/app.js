@@ -4,12 +4,12 @@ const METRIC_CFG = {
     label : 'Mortality (per 100 k)',
     value : p => p.mortality_rate ?? 0,
     colour: v => `rgb(0, 0, ${Math.min(v * 5, 255)})`,
-    range : [2000, 2022],
+    range : [2013, 2024],
     description: [
       '• WEEKLY all-cause deaths per 100 000 inhabitants.',
-      '• Source: Eurostat - dataset "demomwk".',
+      '• Source: Eurostat - "demo_r_mwk3_ts".',
       '• Spatial resolution: NUTS-3 (district).',
-      '• Coverage: 2000 - 2022 (weekly).'
+      '• Coverage: 2013 - 2024 (weekly).'
     ]
   },
 
@@ -17,12 +17,12 @@ const METRIC_CFG = {
     label : 'Population Density (km²)',
     value : p => p.population_density ?? 0,
     colour: v => `rgb(0, ${Math.min(v, 255)}, 0)`,
-    range : [2000, 2021],
+    range : [2000, 2023],
     description: [
       '• Annual population per km² (mid-year stock).',
-      '• Source: Eurostat - table "demo_r_d3dens".',
+      '• Source: Eurostat - "demo_r_d3dens".',
       '• Spatial resolution: NUTS-3.',
-      '• Coverage: 2000 - 2021 (yearly).'
+      '• Coverage: 2000 - 2023 (yearly).'
     ]
   },
 

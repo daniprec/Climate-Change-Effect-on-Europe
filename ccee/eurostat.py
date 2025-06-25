@@ -67,6 +67,16 @@ def download_eurostat_data(dataset: str) -> pd.DataFrame:
         print(
             f"Warning: Error while trying to delete temporary file {path_file}: {str(e)}"
         )
+
+    # Print date range
+    date_columns = df.dropna(axis=0, how="any").columns[
+        df.columns.str.match(r"^\d{4}$")
+    ]
+    if not date_columns.empty:
+        start_year = date_columns.min()
+        end_year = date_columns.max()
+        print(f"Date range: {start_year} - {end_year}")
+
     return df
 
 
