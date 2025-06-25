@@ -44,7 +44,7 @@ html, body {
 
 .info-panel {
   bottom: 60px; left: 20px;
-  max-width: 260px;
+  max-width: 1000px;
   display: none;
 }
 #infoToggle:hover + #infoPanel,
