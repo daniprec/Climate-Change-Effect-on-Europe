@@ -1,139 +1,63 @@
-/* Basic styling for the map and page */
-body {
-  font-family: Arial, sans-serif;
-  background-color: #f4f4f4;
+/* ---------- 1. page foundation ---------- */
+html, body {
+  height: 100%;
   margin: 0;
-  padding: 0;
+  font-family: Arial, sans-serif;
+  background: #f4f4f4;
   color: #333;
 }
-  
+
+/* ---------- 2. headings & copy ---------- */
 h1 {
   text-align: center;
-  margin-top: 20px;
+  margin: 20px 0;
   color: #000066;
 }
 
-/* Center the slider controls with extra space */
-#controls {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  width: 80%;
-  gap: 15px;
-  margin: 20px auto;
-}
-
-#map {
-  width: 80%;
-  height: 500px;
-  margin: 0 auto;
-  border: 2px solid #ccc;
-  border-radius: 8px;
-}
-
-/* Graph container styling */
-#graph {
-  width: 80%;
-  height: 300px;
-  margin: 20px 10px auto auto;
-  padding: 10px;
-  background-color: #fff;
-  border: 2px solid #ccc;
-  border-radius: 8px;
-}
-
-/* info container */
-#info-popup {
-  width: 80%;
-  height: 300px;
-  margin: 20px auto auto 10px;
-  padding: 10px;
-  background-color: #fff;
-  border: 2px solid #ccc;
-  border-radius: 8px;
-}
-
-.slidecontainer {
-  width: 100%; /* Width of the outside container */
-}
-
-/* The slider itself */
+/* ---------- 3. slider controls ---------- */
 .slider {
   appearance: none;
-  width: 100%; /* Full-width */
-  height: 10px; /* Specified height */
-  border-radius: 5px; /* Rounded slider */
-  background: #6dc201; /* Grey background */
-  outline: none; /* Remove outline */
-  opacity: 0.7; /* Set transparency (for mouse-over effects on hover) */
-  -webkit-transition: .2s; /* 0.2 seconds transition on hover */
+  width: 100%;
+  height: 10px;
+  border-radius: 5px;
+  background: #6dc201;
+  outline: none;
+  opacity: 0.7;
   transition: opacity .2s;
 }
+.slider:hover { opacity: 1; }
 
-/* Mouse-over effects */
-.slider:hover {
-  opacity: 1; /* Fully shown on mouse-over */
-}
-
-/* The slider handle (use -webkit- (Chrome, Opera, Safari, Edge) and -moz- (Firefox) to override default look) */
-.slider::-webkit-slider-thumb {
-  appearance: none;
-  width: 25px; /* Set a specific slider handle width */
-  height: 25px; /* Slider handle height */
-  border-radius: 50%; /* Rounded slider handle */
-  background: #000066; /* Blue background */
-  cursor: pointer; /* Cursor on hover */
-}
-
+.slider::-webkit-slider-thumb,
 .slider::-moz-range-thumb {
-  width: 25px; /* Set a specific slider handle width */
-  height: 25px; /* Slider handle height */
-  border-radius: 50%; /* Rounded slider handle */
-  background: #000066; /* Blue background */
-  cursor: pointer; /* Cursor on hover */
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  background: #000066;
+  cursor: pointer;
 }
 
-#yearSlider {
-  width: 300px;
-}
-
-#weekSlider {
-  width: 300px;
-}
-
-/* Button styling */
-button{
-  background-color: #000066;
+/* ---------- 4. buttons ---------- */
+button {
+  background: #000066;
   color: #fff;
   border: none;
   margin-top: 10px;
   padding: 10px 20px;
   border-radius: 5px;
-  cursor: pointer;
   font-size: 1em;
-  transition: background-color 0.3s ease;
+  cursor: pointer;
+  transition: background-color .3s ease;
 }
+button:hover { background: #333399; }
 
-button:hover {
-  background-color: #333399;
-}
-
-/* Footer */
+/* ---------- 5. footer ---------- */
 footer {
   text-align: left;
   padding: 15px 0;
-  background-color: #e9e9e9;
-  font-size: 0.9em;
+  background: #e9e9e9;
+  font-size: .9em;
   color: #555;
-  margin-top: 40px;
   text-indent: 40px;
 }
-
-footer a {
-  color: #000066;
-  text-decoration: none;
-}
-
-footer a:hover {
-  text-decoration: underline;
-}
+footer a       { color: #000066; text-decoration: none; }
+footer a:hover { text-decoration: underline; }

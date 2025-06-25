@@ -1,81 +1,62 @@
-/* full-page map */
+/* ---------- 1. full-screen map canvas ---------- */
 html, body {
-    height: 100%;
-    margin: 0;
-    overflow: hidden;                 /* prevent page scroll */
-  }
-  #map {
-    position: fixed;
-    top: 0; left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 1;                       /* keep below overlays */
-  }
+  overflow: hidden;           /* lock page scroll */
+}
+#map {
+  position: fixed;
+  inset: 0;                   /* top:0 right:0 bottom:0 left:0 */
+  z-index: 1;                 /* below overlays */
+}
 
-  /* time series */
-  #graph {
-    position:absolute;
-    bottom:20px;
-    right:20px;
-    width : 480px;
-    height: 320px;
-  }
-  
-  /* translucent panels */
-  .overlay {
-    position: absolute;
-    z-index: 1000;
-    background: rgba(255, 255, 255, 0.8);
-    padding: 0.75rem 1rem;
-    border-radius: 8px;
-    backdrop-filter: blur(4px);       /* subtle glass look */
-    transition: background 0.2s ease;
-    font-family: system-ui, sans-serif;
-  }
-  .overlay:hover,
-  .overlay:focus-within {
-    background: rgba(255, 255, 255, 1.0);
-  }
-  
-  /* place corners */
-  #controls   { top: 20px;  left: 20px;  max-width: 240px; }
-  #info-popup { bottom: 20px; right: 20px; max-width: 260px; }
-  
-  /* hidden until a region is clicked */
-  .hidden { display: none; }
-  
-  #logo {
-    top: 20px;
-    right: 20px;
-    width: 90px;              /* adjust as needed   */
-    pointer-events: auto;     /* keep clickable     */
-    background: transparent;         /* no white box       */
-    cursor: pointer;       /* pointer cursor     */
-  }
+/* ---------- 2. master overlay style ---------- */
+.overlay {
+  position: absolute;
+  z-index: 1000;
+  background: rgba(255,255,255,.8);
+  padding: .75rem 1rem;
+  border-radius: 8px;
+  backdrop-filter: blur(4px);
+  transition: background .2s;
+  font-family: system-ui, sans-serif;
+}
+.overlay:hover,
+.overlay:focus-within { background: rgba(255,255,255,1); }
 
-  /* info badge (little circle) */
-  .info-badge {
-    bottom: 20px;
-    left: 20px;
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    font: 700 15px/26px system-ui, sans-serif;
-    text-align: center;
-    background: rgba(0,0,0,0.45);
-    color: #fff;
-    cursor: pointer;
-    transition: background .2s;
-  }
-  .info-badge:hover { background: rgba(0,0,0,0.7); }
+/* ---------- 3. specific overlay blocks ---------- */
+/* controls (sliders & selector) */
+#controls { top: 20px; left: 20px; max-width: 600px; }
 
-  /* info panel itself */
-  .info-panel {
-    bottom: 60px;                 /* floats above badge */
-    left: 20px;
-    max-width: 600px;
-    display: none;                /* hidden until hover */
-  }
-  /* show the panel only while the badge or panel is hovered */
-  #infoToggle:hover  + #infoPanel,
-  #infoPanel:hover     { display: block; }
+/* time-series panel */
+#graph   { bottom: 20px; right: 20px; width: 480px; height: 320px; }
+
+/* info badge + panel */
+.info-badge {
+  bottom: 20px; left: 20px;
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  font: 700 15px/26px system-ui, sans-serif;
+  text-align: center; color: #fff;
+  background: rgba(0,0,0,.45);
+  cursor: pointer;
+  transition: background .2s;
+}
+.info-badge:hover { background: rgba(0,0,0,.7); }
+
+.info-panel {
+  bottom: 60px; left: 20px;
+  max-width: 260px;
+  display: none;
+}
+#infoToggle:hover + #infoPanel,
+#infoPanel:hover        { display:block; }
+
+/* logo (no translucent card) */
+.logo {
+  top: 20px; right: 20px;
+  width: 90px;
+  background: transparent;
+  cursor: pointer;
+}
+
+/* utility */
+.hidden { display: none; }
