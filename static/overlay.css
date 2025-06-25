@@ -58,7 +58,7 @@ html, body {
 
 .info-panel {
   bottom: 60px; left: 20px;
-  width: 20%;
+  width: 30%;
   min-width: 300px;
   max-width: 800px;
   display: none;

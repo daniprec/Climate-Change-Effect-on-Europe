@@ -8,7 +8,7 @@ const METRIC_CFG = {
       '• WEEKLY all-cause deaths per 100 000 inhabitants.',
       '• Source: Eurostat - dataset "demomwk".',
       '• Spatial resolution: NUTS-3 (district).',
-      '• Coverage: 2000 - present (weekly).'
+      '• Coverage: 2000 - 2022 (weekly).'
     ]
   },
 
@@ -20,13 +20,13 @@ const METRIC_CFG = {
       '• Annual population per km² (mid-year stock).',
       '• Source: Eurostat - table "demo_r_d3dens".',
       '• Spatial resolution: NUTS-3.',
-      '• Coverage: 2000 - present (yearly).'
+      '• Coverage: 2000 - 2021 (yearly).'
     ]
   },
 
   temperature_rcp45: {
-    label : 'Temperature (RCP 4.5 °C)',
-    value : p => p.temperature_rcp45 ?? 0,
+    label : 'Temperature (°C)',
+    value : p => p.temperature_rcp45 ?? -20,
     colour: v => `rgb(${Math.min((v + 20) * 5, 255)}, 0, 0)`,
     description: [
       '• Mean 2-m air temperature under medium-emission scenario RCP 4.5.',
@@ -37,8 +37,8 @@ const METRIC_CFG = {
   },
 
   temperature_rcp85: {
-    label : 'Temperature (RCP 8.5 °C)',
-    value : p => p.temperature_rcp85 ?? 0,
+    label : 'Temperature (°C)',
+    value : p => p.temperature_rcp85 ?? -20,
     colour: v => `rgb(${Math.min((v + 20) * 5, 255)}, 0, 0)`,
     description: [
       '• Mean 2-m air temperature under high-emission scenario RCP 8.5.',
