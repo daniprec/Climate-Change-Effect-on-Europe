@@ -4,6 +4,7 @@ const METRIC_CFG = {
     label : 'Mortality (per 100 k)',
     value : p => p.mortality_rate ?? 0,
     colour: v => `rgb(0, 0, ${Math.min(v * 5, 255)})`,
+    range : [2000, 2022],
     description: [
       '• WEEKLY all-cause deaths per 100 000 inhabitants.',
       '• Source: Eurostat - dataset "demomwk".',
@@ -16,6 +17,7 @@ const METRIC_CFG = {
     label : 'Population Density (km²)',
     value : p => p.population_density ?? 0,
     colour: v => `rgb(0, ${Math.min(v, 255)}, 0)`,
+    range : [2000, 2021],
     description: [
       '• Annual population per km² (mid-year stock).',
       '• Source: Eurostat - table "demo_r_d3dens".',
@@ -28,6 +30,7 @@ const METRIC_CFG = {
     label : 'Temperature (°C)',
     value : p => p.temperature_rcp45 ?? -20,
     colour: v => `rgb(${Math.min((v + 20) * 5, 255)}, 0, 0)`,
+    range : [2006, 2100],
     description: [
       '• Mean 2-m air temperature under medium-emission scenario RCP 4.5.',
       '• Source: EURO-CORDEX / ESGF, variable "tas".',
@@ -40,6 +43,7 @@ const METRIC_CFG = {
     label : 'Temperature (°C)',
     value : p => p.temperature_rcp85 ?? -20,
     colour: v => `rgb(${Math.min((v + 20) * 5, 255)}, 0, 0)`,
+    range : [2006, 2100],
     description: [
       '• Mean 2-m air temperature under high-emission scenario RCP 8.5.',
       '• Source: EURO-CORDEX / ESGF, variable "tas".',
@@ -48,7 +52,7 @@ const METRIC_CFG = {
     ]
   }
 };
-  
+
 /* ======================= MAP INIT ======================= */
 // take the first metric as default
 let currentMetric = Object.keys(METRIC_CFG)[0];
@@ -180,36 +184,49 @@ function drawTimeSeries(nutsId, regionName) {
     .catch(err => console.error('Error loading TS:', err));
 }
 
-
 /* ==================== EVENT HANDLERS =================== */
 const yearSlider = document.getElementById('yearSlider');
 const weekSlider = document.getElementById('weekSlider');
 const metricSelect = document.getElementById('metricSelect');
+const yearValue    = document.getElementById('yearValue');
+const weekValue    = document.getElementById('weekValue');
 let debounce;
 
+/* --- helper to (re)range the year slider --- */
+function applyYearRange([minYear, maxYear]) {
+  yearSlider.min = minYear;
+  yearSlider.max = maxYear;
+
+  if (+yearSlider.value < minYear) yearSlider.value = minYear;
+  if (+yearSlider.value > maxYear) yearSlider.value = maxYear;
+
+  yearValue.textContent = yearSlider.value;
+}
+
+/* live update & debounce */
 yearSlider.addEventListener('input', () => {
-  document.getElementById('yearLabel').innerText = yearSlider.value;
+  yearValue.textContent = yearSlider.value;
   clearTimeout(debounce);
   debounce = setTimeout(() => loadGeoJSON(yearSlider.value, weekSlider.value), 250);
 });
-
 weekSlider.addEventListener('input', () => {
-  document.getElementById('weekLabel').innerText = weekSlider.value;
+  weekValue.textContent = weekSlider.value;
   clearTimeout(debounce);
   debounce = setTimeout(() => loadGeoJSON(yearSlider.value, weekSlider.value), 250);
 });
 
+/* dataset selector */
 metricSelect.addEventListener('change', () => {
   currentMetric = metricSelect.value;
+  applyYearRange(METRIC_CFG[currentMetric].range);
   loadGeoJSON(yearSlider.value, weekSlider.value);
   if (currentChart) { currentChart.destroy(); currentChart = null; }
-  resetGraph();                         // show hint again
-  updateInfoPanel(currentMetric);                         // update info panel
-  document.getElementById('graph').innerHTML = '';
-  document.getElementById('info-popup').style.display = 'none';
+  resetGraph();
+  updateInfoPanel(currentMetric);
 });
 
-/* ====================== START ========================== */
-loadGeoJSON(FLASK_CTX.maxYear, 1);
-resetGraph();
-updateInfoPanel(currentMetric);
+/* ====================== START-UP ====================== */
+applyYearRange(METRIC_CFG[currentMetric].range);   // set correct slider range
+loadGeoJSON(yearSlider.value, weekSlider.value);   // draw the map
+resetGraph();                                      // placeholder graph text
+updateInfoPanel(currentMetric);                    // info box

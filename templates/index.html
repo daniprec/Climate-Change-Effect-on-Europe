@@ -40,13 +40,13 @@
 
   <!-- CONTROLS (top-left) -->
   <div id="controls" class="overlay">
-    <label for="yearSlider">Year: <span id="yearLabel" class="mutableValue">2025</span></label>
+    <label for="yearSlider">Year: <span id="yearValue" class="mutableValue">2025</span></label>
     <input id="yearSlider" class="slider" type="range"
            min="{{ min_year }}" max="{{ max_year }}"
-           value="2024" />
+           value="{{ yearValue }}" />
     <br />
 
-    <label for="weekSlider">Week: <span id="weekLabel" class="mutableValue">1</span></label>
+    <label for="weekSlider">Week: <span id="weekValue" class="mutableValue">1</span></label>
     <input id="weekSlider" class="slider" type="range"
            min="1" max="52" value="1" />
     <br />
