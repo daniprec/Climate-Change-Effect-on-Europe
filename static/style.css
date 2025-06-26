@@ -18,8 +18,8 @@ h1 {
 .slider {
   appearance: none;
   width: 100%;
-  min-width: 320px;   /* never shrink below 320 px */
-  max-width: 800px;   /* never grow beyond 800 px */
+  min-width: 280px;   /* never shrink below */
+  max-width: 780px;   /* never grow beyond */
   height: 10px;
   border-radius: 5px;
   background: #6dc201;
