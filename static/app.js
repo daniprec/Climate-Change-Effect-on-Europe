@@ -63,7 +63,7 @@ let geoJsonLayer = null;
 
 /* ======================= DATA LOAD ======================= */
 function loadGeoJSON(year, week) {
-  fetch(`/api/data?region=${FLASK_CTX.regionSlug}&year=${year}&week=${week}&metric=${currentMetric}`)
+  return fetch(`/api/data?region=${FLASK_CTX.regionSlug}&year=${year}&week=${week}&metric=${currentMetric}`)
     .then(r => r.json())
     .then(data => {
       if (geoJsonLayer) map.removeLayer(geoJsonLayer);
@@ -71,6 +71,7 @@ function loadGeoJSON(year, week) {
         style: featureStyle,
         onEachFeature
       }).addTo(map);
+      return geoJsonLayer.getBounds();      // <<< add this line
     })
     .catch(err => console.error('Error fetching data:', err));
 }
@@ -95,6 +96,43 @@ function resetGraph() {
     'text-align:center;padding-top:40%;opacity:0.8;">'+
     'Click on a region to display its information</div>';
 }
+
+/* ========  NAVIGATION (breadcrumb + drill-down)  ======== */
+const BASE_BBOX = FLASK_CTX.base_bbox;   // comes from Jinja
+const viewStack = [];                    // [{name, code, bounds}]
+
+function renderBreadcrumb () {
+  const div = document.getElementById('breadcrumb');
+  div.innerHTML = viewStack.map((v,i) =>
+      `<span data-d="${i}">${v.name}</span>${i<viewStack.length-1?'<span class="sep">›</span>':''}`
+  ).join('');
+  div.querySelectorAll('span[data-d]')
+     .forEach(el => el.onclick = () => popTo(+el.dataset.d));
+}
+
+function pushView (name, code, bounds) {
+  if (viewStack.at(-1)?.code === code) return;   // avoid duplicates
+  viewStack.push({name, code, bounds});
+  renderBreadcrumb();
+}
+
+function popTo (depth) {
+  viewStack.splice(depth+1);
+  renderBreadcrumb();
+  const top = viewStack.at(-1);
+  FLASK_CTX.regionSlug = top.code || 'EU';   // <— keep slug in sync
+  map.flyToBounds(top.bounds);
+  loadGeoJSON(yearSlider.value, weekSlider.value);
+}
+
+/* drill-down button calls this */
+function drillDown (iso) {
+  FLASK_CTX.regionSlug = iso;
+  loadGeoJSON(yearSlider.value, weekSlider.value).then(b =>
+    pushView(iso, iso, b)   // use ISO as display name; swap for nicer label if you wish
+  );
+}
+
 
 /* ======================= INFO ======================= */  
 function updateInfoPanel(metric) {
@@ -121,10 +159,9 @@ function onEachFeature(feature, layer) {
   if (p.temperature_rcp85 != null) popupLines.push(`Temp (RCP 8.5): ${p.temperature_rcp85} °C`);
 
   // Optional navigation button for Austria
-  if (p.name === 'Austria') {
-    popupLines.push(
-      '<button onclick="window.location.href=\'/austria\'">Go to Austria</button>'
-    );
+  const iso = (p.CNTR_CODE ?? (p.NUTS_ID ?? '') .slice(0,2)).toUpperCase();
+  if (iso.length === 2) {
+    popupLines.push(`<button onclick="drillDown('${iso}')">District view</button>`);
   }
 
   layer.bindPopup(popupLines.join('<br>'));
@@ -227,6 +264,7 @@ metricSelect.addEventListener('change', () => {
 
 /* ====================== START-UP ====================== */
 applyYearRange(METRIC_CFG[currentMetric].range);   // set correct slider range
+pushView('Europe', null, BASE_BBOX);   // root breadcrumb item
 loadGeoJSON(yearSlider.value, weekSlider.value);   // draw the map
 resetGraph();                                      // placeholder graph text
 updateInfoPanel(currentMetric);                    // info box

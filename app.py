@@ -12,13 +12,27 @@ REGIONS_PATH = os.path.join(BASE_DIR, "data", "regions.geojson")
 
 # Load your multi-year GeoJSON data once at startup
 gdf = gpd.read_file(REGIONS_PATH)
-dict_df = {
-    "Europe": os.path.join(BASE_DIR, "data", "europe.csv"),
-    "Austria": os.path.join(BASE_DIR, "data", "austria.csv"),
+CSV_MAP = {
+    "EU": os.path.join(BASE_DIR, "data", "europe.csv"),
+    "AT": os.path.join(BASE_DIR, "data", "austria.csv"),
 }
 
+REGION_META = {
+    "EU": {  # Europe layer
+        "bbox": [[34, -25], [71, 45]],
+        "center": [50, 20],
+        "zoom": 4,
+    },
+    "AT": {  # Austria
+        "bbox": [[46.358, 9.372], [49.038, 17.508]],
+        "center": [47.5, 13],
+        "zoom": 7,
+    },
+}
+
+
 # Get minimum and maximum year
-df = pd.read_csv(dict_df["Europe"])
+df = pd.read_csv(CSV_MAP["EU"])
 min_year = df["year"].min()
 max_year = df["year"].max()
 
@@ -26,44 +40,32 @@ max_year = df["year"].max()
 @app.route("/")
 def index():
     # Render the base HTML page; the page can load data via AJAX.
+    meta = REGION_META["EU"]
     return render_template(
         "index.html",
-        min_year=min_year,
-        max_year=max_year,
-        center_lat=50,
-        center_lon=20,
-        zoom=4,
-        region="Europe",
-    )
-
-
-@app.route("/austria")
-def index_austria():
-    # Render the country-specific HTML page; the page can load data via AJAX.
-    return render_template(
-        "index.html",
-        min_year=min_year,
-        max_year=max_year,
-        center_lat=47.5,
-        center_lon=13,
-        zoom=7,
-        region="Austria",
+        min_year=int(min_year),  # <— cast here
+        max_year=int(max_year),  # <— …and here
+        center_lat=meta["center"][0],
+        center_lon=meta["center"][1],
+        zoom=meta["zoom"],
+        region="EU",
+        base_bbox=meta["bbox"],
     )
 
 
 @app.get("/api/data")
 def api_data():
-    region = request.args.get("region", "europe")
+    region = request.args.get("region", "EU").upper()
     year = request.args.get("year", "2023")
     week = request.args.get("week", "1")
     metric = request.args.get("metric", "mortality_rate")
 
     # Check if the requested region is valid
-    if region not in dict_df:
+    if region not in CSV_MAP:
         return jsonify({"error": "Invalid region specified"}), 400
 
     # Extract the DataFrame for the specified region, week and year
-    df = pd.read_csv(dict_df[region])
+    df = pd.read_csv(CSV_MAP[region])
     df = df[(df["year"] == int(year)) & (df["week"] == int(week))]
 
     # Check if the requested information exists in the DataFrame
@@ -79,18 +81,24 @@ def api_data():
     return gdf_region.to_json()
 
 
+@app.get("/api/bbox/<iso>")
+def api_bbox(iso):
+    meta = REGION_META.get(iso.upper())
+    return jsonify(bbox=meta["bbox"]) if meta else (jsonify(error="No bbox"), 404)
+
+
 @app.route("/api/data/ts")
 def app_data_time_series():
-    region = request.args.get("region", "europe")
+    region = request.args.get("region", "EU").upper()
     metric = request.args.get("metric", "mortality_rate")
     nuts_id = request.args.get("nuts_id", "AT")
 
     # Check if the requested region is valid
-    if region not in dict_df:
+    if region not in CSV_MAP:
         return jsonify({"error": "Invalid region specified"}), 400
 
     # Load the DataFrame for the specified region
-    df = pd.read_csv(dict_df[region])
+    df = pd.read_csv(CSV_MAP[region])
 
     # Filter by NUTS_ID
     df = df[df["NUTS_ID"] == nuts_id]
