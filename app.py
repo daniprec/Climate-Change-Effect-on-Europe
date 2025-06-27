@@ -10,7 +10,7 @@ app = Flask(__name__)
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 REGIONS_PATH = os.path.join(BASE_DIR, "data", "regions.geojson")
 
-# Load your multi-year GeoJSON data once at startup
+# Load multi-year GeoJSON data once at startup
 gdf = gpd.read_file(REGIONS_PATH)
 CSV_MAP = {
     "EU": os.path.join(BASE_DIR, "data", "europe.csv"),

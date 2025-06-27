@@ -225,8 +225,8 @@ function drawTimeSeries(nutsId, regionName) {
 const yearSlider = document.getElementById('yearSlider');
 const weekSlider = document.getElementById('weekSlider');
 const metricSelect = document.getElementById('metricSelect');
-const yearValue    = document.getElementById('yearValue');
-const weekValue    = document.getElementById('weekValue');
+const yearValue = document.getElementById('yearValue');
+const weekValue = document.getElementById('weekValue');
 let debounce;
 
 /* --- helper to (re)range the year slider --- */
@@ -245,6 +245,7 @@ yearSlider.oninput = () => {
   clearTimeout(debounce);
   debounce = setTimeout(() => loadGeoJSON(yearSlider.value, weekSlider.value), 250);
 };
+
 weekSlider.oninput = () => {
   weekValue.textContent = weekSlider.value;
   clearTimeout(debounce);
@@ -262,7 +263,7 @@ metricSelect.onchange = () => {
 
 /* ====================== START-UP ====================== */
 applyYearRange(METRIC_CFG[currentMetric].range);
-pushView('Europe', null, BASE_BBOX);          // root breadcrumb
+pushView('Europe', null, BASE_BBOX);
 loadGeoJSON(yearSlider.value, weekSlider.value);
 resetGraph();
 updateInfoPanel(currentMetric);
