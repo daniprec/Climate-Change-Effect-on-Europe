@@ -98,8 +98,7 @@ function resetGraph() {
 }
 
 /* ========  NAVIGATION (breadcrumb + drill-down)  ======== */
-const BASE_BBOX = FLASK_CTX.base_bbox;
-const viewStack = [];  // [{name, code, bounds}]
+const viewStack = [];  // [{code, name}]
 
 function renderBreadcrumb() {
   const div = document.getElementById('breadcrumb');
@@ -110,9 +109,9 @@ function renderBreadcrumb() {
      .forEach(el => el.onclick = () => popTo(+el.dataset.d));
 }
 
-function pushView(name, code, bounds) {
+function pushView(code, name) {
   if (viewStack.at(-1)?.code === code) return;   // avoid duplicate push
-  viewStack.push({ name, code, bounds });
+  viewStack.push({ code, name });
   renderBreadcrumb();
 }
 
@@ -121,20 +120,27 @@ function popTo(depth) {
   renderBreadcrumb();
 
   const top = viewStack.at(-1);
-  FLASK_CTX.regionSlug = top.code || 'EU';
-
-  loadGeoJSON(FLASK_CTX.regionSlug, yearSlider.value, weekSlider.value)
-    .then(bounds => map.fitBounds(bounds));   // zoom after layer is ready
+  const name = top.name || 'Europe';
+  const code = top.code || 'EU';
+  changeRegion(code, name);  // drill down to the top view
 }
 
-/* drill-down button calls this */
-function drillDown(iso, name) {
-  FLASK_CTX.regionSlug = iso;
-  loadGeoJSON(FLASK_CTX.regionSlug, yearSlider.value, weekSlider.value)
-  .then(bounds => {
-    pushView(name, iso, bounds);
-    map.fitBounds(bounds);                        // zoom to country
-  });
+/* Change the region in the map and update the breadcrumb. */
+function changeRegion(code, name) {
+  // We get the bounding box for the selected region
+  fetch(`/api/bbox?nuts_id=${code || 'EU'}`)
+    .then(r => r.json())
+    .then(({ bbox, center, zoom }) => {
+      map.fitBounds(bbox);
+      map.setView(center, zoom);
+    })
+    .catch(err => console.error('Error fetching bbox:', err));
+  // Change the current region code
+  FLASK_CTX.regionSlug = code;
+  // Update the breadcrumb
+  pushView(code, name);
+  // Load the new region shapes
+  loadGeoJSON(FLASK_CTX.regionSlug, yearSlider.value, weekSlider.value);
 }
 
 /* ======================= INFO ======================= */  
@@ -164,7 +170,7 @@ function onEachFeature(feature, layer) {
   const iso = (p.NUTS_ID ?? '').toUpperCase();
   const name = (p.name ?? 'Unnamed');
   if (iso.length === 2) {
-    popupLines.push(`<button onclick="drillDown('${iso}', '${name}')">District view</button>`);
+    popupLines.push(`<button onclick="changeRegion('${iso}', '${name}')">District view</button>`);
   }
 
   layer.bindPopup(popupLines.join('<br>'));
@@ -266,7 +272,7 @@ metricSelect.onchange = () => {
 
 /* ====================== START-UP ====================== */
 applyYearRange(METRIC_CFG[currentMetric].range);
-pushView('Europe', null, BASE_BBOX);
+pushView('EU', 'Europe');
 loadGeoJSON(FLASK_CTX.regionSlug, yearSlider.value, weekSlider.value);
 resetGraph();
 updateInfoPanel(currentMetric);

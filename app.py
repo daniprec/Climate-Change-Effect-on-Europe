@@ -49,7 +49,6 @@ def index():
         center_lon=meta["center"][1],
         zoom=meta["zoom"],
         region="EU",
-        base_bbox=meta["bbox"],
     )
 
 
@@ -81,10 +80,15 @@ def api_data():
     return gdf_region.to_json()
 
 
-@app.get("/api/bbox/<iso>")
-def api_bbox(iso):
-    meta = REGION_META.get(iso.upper())
-    return jsonify(bbox=meta["bbox"]) if meta else (jsonify(error="No bbox"), 404)
+@app.get("/api/bbox")
+def api_bbox():
+    iso = request.args.get("nuts_id", "EU").upper()
+    meta = REGION_META.get(iso)
+    return (
+        jsonify(bbox=meta["bbox"], center=meta["center"], zoom=meta["zoom"])
+        if meta
+        else (jsonify(error="No bbox"), 404)
+    )
 
 
 @app.route("/api/data/ts")
