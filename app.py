@@ -48,7 +48,7 @@ def index():
         center_lat=meta["center"][0],
         center_lon=meta["center"][1],
         zoom=meta["zoom"],
-        region="EU",
+        nuts_id="EU",
     )
 
 

@@ -98,7 +98,7 @@ function resetGraph() {
 }
 
 /* ========  NAVIGATION (breadcrumb + drill-down)  ======== */
-const viewStack = [];  // [{code, name}]
+const viewStack = [];  // [{nutsID, name}]
 
 function renderBreadcrumb() {
   const div = document.getElementById('breadcrumb');
@@ -109,9 +109,9 @@ function renderBreadcrumb() {
      .forEach(el => el.onclick = () => popTo(+el.dataset.d));
 }
 
-function pushView(code, name) {
-  if (viewStack.at(-1)?.code === code) return;   // avoid duplicate push
-  viewStack.push({ code, name });
+function pushView(nutsID, name) {
+  if (viewStack.at(-1)?.nutsID === nutsID) return;   // avoid duplicate push
+  viewStack.push({ nutsID, name });
   renderBreadcrumb();
 }
 
@@ -121,26 +121,26 @@ function popTo(depth) {
 
   const top = viewStack.at(-1);
   const name = top.name || 'Europe';
-  const code = top.code || 'EU';
-  changeRegion(code, name);  // drill down to the top view
+  const nutsID = top.nutsID || 'EU';
+  changeRegion(nutsID, name);  // drill down to the top view
 }
 
 /* Change the region in the map and update the breadcrumb. */
-function changeRegion(code, name) {
+function changeRegion(nutsID, name) {
   // We get the bounding box for the selected region
-  fetch(`/api/bbox?nuts_id=${code || 'EU'}`)
+  fetch(`/api/bbox?nuts_id=${nutsID || 'EU'}`)
     .then(r => r.json())
     .then(({ bbox, center, zoom }) => {
       map.fitBounds(bbox);
       map.setView(center, zoom);
     })
     .catch(err => console.error('Error fetching bbox:', err));
-  // Change the current region code
-  FLASK_CTX.regionSlug = code;
+  // Change the current region nutsID
+  FLASK_CTX.nutsID = nutsID;
   // Update the breadcrumb
-  pushView(code, name);
+  pushView(nutsID, name);
   // Load the new region shapes
-  loadGeoJSON(FLASK_CTX.regionSlug, yearSlider.value, weekSlider.value);
+  loadGeoJSON(FLASK_CTX.nutsID, yearSlider.value, weekSlider.value);
 }
 
 /* ======================= INFO ======================= */  
@@ -167,10 +167,10 @@ function onEachFeature(feature, layer) {
   if (p.temperature_rcp45 != null) popupLines.push(`Temp (RCP 4.5): ${p.temperature_rcp45} °C`);
   if (p.temperature_rcp85 != null) popupLines.push(`Temp (RCP 8.5): ${p.temperature_rcp85} °C`);
 
-  const iso = (p.NUTS_ID ?? '').toUpperCase();
+  const nutsID = (p.NUTS_ID ?? '').toUpperCase();
   const name = (p.name ?? 'Unnamed');
-  if (iso.length === 2) {
-    popupLines.push(`<button onclick="changeRegion('${iso}', '${name}')">District view</button>`);
+  if (nutsID.length === 2) {
+    popupLines.push(`<button onclick="changeRegion('${nutsID}', '${name}')">District view</button>`);
   }
 
   layer.bindPopup(popupLines.join('<br>'));
@@ -187,7 +187,7 @@ let currentChart = null;
 function drawTimeSeries(nutsId, regionName) {
   const cfg = METRIC_CFG[currentMetric];
 
-  fetch(`/api/data/ts?region=${FLASK_CTX.regionSlug}&metric=${currentMetric}&nuts_id=${nutsId}`)
+  fetch(`/api/data/ts?region=${FLASK_CTX.nutsID}&metric=${currentMetric}&nuts_id=${nutsId}`)
     .then(r => r.json())
     .then(res => {
       if (!res.data || !res.data.length) return;
@@ -252,19 +252,19 @@ function applyYearRange([minYear, maxYear]) {
 yearSlider.oninput = () => {
   yearValue.textContent = yearSlider.value;
   clearTimeout(debounce);
-  debounce = setTimeout(() => loadGeoJSON(FLASK_CTX.regionSlug, yearSlider.value, weekSlider.value), 250);
+  debounce = setTimeout(() => loadGeoJSON(FLASK_CTX.nutsID, yearSlider.value, weekSlider.value), 250);
 };
 
 weekSlider.oninput = () => {
   weekValue.textContent = weekSlider.value;
   clearTimeout(debounce);
-  debounce = setTimeout(() => loadGeoJSON(FLASK_CTX.regionSlug, yearSlider.value, weekSlider.value), 250);
+  debounce = setTimeout(() => loadGeoJSON(FLASK_CTX.nutsID, yearSlider.value, weekSlider.value), 250);
 };
 
 metricSelect.onchange = () => {
   currentMetric = metricSelect.value;
   applyYearRange(METRIC_CFG[currentMetric].range);
-  loadGeoJSON(FLASK_CTX.regionSlug, yearSlider.value, weekSlider.value);
+  loadGeoJSON(FLASK_CTX.nutsID, yearSlider.value, weekSlider.value);
   if (currentChart) { currentChart.destroy(); currentChart = null; }
   resetGraph();
   updateInfoPanel(currentMetric);
@@ -273,6 +273,6 @@ metricSelect.onchange = () => {
 /* ====================== START-UP ====================== */
 applyYearRange(METRIC_CFG[currentMetric].range);
 pushView('EU', 'Europe');
-loadGeoJSON(FLASK_CTX.regionSlug, yearSlider.value, weekSlider.value);
+loadGeoJSON(FLASK_CTX.nutsID, yearSlider.value, weekSlider.value);
 resetGraph();
 updateInfoPanel(currentMetric);
