@@ -62,8 +62,8 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 
 let geoJsonLayer = null;
 
 /* ======================= DATA LOAD ======================= */
-function loadGeoJSON(year, week) {
-  return fetch(`/api/data?region=${FLASK_CTX.regionSlug}&year=${year}&week=${week}&metric=${currentMetric}`)
+function loadGeoJSON(region, year, week) {
+  return fetch(`/api/data?region=${region}&year=${year}&week=${week}&metric=${currentMetric}`)
     .then(r => r.json())
     .then(data => {
       if (geoJsonLayer) map.removeLayer(geoJsonLayer);
@@ -119,16 +119,19 @@ function pushView(name, code, bounds) {
 function popTo(depth) {
   viewStack.splice(depth + 1);
   renderBreadcrumb();
+
   const top = viewStack.at(-1);
-  FLASK_CTX.regionSlug = top.code || 'EU';       // keep slug in sync
-  map.flyToBounds(top.bounds);
-  loadGeoJSON(yearSlider.value, weekSlider.value);
+  FLASK_CTX.regionSlug = top.code || 'EU';
+
+  loadGeoJSON(FLASK_CTX.regionSlug, yearSlider.value, weekSlider.value)
+    .then(bounds => map.fitBounds(bounds));   // zoom after layer is ready
 }
 
 /* drill-down button calls this */
 function drillDown(iso, name) {
   FLASK_CTX.regionSlug = iso;
-  loadGeoJSON(yearSlider.value, weekSlider.value).then(bounds => {
+  loadGeoJSON(FLASK_CTX.regionSlug, yearSlider.value, weekSlider.value)
+  .then(bounds => {
     pushView(name, iso, bounds);
     map.fitBounds(bounds);                        // zoom to country
   });
@@ -243,19 +246,19 @@ function applyYearRange([minYear, maxYear]) {
 yearSlider.oninput = () => {
   yearValue.textContent = yearSlider.value;
   clearTimeout(debounce);
-  debounce = setTimeout(() => loadGeoJSON(yearSlider.value, weekSlider.value), 250);
+  debounce = setTimeout(() => loadGeoJSON(FLASK_CTX.regionSlug, yearSlider.value, weekSlider.value), 250);
 };
 
 weekSlider.oninput = () => {
   weekValue.textContent = weekSlider.value;
   clearTimeout(debounce);
-  debounce = setTimeout(() => loadGeoJSON(yearSlider.value, weekSlider.value), 250);
+  debounce = setTimeout(() => loadGeoJSON(FLASK_CTX.regionSlug, yearSlider.value, weekSlider.value), 250);
 };
 
 metricSelect.onchange = () => {
   currentMetric = metricSelect.value;
   applyYearRange(METRIC_CFG[currentMetric].range);
-  loadGeoJSON(yearSlider.value, weekSlider.value);
+  loadGeoJSON(FLASK_CTX.regionSlug, yearSlider.value, weekSlider.value);
   if (currentChart) { currentChart.destroy(); currentChart = null; }
   resetGraph();
   updateInfoPanel(currentMetric);
@@ -264,6 +267,6 @@ metricSelect.onchange = () => {
 /* ====================== START-UP ====================== */
 applyYearRange(METRIC_CFG[currentMetric].range);
 pushView('Europe', null, BASE_BBOX);
-loadGeoJSON(yearSlider.value, weekSlider.value);
+loadGeoJSON(FLASK_CTX.regionSlug, yearSlider.value, weekSlider.value);
 resetGraph();
 updateInfoPanel(currentMetric);
