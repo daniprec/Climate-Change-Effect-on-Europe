@@ -26,11 +26,14 @@
 
   <!-- LOGO  (top-right, z-stacked above map) -->
   <img id="logo"
-      src="{{ url_for('static', filename='logo.png') }}"
-      alt="VIG logo"
-      class="overlay logo"
-      onclick="location.href='https://ixlabs.ie.edu/'"
-  />
+       src="{{ url_for('static', filename='logo.png') }}"
+       alt="VIG logo"
+       class="overlay logo"
+       onclick="location.href='https://ixlabs.ie.edu/'"
+   />
+
+  <!-- BREADCRUMB (top-centre)  -->
+  <div id="breadcrumb" class="overlay breadcrumb"></div>
 
   <!-- INFO BADGE (bottom-left) -->
   <div id="infoToggle" class="overlay info-badge">i</div>
@@ -72,8 +75,9 @@
       centerLat : parseFloat("{{ center_lat }}"),
       centerLon : parseFloat("{{ center_lon }}"),
       zoom      : parseInt("{{ zoom }}", 10),
-      regionSlug: "{{ region }}",
-      maxYear   : "{{ max_year }}"
+      nutsID: "{{ nuts_id }}",
+      maxYear   : "{{ max_year }}",
+      availableIDs: "{{ ls_ids }}",
     };
   </script>
 

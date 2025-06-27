@@ -22,6 +22,21 @@ html, body {
 .overlay:hover,
 .overlay:focus-within { background: rgba(255,255,255,1); }
 
+/* ---------- 2. breadcrumb (region level) ---------- */
+/* breadcrumb top-centre */
+.breadcrumb {
+  position:absolute;
+  top:14px;
+  left:50%;
+  transform:translateX(-50%);
+  z-index:1000;
+  font:14px/1.4em system-ui,sans-serif;
+}
+.breadcrumb span        { cursor:pointer; }
+.breadcrumb .sep        { margin:0 .35em; color:#666; }
+.breadcrumb span:hover  { text-decoration:underline; }
+
+
 /* ---------- 3. specific overlay blocks ---------- */
 /* controls (sliders & selector) */
 #controls {
