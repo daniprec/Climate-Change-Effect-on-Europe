@@ -43,8 +43,8 @@ def index():
     meta = REGION_META["EU"]
     return render_template(
         "index.html",
-        min_year=int(min_year),  # <— cast here
-        max_year=int(max_year),  # <— …and here
+        min_year=int(min_year),
+        max_year=int(max_year),
         center_lat=meta["center"][0],
         center_lon=meta["center"][1],
         zoom=meta["zoom"],

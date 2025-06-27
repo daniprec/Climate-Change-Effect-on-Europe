@@ -57,7 +57,7 @@ const METRIC_CFG = {
 // take the first metric as default
 let currentMetric = Object.keys(METRIC_CFG)[0];
 const map = L.map('map', { zoomControl: false })
-  .setView([FLASK_CTX.centerLat, FLASK_CTX.centerLon], FLASK_CTX.zoom);
+            .setView([FLASK_CTX.centerLat, FLASK_CTX.centerLon], FLASK_CTX.zoom);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
 let geoJsonLayer = null;
 
@@ -71,7 +71,7 @@ function loadGeoJSON(year, week) {
         style: featureStyle,
         onEachFeature
       }).addTo(map);
-      return geoJsonLayer.getBounds();      // <<< add this line
+      return geoJsonLayer.getBounds();      // return bounds for drill-down
     })
     .catch(err => console.error('Error fetching data:', err));
 }
@@ -88,7 +88,7 @@ function featureStyle(feature) {
   };
 }
 
-/* ---------- helper: show placeholder text ---------- */
+/* ---------- helper: placeholder graph ---------- */
 function resetGraph() {
   const holder = document.getElementById('graph');
   holder.innerHTML =
@@ -98,41 +98,41 @@ function resetGraph() {
 }
 
 /* ========  NAVIGATION (breadcrumb + drill-down)  ======== */
-const BASE_BBOX = FLASK_CTX.base_bbox;   // comes from Jinja
-const viewStack = [];                    // [{name, code, bounds}]
+const BASE_BBOX = FLASK_CTX.base_bbox;
+const viewStack = [];  // [{name, code, bounds}]
 
-function renderBreadcrumb () {
+function renderBreadcrumb() {
   const div = document.getElementById('breadcrumb');
   div.innerHTML = viewStack.map((v,i) =>
-      `<span data-d="${i}">${v.name}</span>${i<viewStack.length-1?'<span class="sep">›</span>':''}`
+      `<span data-d="${i}">${v.name}</span>${i<viewStack.length-1?'<span class="sep">></span>':''}`
   ).join('');
   div.querySelectorAll('span[data-d]')
      .forEach(el => el.onclick = () => popTo(+el.dataset.d));
 }
 
-function pushView (name, code, bounds) {
-  if (viewStack.at(-1)?.code === code) return;   // avoid duplicates
-  viewStack.push({name, code, bounds});
+function pushView(name, code, bounds) {
+  if (viewStack.at(-1)?.code === code) return;   // avoid duplicate push
+  viewStack.push({ name, code, bounds });
   renderBreadcrumb();
 }
 
-function popTo (depth) {
-  viewStack.splice(depth+1);
+function popTo(depth) {
+  viewStack.splice(depth + 1);
   renderBreadcrumb();
   const top = viewStack.at(-1);
-  FLASK_CTX.regionSlug = top.code || 'EU';   // <— keep slug in sync
+  FLASK_CTX.regionSlug = top.code || 'EU';       // keep slug in sync
   map.flyToBounds(top.bounds);
   loadGeoJSON(yearSlider.value, weekSlider.value);
 }
 
 /* drill-down button calls this */
-function drillDown (iso) {
+function drillDown(iso, name) {
   FLASK_CTX.regionSlug = iso;
-  loadGeoJSON(yearSlider.value, weekSlider.value).then(b =>
-    pushView(iso, iso, b)   // use ISO as display name; swap for nicer label if you wish
-  );
+  loadGeoJSON(yearSlider.value, weekSlider.value).then(bounds => {
+    pushView(name, iso, bounds);
+    map.fitBounds(bounds);                        // zoom to country
+  });
 }
-
 
 /* ======================= INFO ======================= */  
 function updateInfoPanel(metric) {
@@ -158,10 +158,10 @@ function onEachFeature(feature, layer) {
   if (p.temperature_rcp45 != null) popupLines.push(`Temp (RCP 4.5): ${p.temperature_rcp45} °C`);
   if (p.temperature_rcp85 != null) popupLines.push(`Temp (RCP 8.5): ${p.temperature_rcp85} °C`);
 
-  // Optional navigation button for Austria
-  const iso = (p.CNTR_CODE ?? (p.NUTS_ID ?? '') .slice(0,2)).toUpperCase();
+  const iso = (p.NUTS_ID ?? '').toUpperCase();
+  const name = (p.name ?? 'Unnamed');
   if (iso.length === 2) {
-    popupLines.push(`<button onclick="drillDown('${iso}')">District view</button>`);
+    popupLines.push(`<button onclick="drillDown('${iso}', '${name}')">District view</button>`);
   }
 
   layer.bindPopup(popupLines.join('<br>'));
@@ -170,9 +170,9 @@ function onEachFeature(feature, layer) {
   layer.on('click', () => {
     drawTimeSeries(p.NUTS_ID, p.name);
   });
-}  
+}
 
-/* global to hold the active chart */
+/* ---------- Time-series ---------- */
 let currentChart = null;
 
 function drawTimeSeries(nutsId, regionName) {
@@ -240,31 +240,29 @@ function applyYearRange([minYear, maxYear]) {
   yearValue.textContent = yearSlider.value;
 }
 
-/* live update & debounce */
-yearSlider.addEventListener('input', () => {
+yearSlider.oninput = () => {
   yearValue.textContent = yearSlider.value;
   clearTimeout(debounce);
   debounce = setTimeout(() => loadGeoJSON(yearSlider.value, weekSlider.value), 250);
-});
-weekSlider.addEventListener('input', () => {
+};
+weekSlider.oninput = () => {
   weekValue.textContent = weekSlider.value;
   clearTimeout(debounce);
   debounce = setTimeout(() => loadGeoJSON(yearSlider.value, weekSlider.value), 250);
-});
+};
 
-/* dataset selector */
-metricSelect.addEventListener('change', () => {
+metricSelect.onchange = () => {
   currentMetric = metricSelect.value;
   applyYearRange(METRIC_CFG[currentMetric].range);
   loadGeoJSON(yearSlider.value, weekSlider.value);
   if (currentChart) { currentChart.destroy(); currentChart = null; }
   resetGraph();
   updateInfoPanel(currentMetric);
-});
+};
 
 /* ====================== START-UP ====================== */
-applyYearRange(METRIC_CFG[currentMetric].range);   // set correct slider range
-pushView('Europe', null, BASE_BBOX);   // root breadcrumb item
-loadGeoJSON(yearSlider.value, weekSlider.value);   // draw the map
-resetGraph();                                      // placeholder graph text
-updateInfoPanel(currentMetric);                    // info box
+applyYearRange(METRIC_CFG[currentMetric].range);
+pushView('Europe', null, BASE_BBOX);          // root breadcrumb
+loadGeoJSON(yearSlider.value, weekSlider.value);
+resetGraph();
+updateInfoPanel(currentMetric);
