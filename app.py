@@ -49,6 +49,7 @@ def index():
         center_lon=meta["center"][1],
         zoom=meta["zoom"],
         nuts_id="EU",
+        ls_ids=list(CSV_MAP.keys()),
     )
 
 

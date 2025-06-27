@@ -169,8 +169,13 @@ function onEachFeature(feature, layer) {
 
   const nutsID = (p.NUTS_ID ?? '').toUpperCase();
   const name = (p.name ?? 'Unnamed');
-  if (nutsID.length === 2) {
-    popupLines.push(`<button onclick="changeRegion('${nutsID}', '${name}')">District view</button>`);
+  // If this code does not appear in /api/bbox, we do not display the button
+  if (FLASK_CTX.availableIDs.includes(nutsID)) {
+    popupLines.push(
+      `<button onclick="changeRegion('${nutsID}', '${name}')">
+         Region view
+       </button>`
+    );
   }
 
   layer.bindPopup(popupLines.join('<br>'));
