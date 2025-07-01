@@ -1,9 +1,40 @@
 /* ======================= CONFIG ======================= */
+
+const mortalityColour = v => {
+  if (v < 0)   return '#000000';   // black
+  if (v < 5)   return '#66c2a5';   // light blue
+  if (v < 10)  return '#abdda4';   // teal
+  if (v < 15)  return '#e6f598';   // light green
+  if (v < 20)  return '#fee08b';   // yellow
+  if (v < 25)  return '#fdae61';   // orange
+  return '#d7191c';                // red
+};
+
+const populationDensityColour = v => {
+  if (v < 0)   return '#000000';   // black
+  if (v < 50) return '#000066';   // IE dark blue
+  if (v < 100) return '#47bfff';   // IE light blue
+  if (v < 200) return '#e6f598';   // mixed blue to green
+  return '#6dc201';                // IE green
+};
+
+/* --- shared, step-wise palette for all temperature metrics ------------- */
+const tempColour = v => {
+  if (v < -90) return '#000000';   // black
+  if (v < 0)   return '#2b83ba';   // deep blue
+  if (v < 5)   return '#66c2a5';   // light blue
+  if (v < 10)  return '#abdda4';   // teal
+  if (v < 15)  return '#e6f598';   // light green
+  if (v < 20)  return '#fee08b';   // yellow
+  if (v < 25)  return '#fdae61';   // orange
+  return '#d7191c';                // red (≥ 25 °C)
+};
+
 const METRIC_CFG = {
   mortality_rate: {
     label : 'Mortality (per 100 k)',
-    value : p => p.mortality_rate ?? 0,
-    colour: v => `rgb(0, 0, ${Math.min(v * 5, 255)})`,
+    value : p => p.mortality_rate ?? -99,
+    colour: mortalityColour,
     range : [2013, 2024],
     description: [
       '• WEEKLY all-cause deaths per 100 000 inhabitants.',
@@ -15,8 +46,8 @@ const METRIC_CFG = {
 
   population_density: {
     label : 'Population Density (km²)',
-    value : p => p.population_density ?? 0,
-    colour: v => `rgb(0, ${Math.min(v, 255)}, 0)`,
+    value : p => p.population_density ?? -99,
+    colour: populationDensityColour,
     range : [2000, 2023],
     description: [
       '• Annual population per km² (mid-year stock).',
@@ -28,8 +59,8 @@ const METRIC_CFG = {
 
   temperature_rcp45: {
     label : 'Temperature (°C)',
-    value : p => p.temperature_rcp45 ?? -20,
-    colour: v => `rgb(${Math.min((v + 20) * 5, 255)}, 0, 0)`,
+    value : p => p.temperature_rcp45 ?? -99,
+    colour: tempColour, 
     range : [2006, 2100],
     description: [
       '• Mean 2-m air temperature under medium-emission scenario RCP 4.5.',
@@ -41,8 +72,8 @@ const METRIC_CFG = {
 
   temperature_rcp85: {
     label : 'Temperature (°C)',
-    value : p => p.temperature_rcp85 ?? -20,
-    colour: v => `rgb(${Math.min((v + 20) * 5, 255)}, 0, 0)`,
+    value : p => p.temperature_rcp85 ?? -99,
+    colour: tempColour,
     range : [2006, 2100],
     description: [
       '• Mean 2-m air temperature under high-emission scenario RCP 8.5.',
