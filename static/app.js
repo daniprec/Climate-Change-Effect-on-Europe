@@ -84,6 +84,9 @@ const METRIC_CFG = {
   }
 };
 
+/* ======================= INIT PARAMS ====================== */
+Chart.register(window.ChartZoom);   // make Chart.js aware of the plugin
+
 /* ======================= MAP INIT ======================= */
 // take the first metric as default
 let currentMetric = Object.keys(METRIC_CFG)[0];
@@ -248,13 +251,21 @@ function drawTimeSeries(nutsId, regionName) {
       const labels = res.data.map(d => `${d.year}-W${String(d.week).padStart(2, '0')}`);
       const values = res.data.map(d => d.value);
 
+      /* auto-centre:  ±10 years around the current slider year */
+      const curYear = +yearSlider.value;
+      const minYear = Math.max(curYear - 10, +labels[0].slice(0,4));
+      const maxYear = Math.min(curYear + 10, +labels.at(-1).slice(0,4));
+      const minLabel = labels.findIndex(s => +s.slice(0,4) >= minYear);
+      const maxLabel = labels.findLastIndex(s => +s.slice(0,4) <= maxYear);
+
       /* prepare a fresh canvas each click */
       const holder = document.getElementById('regionGraph');
-      holder.innerHTML = '';                          // remove any previous canvas
-      const canvas = document.createElement('canvas');
-      holder.appendChild(canvas);
+      holder.innerHTML = '<canvas></canvas>';
+      const ctx = holder.firstChild.getContext('2d');
 
-      new Chart(canvas.getContext('2d'), {
+      if (currentChart) currentChart.destroy();
+
+      currentChart = new Chart(ctx, {
         type: 'line',
         data: {
           labels,
@@ -273,8 +284,26 @@ function drawTimeSeries(nutsId, regionName) {
           responsive: true,
           maintainAspectRatio: false,
           scales: {
-            x: { ticks: { autoSkip: true, maxTicksLimit: 12 } },
-            y: { beginAtZero: true }
+            x: {
+              ticks : { autoSkip: true, maxTicksLimit:12 },
+              min   : labels[minLabel],
+              max   : labels[maxLabel]
+            },
+            y: { beginAtZero:true }
+          },
+          /* ------------ Zoom / Pan only on X ------------- */
+          plugins: {
+            zoom: {
+              limits: { x: {min: labels[0], max: labels.at(-1)} },
+              zoom: {
+                wheel   : { enabled:true },
+                mode    : 'x'
+              },
+              pan: {
+                enabled: true,   // allow panning
+                mode   : 'x'     // x-axis only
+              }              
+            }
           }
         }
       });
