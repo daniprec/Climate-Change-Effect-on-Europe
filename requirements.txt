@@ -5,8 +5,10 @@ imageio==2.37.0
 netcdf4==1.7.2
 numpy==2.2.5
 pandas==2.2.3
+pyarrow
 Requests==2.32.3
 Shapely==2.1.0
 statsmodels==0.14.4
+tqdm
 typer
 xarray==2025.4.0
