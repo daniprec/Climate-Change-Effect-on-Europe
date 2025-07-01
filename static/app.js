@@ -56,8 +56,10 @@ const METRIC_CFG = {
 /* ======================= MAP INIT ======================= */
 // take the first metric as default
 let currentMetric = Object.keys(METRIC_CFG)[0];
-const map = L.map('map', { zoomControl: false })
-            .setView([FLASK_CTX.centerLat, FLASK_CTX.centerLon], FLASK_CTX.zoom);
+const map = L.map('map', {
+  zoomControl: false,
+  doubleClickZoom: false
+  }).setView([FLASK_CTX.centerLat, FLASK_CTX.centerLon], FLASK_CTX.zoom);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
 let geoJsonLayer = null;
 
@@ -88,9 +90,18 @@ function featureStyle(feature) {
   };
 }
 
-/* ---------- helper: placeholder graph ---------- */
+/* ---------- helper: placeholder regionPopup ---------- */
+function resetPopup() {
+  const holder = document.getElementById('regionPopup');
+  holder.innerHTML =
+    '<div style="color:#555;font:14px/1.4em system-ui, sans-serif;'+
+    'text-align:center;padding-top:40%;opacity:0.8;">'+
+    'Click on a region to display its information</div>';
+}
+
+/* ---------- helper: placeholder regionGraph ---------- */
 function resetGraph() {
-  const holder = document.getElementById('graph');
+  const holder = document.getElementById('regionGraph');
   holder.innerHTML =
     '<div style="color:#555;font:14px/1.4em system-ui, sans-serif;'+
     'text-align:center;padding-top:40%;opacity:0.8;">'+
@@ -127,6 +138,11 @@ function popTo(depth) {
 
 /* Change the region in the map and update the breadcrumb. */
 function changeRegion(nutsID, name) {
+  // First we make sure the region is valid
+  if (!FLASK_CTX.availableIDs.includes(nutsID)) {
+    return;
+  }
+
   // We get the bounding box for the selected region
   fetch(`/api/bbox?nuts_id=${nutsID || 'EU'}`)
     .then(r => r.json())
@@ -162,7 +178,8 @@ function highlightStyle() {
   return { weight: 3, color: '#fff', fillOpacity: 0.7 };   // thicker, darker edge
 }
 
-function onEachFeature(feature, layer) {
+/* ---------- regionPopup ---------- */
+function drawRegionPopup(feature) {
   const p = feature.properties;
 
   // Build the list only with fields that exist
@@ -177,33 +194,12 @@ function onEachFeature(feature, layer) {
   const name = (p.name ?? 'Unnamed');
   // If this code does not appear in /api/bbox, we do not display the button
   if (FLASK_CTX.availableIDs.includes(nutsID)) {
-    popupLines.push(
-      `<button onclick="changeRegion('${nutsID}', '${name}')">
-         Region view
-       </button>`
-    );
+    popupLines.push(`<i>(Double click to zoom in)</i>`);
   }
 
-  layer.bindPopup(popupLines.join('<br>'));
-
-  // Click -> show time-series
-  layer.on('click', () => {
-    drawTimeSeries(p.NUTS_ID, p.name);
-  });
-
-  /* hover glue  */
-  layer.on({
-    mouseover: e => {
-      e.target.setStyle(highlightStyle());
-      // keep it on top so the thick edge isn’t hidden
-      if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
-        e.target.bringToFront();
-      }
-    },
-    mouseout: e => {
-      geoJsonLayer.resetStyle(e.target);   // revert to normal style()
-    }
-  });
+  // Update the regionPopup
+  const holder = document.getElementById('regionPopup');
+  holder.innerHTML = popupLines.join('<br>');
 }
 
 /* ---------- Time-series ---------- */
@@ -222,7 +218,7 @@ function drawTimeSeries(nutsId, regionName) {
       const values = res.data.map(d => d.value);
 
       /* prepare a fresh canvas each click */
-      const holder = document.getElementById('graph');
+      const holder = document.getElementById('regionGraph');
       holder.innerHTML = '';                          // remove any previous canvas
       const canvas = document.createElement('canvas');
       holder.appendChild(canvas);
@@ -253,6 +249,37 @@ function drawTimeSeries(nutsId, regionName) {
       });
     })
     .catch(err => console.error('Error loading TS:', err));
+}
+
+/* ---------- this function is called for each region ---------- */
+
+function onEachFeature(feature, layer) {
+  const p = feature.properties;
+
+  // Click -> show time-series
+  layer.on('click', () => {
+    drawTimeSeries(p.NUTS_ID, p.name);
+  });
+
+  // Double click -> zoom in on the region
+  layer.on('dblclick', () => {
+    changeRegion(p.NUTS_ID, p.name);
+  });
+
+  /* hover glue  */
+  layer.on({
+    mouseover: e => {
+      drawRegionPopup(feature);
+      e.target.setStyle(highlightStyle());
+      // keep it on top so the thick edge isn't hidden
+      if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+        e.target.bringToFront();
+      }
+    },
+    mouseout: e => {
+      geoJsonLayer.resetStyle(e.target);   // revert to normal style()
+    }
+  });
 }
 
 /* ==================== EVENT HANDLERS =================== */
@@ -299,5 +326,6 @@ metricSelect.onchange = () => {
 applyYearRange(METRIC_CFG[currentMetric].range);
 pushView('EU', 'Europe');
 loadGeoJSON(FLASK_CTX.nutsID, yearSlider.value, weekSlider.value);
+resetPopup();
 resetGraph();
 updateInfoPanel(currentMetric);

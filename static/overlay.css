@@ -47,8 +47,20 @@ html, body {
   max-width: 800px;
 }
 
+/* region popup */
+#regionPopup {
+  bottom: 400px;
+  right: 20px;
+  width: 10%;
+  height: 15%;
+  min-width: 400px;
+  max-width: 800px;
+  min-height: 50px;
+  max-height: 200px;
+}
+
 /* time-series panel */
-#graph   {
+#regionGraph   {
   bottom: 20px;
   right: 20px;
   width: 30%;
