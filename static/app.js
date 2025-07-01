@@ -156,6 +156,12 @@ function updateInfoPanel(metric) {
 }
 
 /* =================== POPUP + CHART ===================== */
+
+/* ---------- a helper that returns the highlight style ---------- */
+function highlightStyle() {
+  return { weight: 3, color: '#fff', fillOpacity: 0.7 };   // thicker, darker edge
+}
+
 function onEachFeature(feature, layer) {
   const p = feature.properties;
 
@@ -183,6 +189,20 @@ function onEachFeature(feature, layer) {
   // Click -> show time-series
   layer.on('click', () => {
     drawTimeSeries(p.NUTS_ID, p.name);
+  });
+
+  /* hover glue  */
+  layer.on({
+    mouseover: e => {
+      e.target.setStyle(highlightStyle());
+      // keep it on top so the thick edge isn’t hidden
+      if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+        e.target.bringToFront();
+      }
+    },
+    mouseout: e => {
+      geoJsonLayer.resetStyle(e.target);   // revert to normal style()
+    }
   });
 }
 
