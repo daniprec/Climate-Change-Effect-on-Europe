@@ -8,10 +8,6 @@
   <link rel="stylesheet"
         href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
-  <!-- Overlay styling -->
-  <link rel="stylesheet"
-        href="{{ url_for('static', filename='overlay.css') }}" />
-
   <!-- General style -->
   <link rel="stylesheet"
         href="{{ url_for('static', filename='style.css') }}" />
@@ -24,9 +20,6 @@
 </head>
 <body>
 
-  <!-- MAP (full-screen) -->
-  <div id="map"></div>
-
   <!-- LOGO  (top-right, z-stacked above map) -->
   <img id="logo"
        src="{{ url_for('static', filename='logo.png') }}"
@@ -35,42 +28,50 @@
        onclick="location.href='https://ixlabs.ie.edu/'"
    />
 
-  <!-- BREADCRUMB (top-centre)  -->
-  <div id="breadcrumb" class="overlay breadcrumb"></div>
+  <body>
+    <div id="app-wrapper">
+      <!-- SIDEBAR (left column) -->
+      <aside id="sidebar">
+        <div id="controls" class="panel">
+          <label for="yearSlider">Year: <span id="yearValue" class="mutableValue">2025</span></label>
+          <input id="yearSlider" class="slider" type="range"
+                min="{{ min_year }}" max="{{ max_year }}"
+                value="{{ yearValue }}" />
+          <br />
 
-  <!-- INFO BADGE (bottom-left) -->
-  <div id="infoToggle" class="overlay info-badge">i</div>
+          <label for="weekSlider">Week: <span id="weekValue" class="mutableValue">1</span></label>
+          <input id="weekSlider" class="slider" type="range"
+                min="1" max="52" value="1" />
+          <br />
 
-  <!-- INFO PANEL  (initially hidden) -->
-  <div id="infoPanel" class="overlay info-panel"></div>
+          <label for="metricSelect">Dataset: </label>
+          <select id="metricSelect" class="select">
+            <option value="mortality_rate">Mortality</option>
+            <option value="population_density">Population Density</option>
+            <option value="temperature_rcp45">Temp RCP 4.5</option>
+            <option value="temperature_rcp85">Temp RCP 8.5</option>
+          </select>
+        </div>
 
-  <!-- CONTROLS (top-left) -->
-  <div id="controls" class="overlay">
-    <label for="yearSlider">Year: <span id="yearValue" class="mutableValue">2025</span></label>
-    <input id="yearSlider" class="slider" type="range"
-           min="{{ min_year }}" max="{{ max_year }}"
-           value="{{ yearValue }}" />
-    <br />
+        <div id="infoPanel" class="panel">
+          <!-- info panel -->
+        </div>
+  
+        <div id="regionPopup" class="panel">
+          <!-- region popup -->
+        </div>
+  
+        <div id="regionGraph" class="panel">
+          <!-- time series -->
+        </div>
+      </aside>
 
-    <label for="weekSlider">Week: <span id="weekValue" class="mutableValue">1</span></label>
-    <input id="weekSlider" class="slider" type="range"
-           min="1" max="52" value="1" />
-    <br />
-
-    <label for="metricSelect">Dataset: </label>
-    <select id="metricSelect" class="select">
-      <option value="mortality_rate">Mortality</option>
-      <option value="population_density">Population Density</option>
-      <option value="temperature_rcp45">Temp RCP 4.5</option>
-      <option value="temperature_rcp85">Temp RCP 8.5</option>
-    </select>
-  </div>
-
-  <!-- REGION POPUP (bottom-right) -->
-  <div id="regionPopup" class="overlay rounded shadow"></div>
-
-  <!-- TIME-SERIES (bottom-right, below region popup) -->
-  <div id="regionGraph" class="overlay rounded shadow"></div>
+      <!-- BREADCRUMB (top-centre)  -->
+      <div id="breadcrumb" class="overlay breadcrumb"></div>  
+  
+      <!-- MAP (right column) -->
+      <div id="map"></div>
+    </div>
 
   <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -87,7 +88,7 @@
     };
   </script>
 
-  <!-- Your existing application logic -->
+  <!-- Application logic -->
   <script src="{{ url_for('static', filename='app.js') }}"></script>
 </body>
 </html>
