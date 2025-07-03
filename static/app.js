@@ -118,11 +118,12 @@ function onEachFeature(feature, layer) {
   layer.on('click', () => {
     drawTimeSeries(p.NUTS_ID, p.name);
     // Hold the region info to avoid flickering
-    if (holdRegionInfo !== p.NUTS_ID) {
-      holdRegionInfo = p.NUTS_ID;
+    if (holdRegionInfo.NUTS_ID !== p.NUTS_ID) {
+      holdRegionInfo.NUTS_ID = p.NUTS_ID;
+      holdRegionInfo.name = p.name;
       drawregionInfo(feature);  // display region info
     } else {
-      holdRegionInfo = null;  // reset if clicked again
+      holdRegionInfo.NUTS_ID = null;  // reset if clicked again
     }
   });
 
@@ -162,22 +163,16 @@ function loadGeoJSON(region, year, week) {
     .catch(err => console.error('Error fetching data:', err));
 }
 
-/* ---------- helper: placeholder regionInfo ---------- */
-function resetPopup() {
-  const holder = document.getElementById('regionInfo');
-  holder.innerHTML =
-    '<div style="color:#555;font:14px/1.4em system-ui, sans-serif;'+
-    'text-align:center;padding-top:40%;opacity:0.8;">'+
-    'Click on a region to display its information</div>';
-}
-
 /* ---------- a helper that returns the highlight style ---------- */
 function highlightStyle() {
   return { weight: 3, color: '#fff', fillOpacity: 0.7 };   // thicker, darker edge
 }
 
 /* ---------- regionInfo ---------- */
-let holdRegionInfo = null;  // hold the last region info to avoid flickering
+let holdRegionInfo = {
+  NUTS_ID: null,
+  name: null
+};  // hold the last region info to avoid flickering
 
 function drawregionInfo(feature) {
   const p = feature.properties;
@@ -327,9 +322,8 @@ metricSelect.onchange = () => {
   currentMetric = metricSelect.value;
   applyYearRange(METRIC_CFG[currentMetric].range);
   loadGeoJSON(FLASK_CTX.nutsID, yearSlider.value, weekSlider.value);
-  if (currentChart) { currentChart.destroy(); currentChart = null; }
-  resetGraph();
   updateInfoPanel(currentMetric);
+  drawTimeSeries(holdRegionInfo.NUTS_ID, holdRegionInfo.name);  // redraw TS for the new metric
 };
 
 /* ----------Information panel ---------- */
@@ -370,8 +364,6 @@ function drawTimeSeries(nutsId, regionName) {
       const holder = document.getElementById('regionGraph');
       holder.innerHTML = '<canvas></canvas>';
       const ctx = holder.firstChild.getContext('2d');
-
-      if (currentChart) currentChart.destroy();
 
       currentChart = new Chart(ctx, {
         type: 'line',
@@ -419,19 +411,8 @@ function drawTimeSeries(nutsId, regionName) {
     .catch(err => console.error('Error loading TS:', err));
 }
 
-/* ---------- helper: reset the time series ---------- */
-function resetGraph() {
-  const holder = document.getElementById('regionGraph');
-  holder.innerHTML =
-    '<div style="color:#555;font:14px/1.4em system-ui, sans-serif;'+
-    'text-align:center;padding-top:40%;opacity:0.8;">'+
-    'Click on a region to display its information</div>';
-}
-
 /* ====================== START-UP ====================== */
 applyYearRange(METRIC_CFG[currentMetric].range);
 pushView('EU', 'Europe');
 loadGeoJSON(FLASK_CTX.nutsID, yearSlider.value, weekSlider.value);
-resetPopup();
-resetGraph();
 updateInfoPanel(currentMetric);
