@@ -127,7 +127,7 @@ function onEachFeature(feature, layer) {
   /* hover glue  */
   layer.on({
     mouseover: e => {
-      drawRegionPopup(feature);
+      drawregionInfo(feature);
       e.target.setStyle(highlightStyle());
       // keep it on top so the thick edge isn't hidden
       if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
@@ -155,9 +155,9 @@ function loadGeoJSON(region, year, week) {
     .catch(err => console.error('Error fetching data:', err));
 }
 
-/* ---------- helper: placeholder regionPopup ---------- */
+/* ---------- helper: placeholder regionInfo ---------- */
 function resetPopup() {
-  const holder = document.getElementById('regionPopup');
+  const holder = document.getElementById('regionInfo');
   holder.innerHTML =
     '<div style="color:#555;font:14px/1.4em system-ui, sans-serif;'+
     'text-align:center;padding-top:40%;opacity:0.8;">'+
@@ -169,8 +169,8 @@ function highlightStyle() {
   return { weight: 3, color: '#fff', fillOpacity: 0.7 };   // thicker, darker edge
 }
 
-/* ---------- regionPopup ---------- */
-function drawRegionPopup(feature) {
+/* ---------- regionInfo ---------- */
+function drawregionInfo(feature) {
   const p = feature.properties;
 
   // Build the list only with fields that exist
@@ -188,8 +188,8 @@ function drawRegionPopup(feature) {
     popupLines.push(`<i>(Double click to zoom in)</i>`);
   }
 
-  // Update the regionPopup
-  const holder = document.getElementById('regionPopup');
+  // Update the regionInfo
+  const holder = document.getElementById('regionInfo');
   holder.innerHTML = popupLines.join('<br>');
 }
 
