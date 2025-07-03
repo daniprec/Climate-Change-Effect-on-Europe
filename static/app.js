@@ -193,6 +193,37 @@ function changeRegion(nutsID, name) {
   loadGeoJSON(FLASK_CTX.nutsID, yearSlider.value, weekSlider.value);
 }
 
+/* ==================== SPLITTER DRAGGING =================== */
+
+const splitter = document.getElementById('splitter');
+const sidebar  = document.getElementById('sidebar');
+let isDragging = false;
+
+splitter.addEventListener('mousedown', () => {
+  isDragging = true;
+  document.body.style.cursor = 'col-resize';
+  splitter.style.backgroundColor = '#6dc201';  // change splitter color on drag
+});
+
+document.addEventListener('mousemove', e => {
+  if (!isDragging) return;
+  // Calculate new width, but clamp between min/max
+  const newWidth = Math.min(
+    Math.max(e.clientX, 150),        // no less than 150px
+    window.innerWidth * 0.5          // no more than 50% of viewport
+  );
+  sidebar.style.width = newWidth + 'px';
+  map.invalidateSize();             // if using Leaflet, tell it to reflow
+});
+
+document.addEventListener('mouseup', () => {
+  if (isDragging) {
+    isDragging = false;
+    document.body.style.cursor = '';
+  }
+  splitter.style.backgroundColor = '';  // reset splitter color
+});
+
 /* ======================= INFO ======================= */  
 function updateInfoPanel(metric) {
   const holder = document.getElementById('infoPanel');

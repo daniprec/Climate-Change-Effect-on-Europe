@@ -19,7 +19,6 @@
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2"></script>
 </head>
 <body>
-
   <!-- LOGO  (top-right, z-stacked above map) -->
   <img id="logo"
        src="{{ url_for('static', filename='logo.png') }}"
@@ -28,50 +27,52 @@
        onclick="location.href='https://ixlabs.ie.edu/'"
    />
 
-  <body>
-    <div id="app-wrapper">
-      <!-- SIDEBAR (left column) -->
-      <aside id="sidebar">
-        <div id="controls" class="panel">
-          <label for="yearSlider">Year: <span id="yearValue" class="mutableValue">2025</span></label>
-          <input id="yearSlider" class="slider" type="range"
-                min="{{ min_year }}" max="{{ max_year }}"
-                value="{{ yearValue }}" />
-          <br />
+  <!-- BREADCRUMB (top-centre)  -->
+  <div id="breadcrumb" class="overlay breadcrumb"></div>
 
-          <label for="weekSlider">Week: <span id="weekValue" class="mutableValue">1</span></label>
-          <input id="weekSlider" class="slider" type="range"
-                min="1" max="52" value="1" />
-          <br />
+  <div id="app-wrapper">
+    <!-- SIDEBAR (left column) -->
+    <aside id="sidebar">
+      <div id="controls" class="panel">
+        <label for="yearSlider">Year: <span id="yearValue" class="mutableValue">2025</span></label>
+        <input id="yearSlider" class="slider" type="range"
+              min="{{ min_year }}" max="{{ max_year }}"
+              value="{{ yearValue }}" />
+        <br />
 
-          <label for="metricSelect">Dataset: </label>
-          <select id="metricSelect" class="select">
-            <option value="mortality_rate">Mortality</option>
-            <option value="population_density">Population Density</option>
-            <option value="temperature_rcp45">Temp RCP 4.5</option>
-            <option value="temperature_rcp85">Temp RCP 8.5</option>
-          </select>
-        </div>
+        <label for="weekSlider">Week: <span id="weekValue" class="mutableValue">1</span></label>
+        <input id="weekSlider" class="slider" type="range"
+              min="1" max="52" value="1" />
+        <br />
 
-        <div id="infoPanel" class="panel">
-          <!-- info panel -->
-        </div>
-  
-        <div id="regionPopup" class="panel">
-          <!-- region popup -->
-        </div>
-  
-        <div id="regionGraph" class="panel">
-          <!-- time series -->
-        </div>
-      </aside>
+        <label for="metricSelect">Dataset: </label>
+        <select id="metricSelect" class="select">
+          <option value="mortality_rate">Mortality</option>
+          <option value="population_density">Population Density</option>
+          <option value="temperature_rcp45">Temp RCP 4.5</option>
+          <option value="temperature_rcp85">Temp RCP 8.5</option>
+        </select>
+      </div>
 
-      <!-- BREADCRUMB (top-centre)  -->
-      <div id="breadcrumb" class="overlay breadcrumb"></div>  
-  
-      <!-- MAP (right column) -->
-      <div id="map"></div>
-    </div>
+      <div id="infoPanel" class="panel">
+        <!-- info panel -->
+      </div>
+
+      <div id="regionPopup" class="panel">
+        <!-- region popup -->
+      </div>
+
+      <div id="regionGraph" class="panel">
+        <!-- time series -->
+      </div>
+    </aside>
+
+    <!-- SPLITTER (between sidebar and map) -->
+    <div id="splitter"></div>
+
+    <!-- MAP (right column) -->
+    <div id="map"></div>
+  </div>
 
   <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>

@@ -5,6 +5,7 @@ html, body {
   font-family: Arial, sans-serif;
   background: #f4f4f4;
   color: #333;
+  overflow: hidden;  
 }
 
 /* ---------- 2. headings & copy ---------- */
@@ -14,40 +15,43 @@ h1 {
   color: #000066;
 }
 
-/* ---------- 1. full-screen map canvas ---------- */
-html, body {
-  overflow: hidden;           /* lock page scroll */
-}
-
-/* 1) wrapper splits sidebar + map */
+/* wrapper splits sidebar + map */
 #app-wrapper {
   display: flex;
-  height: 100vh;
+  height: 100vh;            /* fill the viewport */
   overflow: hidden;
 }
 
-/* 2) sidebar: fixed width, scroll if tall */
-#sidebar {
-  flex: 0 0 400px;        /* adjust width to taste */
+/* sidebar: fixed width, scroll if tall */
+aside#sidebar {
+  flex: 0 0 auto;   /* don’t grow or shrink automatically */
   display: flex;
   flex-direction: column;
   gap: 1rem;              /* space between panels */
   padding: 1rem;
   background: rgba(255,255,255,0.9);
   backdrop-filter: blur(4px);
-  overflow-y: auto;
+  min-width: 200px;         /* don’t shrink too far */
+  max-width: 50%;           /* don’t grow past half-screen */
+  overflow-y: auto;         /* scroll if content too tall */
   z-index: 1000;          /* above map */
 }
 
-/* 3) map takes remaining space */
+#splitter {
+  width: 5px;
+  cursor: col-resize;
+  background: rgba(0,0,0,0.1);
+}
+
+/* map takes remaining space */
 #map {
-  flex: 1 1 auto;
+  flex: 1;              /* take up all remaining space */
   position: relative;
   inset: 0;                   /* top:0 right:0 bottom:0 left:0 */
   z-index: 1;                 /* below overlays */
 }
 
-/* 4) panels inside sidebar stack normally */
+/* panels inside sidebar stack normally */
 #sidebar .panel {
   background: white;
   padding: 0.75rem;
