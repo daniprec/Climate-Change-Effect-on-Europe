@@ -310,6 +310,7 @@ yearSlider.oninput = () => {
   yearValue.textContent = yearSlider.value;
   clearTimeout(debounce);
   debounce = setTimeout(() => loadGeoJSON(FLASK_CTX.nutsID, yearSlider.value, weekSlider.value), 250);
+  drawTimeSeries(holdRegionInfo.NUTS_ID, holdRegionInfo.name);  // redraw TS for the new year
 };
 
 weekSlider.oninput = () => {
