@@ -19,17 +19,6 @@
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2"></script>
 </head>
 <body>
-  <!-- LOGO  (top-right, z-stacked above map) -->
-  <img id="logo"
-       src="{{ url_for('static', filename='logo.png') }}"
-       alt="VIG logo"
-       class="overlay logo"
-       onclick="location.href='https://ixlabs.ie.edu/'"
-   />
-
-  <!-- BREADCRUMB (top-centre)  -->
-  <div id="breadcrumb" class="overlay breadcrumb"></div>
-
   <div id="app-wrapper">
     <!-- SIDEBAR (left column) -->
     <aside id="sidebar">
@@ -71,7 +60,17 @@
     <div id="splitter"></div>
 
     <!-- MAP (right column) -->
-    <div id="map"></div>
+    <div id="map">
+      <!-- BREADCRUMB (at the center of the map)  -->
+      <div id="breadcrumb" class="overlay breadcrumb"></div>
+    </div>
+    <!-- LOGO  (top-right, z-stacked above map) -->
+    <img id="logo"
+      src="{{ url_for('static', filename='logo.png') }}"
+      alt="VIG logo"
+      class="overlay logo"
+      onclick="location.href='https://ixlabs.ie.edu/'"
+    />
   </div>
 
   <!-- Leaflet JS -->

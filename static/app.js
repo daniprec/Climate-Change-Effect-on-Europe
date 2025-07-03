@@ -210,7 +210,7 @@ document.addEventListener('mousemove', e => {
   // Calculate new width, but clamp between min/max
   const newWidth = Math.min(
     Math.max(e.clientX, 150),        // no less than 150px
-    window.innerWidth * 0.5          // no more than 50% of viewport
+    window.innerWidth * 0.6          // no more than 60% of viewport
   );
   sidebar.style.width = newWidth + 'px';
   map.invalidateSize();             // if using Leaflet, tell it to reflow
