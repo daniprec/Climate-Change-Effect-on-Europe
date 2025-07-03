@@ -117,6 +117,13 @@ function onEachFeature(feature, layer) {
   // Click -> show time-series
   layer.on('click', () => {
     drawTimeSeries(p.NUTS_ID, p.name);
+    // Hold the region info to avoid flickering
+    if (holdRegionInfo !== p.NUTS_ID) {
+      holdRegionInfo = p.NUTS_ID;
+      drawregionInfo(feature);  // display region info
+    } else {
+      holdRegionInfo = null;  // reset if clicked again
+    }
   });
 
   // Double click -> zoom in on the region
@@ -127,7 +134,7 @@ function onEachFeature(feature, layer) {
   /* hover glue  */
   layer.on({
     mouseover: e => {
-      drawregionInfo(feature);
+      if (holdRegionInfo === null) {drawregionInfo(feature)};
       e.target.setStyle(highlightStyle());
       // keep it on top so the thick edge isn't hidden
       if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
@@ -170,6 +177,8 @@ function highlightStyle() {
 }
 
 /* ---------- regionInfo ---------- */
+let holdRegionInfo = null;  // hold the last region info to avoid flickering
+
 function drawregionInfo(feature) {
   const p = feature.properties;
 
@@ -178,14 +187,18 @@ function drawregionInfo(feature) {
 
   if (p.mortality_rate   != null) popupLines.push(`Mortality: ${p.mortality_rate} per 100 k`);
   if (p.population_density != null) popupLines.push(`Population Density: ${p.population_density} per km²`);
-  if (p.temperature_rcp45 != null) popupLines.push(`Temp (RCP 4.5): ${p.temperature_rcp45} °C`);
-  if (p.temperature_rcp85 != null) popupLines.push(`Temp (RCP 8.5): ${p.temperature_rcp85} °C`);
+  if (p.temperature_rcp45 != null) popupLines.push(`Temperature (RCP 4.5): ${p.temperature_rcp45} °C`);
+  if (p.temperature_rcp85 != null) popupLines.push(`Temperature (RCP 8.5): ${p.temperature_rcp85} °C`);
 
   const nutsID = (p.NUTS_ID ?? '').toUpperCase();
-  const name = (p.name ?? 'Unnamed');
   // If this code does not appear in /api/bbox, we do not display the button
   if (FLASK_CTX.availableIDs.includes(nutsID)) {
     popupLines.push(`<i>(Double click to zoom in)</i>`);
+  }
+
+  // If no info is available for this region, we show a message
+  if (popupLines.length === 1) {
+    popupLines.push('<i>No information available for this region</i>');
   }
 
   // Update the regionInfo
