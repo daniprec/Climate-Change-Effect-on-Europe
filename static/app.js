@@ -87,7 +87,8 @@ const METRIC_CFG = {
 /* ======================= INIT PARAMS ====================== */
 Chart.register(window.ChartZoom);   // make Chart.js aware of the plugin
 
-/* ======================= MAP INIT ======================= */
+/* ======================= MAP ======================= */
+
 // take the first metric as default
 let currentMetric = Object.keys(METRIC_CFG)[0];
 const map = L.map('map', {
@@ -97,7 +98,49 @@ const map = L.map('map', {
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
 let geoJsonLayer = null;
 
-/* ======================= DATA LOAD ======================= */
+/* --- helper: to style GeoJSON features --- */
+function featureStyle(feature) {
+  const cfg = METRIC_CFG[currentMetric];
+  const val = cfg.value(feature.properties);
+  return {
+    fillColor: cfg.colour(val),
+    fillOpacity: 0.7,
+    weight: 1,
+    color: '#666'
+  };
+}
+
+/* ---------- helper: what to do on each feature (variable)? ---------- */
+function onEachFeature(feature, layer) {
+  const p = feature.properties;
+
+  // Click -> show time-series
+  layer.on('click', () => {
+    drawTimeSeries(p.NUTS_ID, p.name);
+  });
+
+  // Double click -> zoom in on the region
+  layer.on('dblclick', () => {
+    changeRegion(p.NUTS_ID, p.name);
+  });
+
+  /* hover glue  */
+  layer.on({
+    mouseover: e => {
+      drawRegionPopup(feature);
+      e.target.setStyle(highlightStyle());
+      // keep it on top so the thick edge isn't hidden
+      if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+        e.target.bringToFront();
+      }
+    },
+    mouseout: e => {
+      geoJsonLayer.resetStyle(e.target);   // revert to normal style()
+    }
+  });
+}
+
+/* --- Load the initial GeoJSON data for the default region --- */
 function loadGeoJSON(region, year, week) {
   return fetch(`/api/data?region=${region}&year=${year}&week=${week}&metric=${currentMetric}`)
     .then(r => r.json())
@@ -112,18 +155,6 @@ function loadGeoJSON(region, year, week) {
     .catch(err => console.error('Error fetching data:', err));
 }
 
-/* ======================= STYLING ======================= */
-function featureStyle(feature) {
-  const cfg = METRIC_CFG[currentMetric];
-  const val = cfg.value(feature.properties);
-  return {
-    fillColor: cfg.colour(val),
-    fillOpacity: 0.7,
-    weight: 1,
-    color: '#666'
-  };
-}
-
 /* ---------- helper: placeholder regionPopup ---------- */
 function resetPopup() {
   const holder = document.getElementById('regionPopup');
@@ -133,16 +164,38 @@ function resetPopup() {
     'Click on a region to display its information</div>';
 }
 
-/* ---------- helper: placeholder regionGraph ---------- */
-function resetGraph() {
-  const holder = document.getElementById('regionGraph');
-  holder.innerHTML =
-    '<div style="color:#555;font:14px/1.4em system-ui, sans-serif;'+
-    'text-align:center;padding-top:40%;opacity:0.8;">'+
-    'Click on a region to display its information</div>';
+/* ---------- a helper that returns the highlight style ---------- */
+function highlightStyle() {
+  return { weight: 3, color: '#fff', fillOpacity: 0.7 };   // thicker, darker edge
 }
 
-/* ========  NAVIGATION (breadcrumb + drill-down)  ======== */
+/* ---------- regionPopup ---------- */
+function drawRegionPopup(feature) {
+  const p = feature.properties;
+
+  // Build the list only with fields that exist
+  const popupLines = [`<b>${p.name}</b>`];
+
+  if (p.mortality_rate   != null) popupLines.push(`Mortality: ${p.mortality_rate} per 100 k`);
+  if (p.population_density != null) popupLines.push(`Population Density: ${p.population_density} per km²`);
+  if (p.temperature_rcp45 != null) popupLines.push(`Temp (RCP 4.5): ${p.temperature_rcp45} °C`);
+  if (p.temperature_rcp85 != null) popupLines.push(`Temp (RCP 8.5): ${p.temperature_rcp85} °C`);
+
+  const nutsID = (p.NUTS_ID ?? '').toUpperCase();
+  const name = (p.name ?? 'Unnamed');
+  // If this code does not appear in /api/bbox, we do not display the button
+  if (FLASK_CTX.availableIDs.includes(nutsID)) {
+    popupLines.push(`<i>(Double click to zoom in)</i>`);
+  }
+
+  // Update the regionPopup
+  const holder = document.getElementById('regionPopup');
+  holder.innerHTML = popupLines.join('<br>');
+}
+
+/* ========  BREADCRUMB  ======== */
+/* This breadcrumb controls the region levels in the map. */
+
 const viewStack = [];  // [{nutsID, name}]
 
 function renderBreadcrumb() {
@@ -224,7 +277,49 @@ document.addEventListener('mouseup', () => {
   splitter.style.backgroundColor = '';  // reset splitter color
 });
 
-/* ======================= INFO ======================= */  
+/* =================== LEFT SIDEBAR ===================== */
+
+/* -------------- Year & Week Sliders ---------- */
+const yearSlider = document.getElementById('yearSlider');
+const weekSlider = document.getElementById('weekSlider');
+const metricSelect = document.getElementById('metricSelect');
+const yearValue = document.getElementById('yearValue');
+const weekValue = document.getElementById('weekValue');
+let debounce;
+
+/* --- helper to (re)range the year slider --- */
+function applyYearRange([minYear, maxYear]) {
+  yearSlider.min = minYear;
+  yearSlider.max = maxYear;
+
+  if (+yearSlider.value < minYear) yearSlider.value = minYear;
+  if (+yearSlider.value > maxYear) yearSlider.value = maxYear;
+
+  yearValue.textContent = yearSlider.value;
+}
+
+yearSlider.oninput = () => {
+  yearValue.textContent = yearSlider.value;
+  clearTimeout(debounce);
+  debounce = setTimeout(() => loadGeoJSON(FLASK_CTX.nutsID, yearSlider.value, weekSlider.value), 250);
+};
+
+weekSlider.oninput = () => {
+  weekValue.textContent = weekSlider.value;
+  clearTimeout(debounce);
+  debounce = setTimeout(() => loadGeoJSON(FLASK_CTX.nutsID, yearSlider.value, weekSlider.value), 250);
+};
+
+metricSelect.onchange = () => {
+  currentMetric = metricSelect.value;
+  applyYearRange(METRIC_CFG[currentMetric].range);
+  loadGeoJSON(FLASK_CTX.nutsID, yearSlider.value, weekSlider.value);
+  if (currentChart) { currentChart.destroy(); currentChart = null; }
+  resetGraph();
+  updateInfoPanel(currentMetric);
+};
+
+/* ----------Information panel ---------- */
 function updateInfoPanel(metric) {
   const holder = document.getElementById('infoPanel');
   const cfg = METRIC_CFG[metric];
@@ -234,37 +329,6 @@ function updateInfoPanel(metric) {
       ${cfg.description.map(line => `<li>${line.replace(/^•\s*/, '')}</li>`).join('')}
     </ul>
   `;
-}
-
-/* =================== POPUP + CHART ===================== */
-
-/* ---------- a helper that returns the highlight style ---------- */
-function highlightStyle() {
-  return { weight: 3, color: '#fff', fillOpacity: 0.7 };   // thicker, darker edge
-}
-
-/* ---------- regionPopup ---------- */
-function drawRegionPopup(feature) {
-  const p = feature.properties;
-
-  // Build the list only with fields that exist
-  const popupLines = [`<b>${p.name}</b>`];
-
-  if (p.mortality_rate   != null) popupLines.push(`Mortality: ${p.mortality_rate} per 100 k`);
-  if (p.population_density != null) popupLines.push(`Population Density: ${p.population_density} per km²`);
-  if (p.temperature_rcp45 != null) popupLines.push(`Temp (RCP 4.5): ${p.temperature_rcp45} °C`);
-  if (p.temperature_rcp85 != null) popupLines.push(`Temp (RCP 8.5): ${p.temperature_rcp85} °C`);
-
-  const nutsID = (p.NUTS_ID ?? '').toUpperCase();
-  const name = (p.name ?? 'Unnamed');
-  // If this code does not appear in /api/bbox, we do not display the button
-  if (FLASK_CTX.availableIDs.includes(nutsID)) {
-    popupLines.push(`<i>(Double click to zoom in)</i>`);
-  }
-
-  // Update the regionPopup
-  const holder = document.getElementById('regionPopup');
-  holder.innerHTML = popupLines.join('<br>');
 }
 
 /* ---------- Time-series ---------- */
@@ -342,76 +406,14 @@ function drawTimeSeries(nutsId, regionName) {
     .catch(err => console.error('Error loading TS:', err));
 }
 
-/* ---------- this function is called for each region ---------- */
-
-function onEachFeature(feature, layer) {
-  const p = feature.properties;
-
-  // Click -> show time-series
-  layer.on('click', () => {
-    drawTimeSeries(p.NUTS_ID, p.name);
-  });
-
-  // Double click -> zoom in on the region
-  layer.on('dblclick', () => {
-    changeRegion(p.NUTS_ID, p.name);
-  });
-
-  /* hover glue  */
-  layer.on({
-    mouseover: e => {
-      drawRegionPopup(feature);
-      e.target.setStyle(highlightStyle());
-      // keep it on top so the thick edge isn't hidden
-      if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
-        e.target.bringToFront();
-      }
-    },
-    mouseout: e => {
-      geoJsonLayer.resetStyle(e.target);   // revert to normal style()
-    }
-  });
+/* ---------- helper: reset the time series ---------- */
+function resetGraph() {
+  const holder = document.getElementById('regionGraph');
+  holder.innerHTML =
+    '<div style="color:#555;font:14px/1.4em system-ui, sans-serif;'+
+    'text-align:center;padding-top:40%;opacity:0.8;">'+
+    'Click on a region to display its information</div>';
 }
-
-/* ==================== EVENT HANDLERS =================== */
-const yearSlider = document.getElementById('yearSlider');
-const weekSlider = document.getElementById('weekSlider');
-const metricSelect = document.getElementById('metricSelect');
-const yearValue = document.getElementById('yearValue');
-const weekValue = document.getElementById('weekValue');
-let debounce;
-
-/* --- helper to (re)range the year slider --- */
-function applyYearRange([minYear, maxYear]) {
-  yearSlider.min = minYear;
-  yearSlider.max = maxYear;
-
-  if (+yearSlider.value < minYear) yearSlider.value = minYear;
-  if (+yearSlider.value > maxYear) yearSlider.value = maxYear;
-
-  yearValue.textContent = yearSlider.value;
-}
-
-yearSlider.oninput = () => {
-  yearValue.textContent = yearSlider.value;
-  clearTimeout(debounce);
-  debounce = setTimeout(() => loadGeoJSON(FLASK_CTX.nutsID, yearSlider.value, weekSlider.value), 250);
-};
-
-weekSlider.oninput = () => {
-  weekValue.textContent = weekSlider.value;
-  clearTimeout(debounce);
-  debounce = setTimeout(() => loadGeoJSON(FLASK_CTX.nutsID, yearSlider.value, weekSlider.value), 250);
-};
-
-metricSelect.onchange = () => {
-  currentMetric = metricSelect.value;
-  applyYearRange(METRIC_CFG[currentMetric].range);
-  loadGeoJSON(FLASK_CTX.nutsID, yearSlider.value, weekSlider.value);
-  if (currentChart) { currentChart.destroy(); currentChart = null; }
-  resetGraph();
-  updateInfoPanel(currentMetric);
-};
 
 /* ====================== START-UP ====================== */
 applyYearRange(METRIC_CFG[currentMetric].range);
