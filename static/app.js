@@ -356,12 +356,12 @@ let currentChart = null;
 function parseRange(r) {
   const num = +r.slice(0, -1);
   switch (r.slice(-1)) {
-    case 'M': return { months: num };
-    case 'Y': return { years: num };
+    case 'M': return num / 24 ;
+    case 'Y': return num / 2;
   }
-  return { years: 10 };
+  return 5;
 }
-let activeRange = { years: 10 };  // default +/-10 years
+let activeRange = 5;  // default +/-10 years
 rangeButtons.forEach(btn => {
   btn.onclick = () => {
     rangeButtons.forEach(b=>b.classList.remove('active'));
@@ -407,11 +407,30 @@ function renderDualAxisChart(labels, data1, data2, m1, m2, regionName) {
     });
   }
 
-  const curYear = +yearSlider.value;
-  const minYear = Math.max(curYear - 10, +labels[0].slice(0,4));
-  const maxYear = Math.min(curYear + 10, +labels.at(-1).slice(0,4));
-  const minLabel = labels.findIndex(s => +s.slice(0,4) >= minYear);
-  const maxLabel = labels.findLastIndex(s => +s.slice(0,4) <= maxYear);
+  // assume `activeRange` is in years
+  const curYear  = +yearSlider.value;
+  const curWeek  = +weekSlider.value;
+  const weekCount = 53;               // enough to cover any ISO week overlap
+
+  // flatten current position to a single number
+  const curIndex = curYear * weekCount + curWeek;
+  const delta    = activeRange * weekCount;
+
+  // precompute label-indices once
+  const labelIndices = labels.map(l => {
+    // l === "2023-W05"
+    const [yearStr, weekStr] = l.split('-W');
+    const y = +yearStr, w = +weekStr;
+    return y * weekCount + w;
+  });
+
+  // now find min/max positions
+  const minTarget = curIndex - delta;
+  const maxTarget = curIndex + delta;
+
+  const minLabel = labelIndices.findIndex(idx => idx >= minTarget);
+  const maxLabel = labelIndices.map((idx, i) => idx <= maxTarget ? i : -1)
+                              .filter(i => i >= 0).pop();
 
   currentChart = new Chart(ctx, {
     type: 'line',
