@@ -288,7 +288,7 @@ document.addEventListener('mouseup', () => {
 /* -------------- Year & Week Sliders ---------- */
 const yearSlider = document.getElementById('yearSlider');
 const weekSlider = document.getElementById('weekSlider');
-const mainSelect = document.getElementById('metricSelect');
+const metricSelect = document.getElementById('metricSelect');
 const compareSelect = document.getElementById('compareSelect');
 const yearValue = document.getElementById('yearValue');
 const weekValue = document.getElementById('weekValue');
@@ -296,7 +296,7 @@ const rangeButtons  = document.getElementById('rangeButtons').querySelectorAll('
 
 let debounce;
 
-let mainMetric = mainSelect.value;
+let mainMetric = metricSelect.value;
 let compareMetric = compareSelect.value || null;
 
 /* --- helper to (re)range the year slider --- */
@@ -332,6 +332,11 @@ metricSelect.onchange = () => {
   drawTimeSeries(holdRegionInfo.NUTS_ID, holdRegionInfo.name);  // redraw TS for the new metric
 };
 
+compareSelect.onchange = () => {
+  compareMetric = compareSelect.value || null;
+  drawTimeSeries(holdRegionInfo.NUTS_ID, holdRegionInfo.name);
+};
+
 /* ----------Information panel ---------- */
 function updateInfoPanel(metric) {
   const holder = document.getElementById('infoPanel');
@@ -347,88 +352,132 @@ function updateInfoPanel(metric) {
 /* ---------- Time-series ---------- */
 let currentChart = null;
 
-function drawTimeSeries(nutsId, regionName) {
-  const cfg = METRIC_CFG[mainMetric];
-  const cfg_compare = METRIC_CFG[compareMetric];
+// parse a range string like "10Y" or "5M" into an object
+function parseRange(r) {
+  const num = +r.slice(0, -1);
+  switch (r.slice(-1)) {
+    case 'M': return { months: num };
+    case 'Y': return { years: num };
+  }
+  return { years: 10 };
+}
+let activeRange = { years: 10 };  // default +/-10 years
+rangeButtons.forEach(btn => {
+  btn.onclick = () => {
+    rangeButtons.forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    activeRange = parseRange(btn.dataset.range);
+    drawTimeSeries(holdRegionInfo.NUTS_ID, holdRegionInfo.name);  // redraw TS for the new range
+  };
+});
 
-  Promise.all([
-    fetch(`/api/data/ts?region=${FLASK_CTX.nutsID}&metric=${mainMetric}&nuts_id=${nutsId}`).then(r=>r.json()),
-    compareMetric
-      ? fetch(`/api/data/ts?region=${FLASK_CTX.nutsID}&metric=${compareMetric}&nuts_id=${nutsId}`).then(r=>r.json())
-      : Promise.resolve({ data: [] })
-  ])
-  .then(([res1, res2]) => {
-      if (!res1.data || !res1.data.length) return;
+// inject or replace the <canvas> inside #regionGraph
+function prepareCanvas() {
+  const holder = document.getElementById('regionGraph');
+  holder.innerHTML = '<canvas></canvas>';
+  return holder.querySelector('canvas').getContext('2d');
+}
 
-      /* labels & values */
-      const labels = res1.data.map(d => `${d.year}-W${String(d.week).padStart(2, '0')}`);
-      const values = res1.data.map(d => d.value);
-      const values_compare = res2.data.map(d => d.value || null);  // allow nulls for missing data
+// actually render Chart.js with two Y-axes
+function renderDualAxisChart(labels, data1, data2, m1, m2, regionName) {
+  const ctx = prepareCanvas();
+  if (currentChart) currentChart.destroy();
 
-      /* auto-centre:  ±10 years around the current slider year */
-      const curYear = +yearSlider.value;
-      const minYear = Math.max(curYear - 10, +labels[0].slice(0,4));
-      const maxYear = Math.min(curYear + 10, +labels.at(-1).slice(0,4));
-      const minLabel = labels.findIndex(s => +s.slice(0,4) >= minYear);
-      const maxLabel = labels.findLastIndex(s => +s.slice(0,4) <= maxYear);
+  const datasets = [{
+    label   : `${METRIC_CFG[m1].label} — ${regionName}`,
+    data    : data1,
+    yAxisID : 'yLeft',
+    borderColor: '#6dc201',
+    backgroundColor: '#6dc2014d',
+    fill  : true,
+    tension: 0.25,
+    pointRadius: 0,
+    pointHitRadius: 20
+  }];
 
-      /* prepare a fresh canvas each click */
-      const holder = document.getElementById('regionGraph');
-      holder.innerHTML = '<canvas></canvas>';
-      const ctx = holder.firstChild.getContext('2d');
+  if (m2) {
+    datasets.push({
+      label   : `${METRIC_CFG[m2].label} — ${regionName}`,
+      data    : data2,
+      yAxisID : 'yRight',
+      borderColor: '#ff6361',
+      fill: false,
+      // prevent grid lines from cluttering
+      grid: { drawOnChartArea: false }
+    });
+  }
 
-      currentChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels,
-          datasets: [{
-            label : `${cfg.label} - ${regionName}`,
-            data  : values,
-            borderColor   : '#6dc201',
-            backgroundColor: '#6dc2014d',
-            fill  : true,
-            tension: 0.25,
-            pointRadius: 0,
-            pointHitRadius: 20
-          }, {
-            label : compareMetric ? `${cfg_compare.label} - ${regionName}` : null,
-            data  : values_compare,
-            yAxisID : 'yRight',
-            borderColor   : '#ff7f00',
-            tension: 0.25,
-            pointRadius: 0,
-            pointHitRadius: 20
-          }]
+  const curYear = +yearSlider.value;
+  const minYear = Math.max(curYear - 10, +labels[0].slice(0,4));
+  const maxYear = Math.min(curYear + 10, +labels.at(-1).slice(0,4));
+  const minLabel = labels.findIndex(s => +s.slice(0,4) >= minYear);
+  const maxLabel = labels.findLastIndex(s => +s.slice(0,4) <= maxYear);
+
+  currentChart = new Chart(ctx, {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: {
+          ticks : { autoSkip: true, maxTicksLimit:12 },
+          min   : labels[minLabel],
+          max   : labels[maxLabel]
         },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            x: {
-              ticks : { autoSkip: true, maxTicksLimit:12 },
-              min   : labels[minLabel],
-              max   : labels[maxLabel]
-            },
-            y: { beginAtZero:true }
-          },
-          /* ------------ Zoom / Pan only on X ------------- */
-          plugins: {
-            zoom: {
-              limits: { x: {min: labels[0], max: labels.at(-1)} },
-              zoom: {
-                wheel   : { enabled:true },
-                mode    : 'x'
-              },
-              pan: {
-                enabled: true,   // allow panning
-                mode   : 'x'     // x-axis only
-              }              
-            }
+        yLeft: {
+          beginAtZero:true,
+          type:'linear',
+          position:'left',
+          title:{ display:true, text: METRIC_CFG[m1].label }
+        },
+        // only show right axis if comparing
+        ...(m2 && {
+          yRight: {
+            beginAtZero:true,
+            type:'linear',
+            position:'right',
+            title:{ display:true, text: METRIC_CFG[m2].label }
           }
+        })
+      },
+      plugins: {
+        zoom: {
+          limits: { x: {min: labels[0], max: labels.at(-1)} },
+          zoom: {
+            wheel   : { enabled:true },
+            mode    : 'x'
+          },
+          pan: {
+            enabled: true,   // allow panning
+            mode   : 'x'     // x-axis only
+          } 
         }
-      });
-    })
-    .catch(err => console.error('Error loading TS:', err));
+      }
+    }
+  });
+}
+
+// fetch both series in parallel, then render
+function drawTimeSeries(nutsId, regionName) {
+
+  // build two fetches
+  const p1 = fetch(
+    `/api/data/ts?region=${FLASK_CTX.nutsID}&metric=${mainMetric}&nuts_id=${nutsId}`
+  ).then(r=>r.json());
+
+  const p2 = compareMetric
+    ? fetch(
+        `/api/data/ts?region=${FLASK_CTX.nutsID}&metric=${compareMetric}&nuts_id=${nutsId}`
+      ).then(r=>r.json())
+    : Promise.resolve({ data: [] });
+
+  Promise.all([p1, p2]).then(([res1, res2]) => {
+    const labels = res1.data.map(d => `${d.year}-W${String(d.week).padStart(2,'0')}`);
+    const data1  = res1.data.map(d => d.value);
+    const data2  = res2.data.map(d => d.value);
+    renderDualAxisChart(labels, data1, data2, mainMetric, compareMetric, regionName);
+  }).catch(console.error);
 }
 
 /* ====================== START-UP ====================== */
