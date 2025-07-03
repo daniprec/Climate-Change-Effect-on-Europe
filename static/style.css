@@ -74,7 +74,7 @@ aside #sidebar {
 .overlay:hover,
 .overlay:focus-within { background: rgba(255,255,255,1); }
 
-/* ---------- breadcrumb (region level) ---------- */
+/* ---------- overlay: breadcrumb (region level) ---------- */
 
 #app-wrapper .breadcrumb {
   position:absolute;
@@ -91,7 +91,7 @@ aside #sidebar {
 .breadcrumb span:hover  { text-decoration:underline; }
 
 
-/* ---------- 3. specific overlay blocks ---------- */
+/* ---------- overlay: logo image ---------- */
 
 /* logo (no translucent card) */
 .logo {
@@ -104,7 +104,7 @@ aside #sidebar {
 /* utility */
 .hidden { display: none; }
 
-/* ---------- 3. slider controls ---------- */
+/* ---------- slider controls ---------- */
 .slider {
   appearance: none;
   width: 100%;
@@ -132,7 +132,7 @@ aside #sidebar {
   color: #000066;
 }
 
-/* ---------- 3. select ---------- */
+/* ---------- select (dropdown) ---------- */
 
 .select {
   width: 100%;
@@ -145,7 +145,7 @@ aside #sidebar {
 }
 
 
-/* ---------- 4. buttons ---------- */
+/* ---------- buttons ---------- */
 button {
   background: #000066;
   color: #fff;
@@ -159,7 +159,8 @@ button {
 }
 button:hover { background: #333399; }
 
-/* ---------- 5. footer ---------- */
+/* ---------- footer ---------- */
+
 footer {
   text-align: left;
   padding: 15px 0;
