@@ -89,8 +89,6 @@ Chart.register(window.ChartZoom);   // make Chart.js aware of the plugin
 
 /* ======================= MAP ======================= */
 
-// take the first metric as default
-let currentMetric = Object.keys(METRIC_CFG)[0];
 const map = L.map('map', {
   zoomControl: false,
   doubleClickZoom: false
@@ -100,7 +98,7 @@ let geoJsonLayer = null;
 
 /* --- helper: to style GeoJSON features --- */
 function featureStyle(feature) {
-  const cfg = METRIC_CFG[currentMetric];
+  const cfg = METRIC_CFG[mainMetric];
   const val = cfg.value(feature.properties);
   return {
     fillColor: cfg.colour(val),
@@ -150,7 +148,7 @@ function onEachFeature(feature, layer) {
 
 /* --- Load the initial GeoJSON data for the default region --- */
 function loadGeoJSON(region, year, week) {
-  return fetch(`/api/data?region=${region}&year=${year}&week=${week}&metric=${currentMetric}`)
+  return fetch(`/api/data?region=${region}&year=${year}&week=${week}&metric=${mainMetric}`)
     .then(r => r.json())
     .then(data => {
       if (geoJsonLayer) map.removeLayer(geoJsonLayer);
@@ -290,10 +288,16 @@ document.addEventListener('mouseup', () => {
 /* -------------- Year & Week Sliders ---------- */
 const yearSlider = document.getElementById('yearSlider');
 const weekSlider = document.getElementById('weekSlider');
-const metricSelect = document.getElementById('metricSelect');
+const mainSelect = document.getElementById('metricSelect');
+const compareSelect = document.getElementById('compareSelect');
 const yearValue = document.getElementById('yearValue');
 const weekValue = document.getElementById('weekValue');
+const rangeButtons  = document.getElementById('rangeButtons').querySelectorAll('button');
+
 let debounce;
+
+let mainMetric = mainSelect.value;
+let compareMetric = compareSelect.value || null;
 
 /* --- helper to (re)range the year slider --- */
 function applyYearRange([minYear, maxYear]) {
@@ -304,6 +308,7 @@ function applyYearRange([minYear, maxYear]) {
   if (+yearSlider.value > maxYear) yearSlider.value = maxYear;
 
   yearValue.textContent = yearSlider.value;
+  weekValue.textContent = weekSlider.value;
 }
 
 yearSlider.oninput = () => {
@@ -320,10 +325,10 @@ weekSlider.oninput = () => {
 };
 
 metricSelect.onchange = () => {
-  currentMetric = metricSelect.value;
-  applyYearRange(METRIC_CFG[currentMetric].range);
+  mainMetric = metricSelect.value;
+  applyYearRange(METRIC_CFG[mainMetric].range);
   loadGeoJSON(FLASK_CTX.nutsID, yearSlider.value, weekSlider.value);
-  updateInfoPanel(currentMetric);
+  updateInfoPanel(mainMetric);
   drawTimeSeries(holdRegionInfo.NUTS_ID, holdRegionInfo.name);  // redraw TS for the new metric
 };
 
@@ -343,16 +348,22 @@ function updateInfoPanel(metric) {
 let currentChart = null;
 
 function drawTimeSeries(nutsId, regionName) {
-  const cfg = METRIC_CFG[currentMetric];
+  const cfg = METRIC_CFG[mainMetric];
+  const cfg_compare = METRIC_CFG[compareMetric];
 
-  fetch(`/api/data/ts?region=${FLASK_CTX.nutsID}&metric=${currentMetric}&nuts_id=${nutsId}`)
-    .then(r => r.json())
-    .then(res => {
-      if (!res.data || !res.data.length) return;
+  Promise.all([
+    fetch(`/api/data/ts?region=${FLASK_CTX.nutsID}&metric=${mainMetric}&nuts_id=${nutsId}`).then(r=>r.json()),
+    compareMetric
+      ? fetch(`/api/data/ts?region=${FLASK_CTX.nutsID}&metric=${compareMetric}&nuts_id=${nutsId}`).then(r=>r.json())
+      : Promise.resolve({ data: [] })
+  ])
+  .then(([res1, res2]) => {
+      if (!res1.data || !res1.data.length) return;
 
       /* labels & values */
-      const labels = res.data.map(d => `${d.year}-W${String(d.week).padStart(2, '0')}`);
-      const values = res.data.map(d => d.value);
+      const labels = res1.data.map(d => `${d.year}-W${String(d.week).padStart(2, '0')}`);
+      const values = res1.data.map(d => d.value);
+      const values_compare = res2.data.map(d => d.value || null);  // allow nulls for missing data
 
       /* auto-centre:  ±10 years around the current slider year */
       const curYear = +yearSlider.value;
@@ -376,6 +387,14 @@ function drawTimeSeries(nutsId, regionName) {
             borderColor   : '#6dc201',
             backgroundColor: '#6dc2014d',
             fill  : true,
+            tension: 0.25,
+            pointRadius: 0,
+            pointHitRadius: 20
+          }, {
+            label : compareMetric ? `${cfg_compare.label} - ${regionName}` : null,
+            data  : values_compare,
+            yAxisID : 'yRight',
+            borderColor   : '#ff7f00',
             tension: 0.25,
             pointRadius: 0,
             pointHitRadius: 20
@@ -413,7 +432,7 @@ function drawTimeSeries(nutsId, regionName) {
 }
 
 /* ====================== START-UP ====================== */
-applyYearRange(METRIC_CFG[currentMetric].range);
+applyYearRange(METRIC_CFG[mainMetric].range);
 pushView('EU', 'Europe');
 loadGeoJSON(FLASK_CTX.nutsID, yearSlider.value, weekSlider.value);
-updateInfoPanel(currentMetric);
+updateInfoPanel(mainMetric);

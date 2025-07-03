@@ -25,21 +25,20 @@
       <div id="controls" class="panel">
         <label for="yearSlider">Year: <span id="yearValue" class="mutableValue">2025</span></label>
         <input id="yearSlider" class="slider" type="range"
-              min="{{ min_year }}" max="{{ max_year }}"
-              value="{{ yearValue }}" />
+              min="{{ min_year }}" max="{{ max_year }}" />
         <br />
 
         <label for="weekSlider">Week: <span id="weekValue" class="mutableValue">1</span></label>
         <input id="weekSlider" class="slider" type="range"
-              min="1" max="52" value="1" />
+              min="1" max="52" />
         <br />
 
         <label for="metricSelect">Dataset: </label>
         <select id="metricSelect" class="select">
           <option value="mortality_rate">Mortality</option>
           <option value="population_density">Population Density</option>
-          <option value="temperature_rcp45">Temp RCP 4.5</option>
-          <option value="temperature_rcp85">Temp RCP 8.5</option>
+          <option value="temperature_rcp45">Temperature (RCP 4.5)</option>
+          <option value="temperature_rcp85">Temperature (RCP 8.5)</option>
         </select>
       </div>
 
@@ -53,6 +52,22 @@
 
       <div id="regionGraph" class="panel graph">
         <!-- time series -->
+      </div>
+
+      <label for="compareSelect">Compare with:</label>
+      <select id="compareSelect" class="select">
+        <option value="">— none —</option>
+        <option value="mortality_rate">Mortality</option>
+        <option value="population_density">Population Density</option>
+        <option value="temperature_rcp45">Temperature (RCP 4.5)</option>
+        <option value="temperature_rcp85">Temperature (RCP 8.5)</option>
+      </select>
+
+      <div id="rangeButtons">
+        <button data-range="1M">1M</button>
+        <button data-range="6M">6M</button>
+        <button data-range="1Y">1Y</button>
+        <button data-range="5Y">5Y</button>
       </div>
     </aside>
 
