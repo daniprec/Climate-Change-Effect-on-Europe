@@ -400,7 +400,7 @@ function renderDualAxisChart(labels, data1, data2, m1, m2, regionName) {
       label   : `${METRIC_CFG[m2].label} — ${regionName}`,
       data    : data2,
       yAxisID : 'yRight',
-      borderColor: '#ff6361',
+      borderColor: '#000066',
       fill: false,
       // prevent grid lines from cluttering
       grid: { drawOnChartArea: false }
