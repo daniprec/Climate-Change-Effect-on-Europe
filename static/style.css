@@ -46,6 +46,10 @@ aside #sidebar {
   box-shadow: 0 2px 6px rgba(0,0,0,0.1);
 }
 
+#sidebar .graph {
+  min-height: 300px;   /* minimum height for graphs */
+}
+
 #splitter {
   width: 5px;
   cursor: col-resize;
