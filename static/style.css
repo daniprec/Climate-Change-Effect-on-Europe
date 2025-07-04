@@ -25,20 +25,25 @@ h1 {
   overflow: hidden;
 }
 
-#sidebar {
+/* The sidebar container holds the sidebar and the splitter */
+/* it is used to control the different behaviour between desktop and mobile */
+#sidebarContainer {
   flex: 0 0 auto;   /* don't grow or shrink automatically */
+  min-width: 200px;         /* don't shrink too far */
+  max-width: 50%;           /* don't grow past half-screen */
+  height: 100vh;        /* Add this if not already set by container */
+  position: relative;
+  z-index: 1000;          /* above map */
+}
+
+#sidebar {
   display: flex;
   flex-direction: column;
   gap: 1rem;              /* space between panels */
   padding: 1rem;
   background: rgba(255,255,255,0.9);
   backdrop-filter: blur(4px);
-  min-width: 200px;         /* don’t shrink too far */
-  max-width: 50%;           /* don’t grow past half-screen */
   overflow-y: auto;         /* scroll if content too tall */
-  height: 100vh;        /* Add this if not already set by container */
-  position: relative;
-  z-index: 1000;          /* above map */
 }
 
 /* panels inside sidebar stack normally */
@@ -65,6 +70,82 @@ h1 {
   position: relative;
   inset: 0;                   /* top:0 right:0 bottom:0 left:0 */
   z-index: 1;                 /* below overlays */
+}
+
+/* --- Desktop behavior --- */
+@media (min-width: 769px) {
+  #sidebarContainer {
+    transform: none !important;
+    position: relative;
+    width: auto;
+    height: auto;
+    overflow-y: visible;
+  }
+
+  #menuToggle,
+  #closeSidebar {
+    display: none !important;
+  }
+
+  #splitter {
+    display: block;
+  }
+}
+
+
+/* --- Mobile behavior --- */
+.mobile-only {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mobile-only {
+    display: inline-block;
+  }
+
+  #menuToggle {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 1100;
+    background: #000066;
+    color: white;
+    border: none;
+    padding: 10px;
+    font-size: 1.2em;
+    border-radius: 5px;
+  }
+
+  #sidebarContainer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    max-width: 100%;
+    height: 100%;
+    background: rgba(255,255,255,0.97);
+    z-index: 1050;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    overflow-y: auto;
+  }
+
+  #sidebarContainer.active {
+    transform: translateX(0);
+  }
+
+  #sidebar {
+    width: 100%;
+    padding-top: 80px; /* space for the toggle button */
+  }  
+
+  #splitter {
+    display: none; /* Hide the drag bar on mobile */
+  }
+
+  #map {
+    height: 100vh;
+  }
 }
 
 /* ---------- overlay ---------- */
@@ -103,7 +184,7 @@ h1 {
 /* logo (no translucent card) */
 .logo {
   top: 20px; right: 20px;
-  width: 90px;
+  width: 30px;
   background: transparent;
   cursor: pointer;
 }

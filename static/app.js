@@ -499,6 +499,25 @@ function drawTimeSeries(nutsId, regionName) {
   }).catch(console.error);
 }
 
+/* === MOBILE MENU === */
+const menuIcon = document.getElementById('menuToggle');
+
+document.getElementById('menuToggle').addEventListener('click', () => {
+  /* If the sidebar was already active, remove it */
+  if (document.getElementById('sidebarContainer').classList.contains('active')) {
+    document.getElementById('sidebarContainer').classList.remove('active');
+    /* Change the menu icon back to bars */
+    /* We do this by changing its content */
+    menuIcon.innerHTML = '<i class="fa-solid fa-bars"></i>';
+  } else {
+    /* If the sidebar is not active, show it */
+    document.getElementById('sidebarContainer').classList.add('active');
+    /* Change the menu icon to a cross */
+    /* We do this by changing its content */
+    menuIcon.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+  }
+});
+
 /* ====================== START-UP ====================== */
 applyYearRange(METRIC_CFG[mainMetric].range);
 pushView('EU', 'Europe');
