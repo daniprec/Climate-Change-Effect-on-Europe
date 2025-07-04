@@ -2,7 +2,7 @@
 html, body {
   height: 100%;
   margin: 0;
-  font-family: Arial, sans-serif;
+  font-family: 'Montserrat', sans-serif; /* IE style */
   background: #f4f4f4;
   color: #333;
   overflow-x: hidden;
@@ -55,10 +55,12 @@ h1 {
   padding: 0.75rem;
   /* border-radius: 8px; */
   box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  font-size: 1em;
 }
 
 #sidebar .graph {
   min-height: 300px;   /* minimum height for graphs */
+  font-size: 1em;
 }
 
 #splitter {
@@ -118,6 +120,7 @@ h1 {
     border: none;
     padding: 10px;
     font-size: 3.3em;
+    font-weight: 800; /* Bold */
     border-radius: 5px;
   }
 
@@ -161,7 +164,6 @@ h1 {
   padding: .75rem 1rem;
   border-radius: 8px;
   transition: background .2s;
-  font-family: system-ui, sans-serif;
 }
 .overlay:hover,
 .overlay:focus-within { background: rgba(255,255,255,1); }
@@ -176,7 +178,8 @@ h1 {
   left:50%;
   transform:translateX(-50%);
   z-index:1000;
-  font:14px/1.4em system-ui,sans-serif;
+  font-size: 1.5em;
+  font-weight: 800; /* Bold */
 }
 .breadcrumb span        { cursor:pointer; }
 .breadcrumb .sep        { margin:0 .35em; color:#666; }
@@ -247,6 +250,7 @@ button {
   padding: 10px 20px;
   border-radius: 5px;
   font-size: 1em;
+  font-weight: 800; /* Bold */
   cursor: pointer;
   transition: background-color .3s ease;
 }
