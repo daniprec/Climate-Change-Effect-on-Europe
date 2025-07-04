@@ -343,14 +343,19 @@ compareSelect.onchange = () => {
 
 /* ----------Information panel ---------- */
 function updateMetricInfo(metric) {
-  const holder = document.getElementById('metricInfo');
   const cfg = METRIC_CFG[metric];
-  holder.innerHTML = `
-    <h3>${cfg.label}</h3>
-    <ul>
-      ${cfg.description.map(line => `<li>${line.replace(/^•\s*/, '')}</li>`).join('')}
-    </ul>
-  `;
+  document.getElementById('metricTitle').textContent = cfg.label;
+
+  const ul = document.getElementById('metricDesc');
+  ul.innerHTML = cfg.description.map(line => `<li>${line.replace(/^•\s*/, '')}</li>`).join('');
+
+  const btn = document.getElementById('metricSource');
+  if (cfg.url) {
+    btn.style.display = 'inline-block';
+    btn.onclick = () => window.open(cfg.url, '_blank');
+  } else {
+    btn.style.display = 'none';
+  }
 }
 
 /* ---------- Time-series ---------- */
