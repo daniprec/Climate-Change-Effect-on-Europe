@@ -5,7 +5,8 @@ html, body {
   font-family: Arial, sans-serif;
   background: #f4f4f4;
   color: #333;
-  overflow: hidden;  
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 /* ---------- headings & copy ---------- */
@@ -37,12 +38,14 @@ h1 {
 }
 
 #sidebar {
+  max-width: 95%;
   display: flex;
   flex-direction: column;
   gap: 1rem;              /* space between panels */
   padding: 1rem;
   background: rgba(255,255,255,0.9);
   backdrop-filter: blur(4px);
+  height: 95vh;        /* Add this if not already set by container */
   overflow-y: auto;         /* scroll if content too tall */
 }
 
@@ -135,7 +138,6 @@ h1 {
   }
 
   #sidebar {
-    width: 100%;
     padding-top: 80px; /* space for the toggle button */
   }  
 
@@ -184,7 +186,7 @@ h1 {
 /* logo (no translucent card) */
 .logo {
   top: 20px; right: 20px;
-  width: 30px;
+  width: 50px;
   background: transparent;
   cursor: pointer;
 }
