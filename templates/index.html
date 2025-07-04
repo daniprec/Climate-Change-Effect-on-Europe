@@ -53,12 +53,15 @@
           </select>
         </div>
 
-        <div id="metricInfo" class="panel">
-          <h3 id="metricTitle"></h3>
-          <ul id="metricDesc"></ul>
-          <button id="metricSource">Go to source</button>
-        </div>        
-
+        <details class="panel" id="metricInfoDropdown" closed>
+          <summary>Dataset Info</summary>
+          <div id="metricInfo">
+            <h4 id="metricTitle"></h4>
+            <ul id="metricDesc"></ul>
+            <button id="metricSource">Go to source</button>
+          </div>
+        </details>        
+        
         <div id="regionInfo" class="panel">
           <!-- region popup -->
         </div>
