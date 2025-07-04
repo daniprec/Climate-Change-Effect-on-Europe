@@ -41,7 +41,8 @@ const METRIC_CFG = {
       '• Source: Eurostat - "demo_r_mwk3_ts".',
       '• Spatial resolution: NUTS-3 (district).',
       '• Coverage: 2013 - 2024 (weekly).'
-    ]
+    ],
+    url: 'https://doi.org/10.2908/DEMO_R_MWK3_TS'
   },
 
   population_density: {
@@ -54,7 +55,8 @@ const METRIC_CFG = {
       '• Source: Eurostat - "demo_r_d3dens".',
       '• Spatial resolution: NUTS-3.',
       '• Coverage: 2000 - 2023 (yearly).'
-    ]
+    ],
+    url: 'https://doi.org/10.2908/DEMO_R_D3DENS'
   },
 
   temperature_rcp45: {
@@ -67,7 +69,8 @@ const METRIC_CFG = {
       '• Source: EURO-CORDEX / ESGF, variable "tas".',
       '• Spatial resolution: 0.11° (~12 km); sampled at region centroid.',
       '• Coverage: 2006 - 2100 (monthly, interpolated to daily in this dash).'
-    ]
+    ],
+    url: 'https://cordex.org/data-access/cordex-cmip5-data/cordex-cmip5-esgf/'
   },
 
   temperature_rcp85: {
@@ -80,7 +83,8 @@ const METRIC_CFG = {
       '• Source: EURO-CORDEX / ESGF, variable "tas".',
       '• Spatial resolution: 0.11° (~12 km); sampled at region centroid.',
       '• Coverage: 2006 - 2100 (monthly, interpolated to weekly for the dashboard).'
-    ]
+    ],
+    url: 'https://cordex.org/data-access/cordex-cmip5-data/cordex-cmip5-esgf/'
   }
 };
 
@@ -96,7 +100,7 @@ const map = L.map('map', {
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
 let geoJsonLayer = null;
 
-/* --- helper: to style GeoJSON features --- */
+/* --- helper: to style GeoJSON features (metrics) --- */
 function featureStyle(feature) {
   const cfg = METRIC_CFG[mainMetric];
   const val = cfg.value(feature.properties);
@@ -108,7 +112,7 @@ function featureStyle(feature) {
   };
 }
 
-/* ---------- helper: what to do on each feature (variable)? ---------- */
+/* ---------- helper: what to do on each feature (metric)? ---------- */
 function onEachFeature(feature, layer) {
   const p = feature.properties;
 
@@ -119,7 +123,7 @@ function onEachFeature(feature, layer) {
     if (holdRegionInfo.NUTS_ID !== p.NUTS_ID) {
       holdRegionInfo.NUTS_ID = p.NUTS_ID;
       holdRegionInfo.name = p.name;
-      drawregionInfo(feature);  // display region info
+      drawRegionInfo(feature);  // display region info
     } else {
       holdRegionInfo.NUTS_ID = null;  // reset if clicked again
     }
@@ -133,7 +137,7 @@ function onEachFeature(feature, layer) {
   /* hover glue  */
   layer.on({
     mouseover: e => {
-      if (holdRegionInfo === null) {drawregionInfo(feature)};
+      if (holdRegionInfo === null) {drawRegionInfo(feature)};
       e.target.setStyle(highlightStyle());
       // keep it on top so the thick edge isn't hidden
       if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
@@ -172,7 +176,7 @@ let holdRegionInfo = {
   name: null
 };  // hold the last region info to avoid flickering
 
-function drawregionInfo(feature) {
+function drawRegionInfo(feature) {
   const p = feature.properties;
 
   // Build the list only with fields that exist
@@ -328,7 +332,7 @@ metricSelect.onchange = () => {
   mainMetric = metricSelect.value;
   applyYearRange(METRIC_CFG[mainMetric].range);
   loadGeoJSON(FLASK_CTX.nutsID, yearSlider.value, weekSlider.value);
-  updateInfoPanel(mainMetric);
+  updateMetricInfo(mainMetric);
   drawTimeSeries(holdRegionInfo.NUTS_ID, holdRegionInfo.name);  // redraw TS for the new metric
 };
 
@@ -338,8 +342,8 @@ compareSelect.onchange = () => {
 };
 
 /* ----------Information panel ---------- */
-function updateInfoPanel(metric) {
-  const holder = document.getElementById('infoPanel');
+function updateMetricInfo(metric) {
+  const holder = document.getElementById('metricInfo');
   const cfg = METRIC_CFG[metric];
   holder.innerHTML = `
     <h3>${cfg.label}</h3>
@@ -522,4 +526,4 @@ document.getElementById('menuToggle').addEventListener('click', () => {
 applyYearRange(METRIC_CFG[mainMetric].range);
 pushView('EU', 'Europe');
 loadGeoJSON(FLASK_CTX.nutsID, yearSlider.value, weekSlider.value);
-updateInfoPanel(mainMetric);
+updateMetricInfo(mainMetric);
