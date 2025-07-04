@@ -21,11 +21,12 @@ h1 {
 #app-wrapper {
   display: flex;
   height: 100vh;            /* fill the viewport */
+  max-height: 100vh; /* allows scrolling if content is too tall */
   overflow: hidden;
 }
 
-aside #sidebar {
-  flex: 0 0 auto;   /* don’t grow or shrink automatically */
+#sidebar {
+  flex: 0 0 auto;   /* don't grow or shrink automatically */
   display: flex;
   flex-direction: column;
   gap: 1rem;              /* space between panels */
@@ -35,6 +36,8 @@ aside #sidebar {
   min-width: 200px;         /* don’t shrink too far */
   max-width: 50%;           /* don’t grow past half-screen */
   overflow-y: auto;         /* scroll if content too tall */
+  height: 100vh;        /* Add this if not already set by container */
+  position: relative;
   z-index: 1000;          /* above map */
 }
 
