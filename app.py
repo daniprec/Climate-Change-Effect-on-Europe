@@ -38,11 +38,11 @@ max_year = df["year"].max()
 
 
 @app.route("/")
-def index():
+def map():
     # Render the base HTML page; the page can load data via AJAX.
     meta = REGION_META["EU"]
     return render_template(
-        "index.html",
+        "map.html",
         min_year=int(min_year),
         max_year=int(max_year),
         center_lat=meta["center"][0],
