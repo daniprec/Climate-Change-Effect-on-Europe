@@ -26,5 +26,54 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
 </head>
 <body>
-</body>
+    <img id="logo"
+        src="{{ url_for('static', filename='logo.webp') }}"
+        alt="VIG logo"
+        class="overlay logo"
+    />
+
+    <div class="container" id="questionsContainer">
+      <div class="intro">
+        <h2>Open Questions at the VIG Lab</h2>
+        <p>
+          At IE University, we believe that understanding the risks and opportunities of climate change is essential
+          to building a more resilient future. This hub curates emerging questions at the intersection of
+          <strong>climate and insurance</strong> — and connects them with leading academic and public contributions.
+        </p>
+      </div>
+  
+      <div class="grid">
+        <!-- COLLAPSIBLE QUESTION -->
+        <details class="panel collapsible">
+          <summary>What effect does temperature have on life expectancy?</summary>
+          <h4>Academic Publications</h4>
+          <ul>
+            <li><a href="https://doi.org/10.1016/j.envres.2020.109388" target="_blank">Ambient Temperature and Mortality — Environmental Research (2020)</a></li>
+            <li><a href="https://doi.org/10.1007/s10654-020-00632-3" target="_blank">Temperature and lifespan: evidence from epidemiological studies</a></li>
+          </ul>
+  
+          <h4>Press & Reports</h4>
+          <ul>
+            <li><a href="https://www.nytimes.com/2022/07/18/health/heat-life-expectancy.html" target="_blank">Heat waves threaten public health and longevity — NYT</a></li>
+            <li><a href="https://www.bbc.com/news/science-environment-62142208" target="_blank">The silent toll of rising heat — BBC Science</a></li>
+          </ul>
+        </details>
+  
+        <details class="panel collapsible">
+            <summary>What effect does temperature have on sick leaves?</summary>
+            <h4>Academic Publications</h4>
+            <ul>
+              <li><a href="https://doi.org/10.1016/j.envres.2020.109388" target="_blank">Ambient Temperature and Mortality — Environmental Research (2020)</a></li>
+              <li><a href="https://doi.org/10.1007/s10654-020-00632-3" target="_blank">Temperature and lifespan: evidence from epidemiological studies</a></li>
+            </ul>
+    
+            <h4>Press & Reports</h4>
+            <ul>
+              <li><a href="https://www.nytimes.com/2022/07/18/health/heat-life-expectancy.html" target="_blank">Heat waves threaten public health and longevity — NYT</a></li>
+              <li><a href="https://www.bbc.com/news/science-environment-62142208" target="_blank">The silent toll of rising heat — BBC Science</a></li>
+            </ul>
+          </details>
+      </div>
+    </div>
+  </body>
 </html>
