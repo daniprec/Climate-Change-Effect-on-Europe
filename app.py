@@ -53,6 +53,11 @@ def map():
     )
 
 
+@app.route("/questions")
+def questions():
+    return render_template("questions.html")
+
+
 @app.get("/api/data")
 def api_data():
     region = request.args.get("region", "EU").upper()
