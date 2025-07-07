@@ -16,6 +16,17 @@ h1 {
   color: #000066;
 }
 
+/* ---------- links ---------- */
+a {
+  color: #000066;
+  text-decoration: none;
+}
+
+a:hover {
+  color: #6dc201;
+  text-decoration: underline;
+}
+
 /* ---------- app wrapper ---------- */
 /* contains both the sidebar and the map */
 
@@ -255,7 +266,7 @@ button {
   cursor: pointer;
   transition: background-color .3s ease;
 }
-button:hover { background: #333399; }
+button:hover { background: #6dc201; }
 
 /* ---------- footer ---------- */
 
