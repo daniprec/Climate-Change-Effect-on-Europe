@@ -137,7 +137,7 @@ function onEachFeature(feature, layer) {
   /* hover glue  */
   layer.on({
     mouseover: e => {
-      if (holdRegionInfo === null) {drawRegionInfo(feature)};
+      if (holdRegionInfo.NUTS_ID == null) {drawRegionInfo(feature)};
       e.target.setStyle(highlightStyle());
       // keep it on top so the thick edge isn't hidden
       if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
