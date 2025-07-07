@@ -71,6 +71,7 @@ a:hover {
 }
 
 #sidebar .graph {
+  margin-top: 1em; /* space above graphs */
   min-height: 300px;   /* minimum height for graphs */
   font-size: 1em;
 }
@@ -107,6 +108,14 @@ a:hover {
   #splitter {
     display: block;
   }
+
+  #rangeButtons {
+    display: flex;
+    justify-content: center;  /* center items horizontally */
+    gap: 0.5em;                /* optional: adds spacing between buttons */
+    margin-top: 0.5em;           /* optional: space from elements above */
+    flex-wrap: wrap;           /* optional: allows buttons to wrap on small screens */
+  }  
 }
 
 
@@ -252,6 +261,10 @@ a:hover {
   margin-top: 10px;
 }
 
+/* Add a small gap at the top of every collapsible section */
+details.collapsible > summary + * {
+  margin-top: 1em;
+}
 
 /* ---------- buttons ---------- */
 button {

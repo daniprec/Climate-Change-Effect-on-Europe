@@ -53,8 +53,8 @@
           </select>
         </div>
 
-        <details class="panel" id="metricInfoDropdown" closed>
-          <summary>Dataset Info</summary>
+        <details class="panel collapsible" id="metricInfoSection" closed>
+          <summary><strong>Dataset Info</strong></summary>
           <div id="metricInfo">
             <h4 id="metricTitle"></h4>
             <ul id="metricDesc"></ul>
@@ -63,28 +63,34 @@
         </details>        
         
         <div id="regionInfo" class="panel">
-          <!-- region popup -->
+          <ul>Hover on the map to display the region information.</ul>
         </div>
 
-        <div id="regionGraph" class="panel graph">
-          <!-- time series -->
-        </div>
+        <details class="panel collapsible" id="graphSection" closed>
+          <summary><strong>Graph over Time</strong></summary>
 
-        <label for="compareSelect">Compare with:</label>
-        <select id="compareSelect" class="select">
-          <option value="">— none —</option>
-          <option value="mortality_rate">Mortality</option>
-          <option value="population_density">Population Density</option>
-          <option value="temperature_rcp45">Temperature (RCP 4.5)</option>
-          <option value="temperature_rcp85">Temperature (RCP 8.5)</option>
-        </select>
+          <div class="dropdown-content">
+          <label for="compareSelect">Compare with:</label>
+          <select id="compareSelect" class="select">
+            <option value="">— none —</option>
+            <option value="mortality_rate">Mortality</option>
+            <option value="population_density">Population Density</option>
+            <option value="temperature_rcp45">Temperature (RCP 4.5)</option>
+            <option value="temperature_rcp85">Temperature (RCP 8.5)</option>
+          </select>
+          </div>
 
-        <div id="rangeButtons">
-          <button data-range="6M">6M</button>
-          <button data-range="1Y">1Y</button>
-          <button data-range="5Y">5Y</button>
-          <button data-range="10Y">10Y</button>
-        </div>
+          <div id="regionGraph" class="panel graph">
+            <!-- time series -->
+          </div>
+
+          <div id="rangeButtons">
+            <button data-range="6M">6M</button>
+            <button data-range="1Y">1Y</button>
+            <button data-range="5Y">5Y</button>
+            <button data-range="10Y">10Y</button>
+          </div>
+        </details>
 
         <details class="panel" id="aboutDropdown">
           <summary><strong>About</strong></summary>
