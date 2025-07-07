@@ -66,7 +66,7 @@
           <ul>Hover on the map to display the region information.</ul>
         </div>
 
-        <details class="panel collapsible" id="graphSection" closed>
+        <details class="panel collapsible" id="graphSection" open>
           <summary><strong>Graph over Time</strong></summary>
 
           <div class="dropdown-content">
@@ -92,25 +92,12 @@
           </div>
         </details>
 
-        <details class="panel" id="aboutDropdown">
-          <summary><strong>About</strong></summary>
-          <div id="about">
-            <h4 style="margin-top: 20px;">IE-VIG-LAB</h4>
-            <p>This dashboard is a collaborative initiative by members of IE University, hosted by the Impact Xcelerator:</p>
-            <ul>
-              <li><a href="https://danielprecioso.com" target="_blank">Daniel Precioso</a>, Senior Data Scientist @ IE School of Science and Technology</li>
-              <li><a href="https://www.ikhlaqsidhu.net/" target="_blank">Ikhlaq Sidhu</a>, Dean @ IE School of Science and Technology</li>
-              <li><a href="https://www.linkedin.com/in/isanchezemmerich" target="_blank">Isabel Sánchez Emmerich</a>, Project Manager @ IE School of Science and Technology</li>
-            </ul>
-          </div>
-        </details>
-
         <!-- Open questions button. On click, it takes you to the /questions page -->
-        <div id="openQuestions">
-          <a href="{{ url_for('questions') }}" class="button">
-            <i class="fa fa-question-circle"></i> Open Questions
-          </a>
-      </div>
+        <button id="goToQuestions" onclick="location.href='/questions'">Open Questions</button> 
+        
+        <!-- About section -->
+        {% include 'about.html' %}
+
     </aside>
 
     <!-- SPLITTER (between sidebar and map) -->

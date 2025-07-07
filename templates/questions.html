@@ -26,11 +26,14 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
 </head>
 <body>
-    <img id="logo"
-        src="{{ url_for('static', filename='logo.webp') }}"
-        alt="VIG logo"
-        class="overlay logo"
-    />
+    <header>
+        <button id="goToMap" style="position: relative; left: 5%;" onclick="location.href='/'">Go to Map</button>     
+        <img id="logo"
+            src="{{ url_for('static', filename='logo.webp') }}"
+            alt="VIG logo"
+            class="logo"
+        />
+    </header>
 
     <div class="container" id="questionsContainer">
       <div class="intro">
@@ -72,6 +75,9 @@
             </ul>
           </details>
       </div>
+
+      {% include 'about.html' %}
+
     </div>
   </body>
 </html>
