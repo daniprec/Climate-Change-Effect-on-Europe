@@ -192,9 +192,9 @@ h1 {
 .logo {
   top: 10px;
   right: 10px;
-  width: 80px;
-  background: transparent;
-  cursor: pointer;
+  width: 150px;
+  max-width: 20%;
+  background: white;
 }
 
 /* utility */
