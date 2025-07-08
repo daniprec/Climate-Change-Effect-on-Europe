@@ -10,18 +10,17 @@ from tqdm import tqdm
 
 
 def download_file(url: str, dest: pathlib.Path, chunk=1 << 20) -> pathlib.Path:
-    """Stream-download url into dest and return the Path."""
+    """Stream-download url into dest. European Environment Agency (EEA)."""
     dest.parent.mkdir(parents=True, exist_ok=True)
     with requests.get(url, stream=True, timeout=30) as r:
         r.raise_for_status()
         with dest.open("wb") as fh:
             for block in r.iter_content(chunk_size=chunk):
                 fh.write(block)
-    return dest
 
 
 def main(
-    path_csv="./data/ParquetFilesUrls_NOX.csv",
+    path_csv="./data/eea/ParquetFilesUrls_NOX.csv",
     output_csv: str = "./data/airquality.csv",
     max_urls: int = None,
     verbose: bool = False,
