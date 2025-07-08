@@ -323,7 +323,7 @@ yearSlider.oninput = () => {
 };
 
 weekSlider.oninput = () => {
-  weekValue.textContent = weekSlider.value;
+  updateWeekLabel();
   clearTimeout(debounce);
   debounce = setTimeout(() => loadGeoJSON(FLASK_CTX.nutsID, yearSlider.value, weekSlider.value), 250);
 };
@@ -335,6 +335,24 @@ metricSelect.onchange = () => {
   updateMetricInfo(mainMetric);
   drawTimeSeries(holdRegionInfo.NUTS_ID, holdRegionInfo.name);  // redraw TS for the new metric
 };
+
+function getMonthFromWeek(year, week) {
+  const simple = new Date(year, 0, 1 + (week - 1) * 7);
+  const dow = simple.getDay();
+  const ISOweekStart = simple;
+  if (dow <= 4)
+    ISOweekStart.setDate(simple.getDate() - simple.getDay() + 1);
+  else
+    ISOweekStart.setDate(simple.getDate() + 8 - simple.getDay());
+  return ISOweekStart.toLocaleString('default', { month: 'long' });
+}
+
+function updateWeekLabel() {
+  const week = parseInt(weekSlider.value);
+  const year = parseInt(yearSlider.value);
+  const month = getMonthFromWeek(year, week);
+  weekValue.textContent=`${week} (${month})`;
+}
 
 compareSelect.onchange = () => {
   compareMetric = compareSelect.value || null;
@@ -548,3 +566,4 @@ applyYearRange(METRIC_CFG[mainMetric].range);
 pushView('EU', 'Europe');
 loadGeoJSON(FLASK_CTX.nutsID, yearSlider.value, weekSlider.value);
 updateMetricInfo(mainMetric);
+updateWeekLabel();
