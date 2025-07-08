@@ -27,6 +27,25 @@ def download_pollutant_in_region(
     nuts_id: str = "AT",
     verbose: bool = True,
 ) -> pd.DataFrame:
+    """
+    Download and process EEA pollutant data for a specific NUTS region.
+
+    Parameters
+    ----------
+    path_data : str
+        Path to the directory where the CSV file with parquet URLs is located.
+    pollutant : str
+        Pollutant to filter by. Options are "PM10", "O3", "NOX".
+    nuts_id : str
+        NUTS ID to filter the data by (e.g., "AT" for Austria).
+    verbose : bool
+        If True, print additional information during processing.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame containing the averaged pollutant data for the specified NUTS region.
+    """
     path_data = pathlib.Path(path_data)
     path_csv = path_data / "eea" / f"ParquetFilesUrls_{pollutant}.csv"
     if not path_csv.exists():
