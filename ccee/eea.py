@@ -48,7 +48,7 @@ def main(
                 table = pq.read_table(filename)  # Arrow Table
                 dfs.append(table)
             except Exception as exc:
-                print(f"[WARN] Skipped {url}: {exc}")
+                logging.warning(f"Skipped {url}: {exc}")
 
         if not dfs:
             raise RuntimeError("No parquet files could be read.")
