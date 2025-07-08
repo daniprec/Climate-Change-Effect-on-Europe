@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 
 from ccee.cordex import cordex_tas_to_dataframe_per_region
+from ccee.eea import download_eea_air_quality
 from ccee.eurostat import (
     download_eurostat_mortality,
     download_eurostat_nuts2_population,
@@ -64,6 +65,32 @@ def main(path_data: str = "./data", path_geojson: str = "./data/regions.geojson"
 
     # Drop any year after 2100, as we only consider the 21st century
     df = df[df["year"] <= 2100].copy()
+
+    # Include air quality data
+    for pollutant in ["PM10", "O3", "NOX"]:
+        # Initialize an empty list to store DataFrames for each NUTS_ID
+        ls_df_pollutant: list[pd.DataFrame] = []
+        # Iterate over each unique NUTS_ID in the DataFrame
+        for nuts_id in df["NUTS_ID"].unique():
+            # Download the air quality data for the specified pollutant and NUTS_ID
+            print(f"[INFO] Downloading {pollutant} data for NUTS_ID {nuts_id}...")
+            df_aq = download_eea_air_quality(
+                path_data=path_data, pollutant=pollutant, nuts_id=nuts_id, verbose=True
+            )
+            # Rename the pollutant column to avoid confusion
+            df_aq.rename(columns={"Value": f"{pollutant}"}, inplace=True)
+
+            # Take only the relevant columns
+            df_aq = df_aq[["NUTS_ID", "year", "week", f"{pollutant}"]]
+
+            ls_df_pollutant.append(df_aq)
+
+        # Stack all dataframes for the current pollutant
+        df_aq = pd.concat(ls_df_pollutant, ignore_index=True)
+
+        # Merge the pollutant data with the main DataFrame
+        df = df.merge(df_aq, on=["NUTS_ID", "year", "week"], how="outer")
+
     # Reset the index after all merges
     df.reset_index(drop=True, inplace=True)
 

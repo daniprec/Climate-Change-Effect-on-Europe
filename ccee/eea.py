@@ -21,7 +21,7 @@ def download_file(url: str, dest: pathlib.Path, chunk=1 << 20) -> pathlib.Path:
                 fh.write(block)
 
 
-def download_pollutant_in_region(
+def download_eea_air_quality(
     path_data: str = "./data/",
     pollutant: str = "PM10",
     nuts_id: str = "AT",
@@ -65,6 +65,24 @@ def download_pollutant_in_region(
 
     # Take urls containing the specified NUTS_ID
     urls = [url for url in urls if f"/{nuts_id}/" in url]
+
+    if len(urls) == 0:
+        logging.warning(
+            f"No URLs found for NUTS_ID '{nuts_id}' and pollutant '{pollutant}'."
+        )
+        # Return an empty DataFrame with the expected columns
+        return pd.DataFrame(
+            columns=[
+                "NUTS_ID",
+                "year",
+                "week",
+                "Pollutant",
+                "Unit",
+                "AggType",
+                "Verification",
+                "Value",
+            ]
+        )
 
     # Temporary folder to hold the downloads
     with tempfile.TemporaryDirectory() as tmp_dir:
@@ -133,6 +151,10 @@ def download_pollutant_in_region(
                 f"Multiple unique values found in {col} for some combinations."
                 f"{merged_df[col].unique()}"
             )
+            # Average the values in case of multiple unique values
+            merged_df[col] = merged_df.groupby(
+                ["NUTS_ID", "Year", "Week", "Pollutant"]
+            )[col].transform("first")
 
     # Sort by NUTS_ID, Year, Week, Pollutant
     merged_df = merged_df.sort_values(
@@ -144,11 +166,17 @@ def download_pollutant_in_region(
         merged_df["Pollutant"].map(DICT_POLLUTANTS).fillna("Unknown")
     )
 
+    # Rename columns to match the rest of the project
+    merged_df.rename(
+        columns={"Year": "year", "Week": "week"},
+        inplace=True,
+    )
+
     return merged_df
 
 
 def main():
-    df = download_pollutant_in_region(verbose=True)
+    df = download_eea_air_quality(verbose=True)
     print(df.head())
 
 
