@@ -434,8 +434,23 @@ function renderDualAxisChart(labels, data1, data2, m1, m2, regionName) {
   });
 
   // now find min/max positions
-  const minTarget = curIndex - delta;
-  const maxTarget = curIndex + delta;
+  let minTarget = curIndex - delta;
+  let maxTarget = curIndex + delta;
+
+  // if the minTarget goes below the first label, we need to adjust the
+  // maxTarget to account for that difference
+  if (minTarget < labelIndices[0]) {
+    const diff = labelIndices[0] - minTarget;
+    // adjust maxTarget to keep the range size
+    maxTarget += diff;
+  }
+  // if the maxTarget goes above the last label, we need to adjust the
+  // minTarget to account for that difference
+  if (maxTarget > labelIndices.at(-1)) {
+    const diff = maxTarget - labelIndices.at(-1);
+    // adjust minTarget to keep the range size
+    minTarget -= diff;
+  }
 
   const minLabel = labelIndices.findIndex(idx => idx >= minTarget);
   const maxLabel = labelIndices.map((idx, i) => idx <= maxTarget ? i : -1)
