@@ -1,3 +1,4 @@
+import logging
 import pathlib
 import tempfile
 
@@ -22,6 +23,8 @@ def download_file(url: str, dest: pathlib.Path, chunk=1 << 20) -> pathlib.Path:
 def main(
     path_csv="./data/ParquetFilesUrls_NOX.csv",
     output_csv: str = "./data/airquality.csv",
+    max_urls: int = None,
+    verbose: bool = False,
 ):
     # Read the CSV that lists all parquet URLs
     links_df = pd.read_csv(path_csv)
