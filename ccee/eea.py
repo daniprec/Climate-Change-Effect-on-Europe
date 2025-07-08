@@ -8,6 +8,8 @@ import pyarrow.parquet as pq
 import requests
 from tqdm import tqdm
 
+DICT_POLLUTANTS = {5: "PM10", 7: "O3", 9: "NOX"}
+
 
 def download_file(url: str, dest: pathlib.Path, chunk=1 << 20) -> pathlib.Path:
     """Stream-download url into dest. European Environment Agency (EEA)."""
@@ -19,12 +21,20 @@ def download_file(url: str, dest: pathlib.Path, chunk=1 << 20) -> pathlib.Path:
                 fh.write(block)
 
 
-def main(
-    path_csv="./data/eea/ParquetFilesUrls_NOX.csv",
-    output_csv: str = "./data/airquality.csv",
-    max_urls: int = 5,
+def download_pollutant_in_region(
+    path_data: str = "./data/",
+    pollutant: str = "PM10",
+    nuts_id: str = "AT",
     verbose: bool = True,
-):
+) -> pd.DataFrame:
+    path_data = pathlib.Path(path_data)
+    path_csv = path_data / "eea" / f"ParquetFilesUrls_{pollutant}.csv"
+    if not path_csv.exists():
+        raise FileNotFoundError(
+            f"CSV file with parquet URLs not found at {path_csv}. "
+            "Please download it from the EEA website."
+        )
+
     # Read the CSV that lists all parquet URLs
     links_df = pd.read_csv(path_csv)
     if "ParquetFileUrl" not in links_df.columns:
@@ -34,9 +44,8 @@ def main(
     if not urls:
         raise ValueError("No URLs found!")
 
-    # Sort urls alphabetically (each one contains a country code)
-    urls = sorted(urls)[:max_urls] if max_urls is not None else sorted(urls)
-    # TODO: We can be clever and download one country at a time
+    # Take urls containing the specified NUTS_ID
+    urls = [url for url in urls if f"/{nuts_id}/" in url]
 
     # Temporary folder to hold the downloads
     with tempfile.TemporaryDirectory() as tmp_dir:
@@ -59,12 +68,14 @@ def main(
         merged_table = pa.concat_tables(dfs, promote=True)
         merged_df = merged_table.to_pandas()
 
-    # Drop all validity rows that are not 1
+    # Keep only valid rows
     mask_valid = merged_df["Validity"] == 1
     merged_df = merged_df[mask_valid].reset_index(drop=True)
     if verbose:
         num_non_valid = (~mask_valid).sum()
-        print(f"Removed {num_non_valid} non-valid rows.")
+        print(
+            f"Removed {num_non_valid} non-valid rows out of {len(merged_df)} total rows."
+        )
 
     # The letters before "/" in each element in "Samplingpoint" is the NUTS # code. For instance "BA/SPO-BA0038A_00009_100" -> "BA"
     merged_df["NUTS_ID"] = merged_df["Samplingpoint"].str.split("/").str[0]
@@ -99,18 +110,27 @@ def main(
             merged_df.groupby(["NUTS_ID", "Year", "Week", "Pollutant"])[col].nunique()
             > 1
         ).any():
-            raise ValueError(
+            logging.warning(
                 f"Multiple unique values found in {col} for some combinations."
                 f"{merged_df[col].unique()}"
             )
 
-    merged_df.to_csv(output_csv, index=False)
-    print(f"Wrote merged csv     -> {output_csv}")
+    # Sort by NUTS_ID, Year, Week, Pollutant
+    merged_df = merged_df.sort_values(
+        by=["NUTS_ID", "Year", "Week", "Pollutant"], ignore_index=True
+    )
 
-    # Quick sanity print
-    if verbose:
-        print("Merged shape:", merged_df.shape)
-        print(merged_df.head())
+    # Convert pollutant numbers to names
+    merged_df["Pollutant"] = (
+        merged_df["Pollutant"].map(DICT_POLLUTANTS).fillna("Unknown")
+    )
+
+    return merged_df
+
+
+def main():
+    df = download_pollutant_in_region(verbose=True)
+    print(df.head())
 
 
 if __name__ == "__main__":
