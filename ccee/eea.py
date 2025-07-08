@@ -22,8 +22,8 @@ def download_file(url: str, dest: pathlib.Path, chunk=1 << 20) -> pathlib.Path:
 def main(
     path_csv="./data/eea/ParquetFilesUrls_NOX.csv",
     output_csv: str = "./data/airquality.csv",
-    max_urls: int = None,
-    verbose: bool = False,
+    max_urls: int = 5,
+    verbose: bool = True,
 ):
     # Read the CSV that lists all parquet URLs
     links_df = pd.read_csv(path_csv)
@@ -58,6 +58,51 @@ def main(
         # Concatenate the Arrow tables efficiently
         merged_table = pa.concat_tables(dfs, promote=True)
         merged_df = merged_table.to_pandas()
+
+    # Drop all validity rows that are not 1
+    mask_valid = merged_df["Validity"] == 1
+    merged_df = merged_df[mask_valid].reset_index(drop=True)
+    if verbose:
+        num_non_valid = (~mask_valid).sum()
+        print(f"Removed {num_non_valid} non-valid rows.")
+
+    # The letters before "/" in each element in "Samplingpoint" is the NUTS # code. For instance "BA/SPO-BA0038A_00009_100" -> "BA"
+    merged_df["NUTS_ID"] = merged_df["Samplingpoint"].str.split("/").str[0]
+
+    # The "Start" column has the format "2024-01-01 00:00:00"
+    # We extract from them "Year" and "Week" using pandas after conversion
+    merged_df["Start"] = pd.to_datetime(merged_df["Start"])
+    merged_df["Year"] = merged_df["Start"].dt.year
+    merged_df["Week"] = merged_df["Start"].dt.isocalendar().week
+
+    # Group by NUTS_ID, Year, Week, Pollutant. Average the Value
+    merged_df = (
+        merged_df.groupby(
+            [
+                "NUTS_ID",
+                "Year",
+                "Week",
+                "Pollutant",
+                "Unit",
+                "AggType",
+                "Verification",
+            ],
+            as_index=False,
+        )
+        .agg({"Value": "mean"})
+        .reset_index(drop=True)
+    )
+
+    # Extra check: ensure the is a single "Unit" and "AggType" per NUTS_ID, Year, Week, Pollutant
+    for col in ["Unit", "AggType", "Verification"]:
+        if (
+            merged_df.groupby(["NUTS_ID", "Year", "Week", "Pollutant"])[col].nunique()
+            > 1
+        ).any():
+            raise ValueError(
+                f"Multiple unique values found in {col} for some combinations."
+                f"{merged_df[col].unique()}"
+            )
 
     merged_df.to_csv(output_csv, index=False)
     print(f"Wrote merged csv     -> {output_csv}")
