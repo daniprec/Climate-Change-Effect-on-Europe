@@ -33,7 +33,7 @@ def main(
         raise ValueError("No URLs found!")
 
     # Sort urls alphabetically (each one contains a country code)
-    urls = sorted(urls)[:4]
+    urls = sorted(urls)[:max_urls] if max_urls is not None else sorted(urls)
     # TODO: We can be clever and download one country at a time
 
     # Temporary folder to hold the downloads
