@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>VIG Climate-Risk Map</title>
+
+  <!-- IE style -->
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;800&display=swap" rel="stylesheet">
+
+  <!-- Leaflet -->
+  <link rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <!-- General style -->
+  <link rel="stylesheet"
+        href="{{ url_for('static', filename='style.css') }}" />
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Zoom/Pan plug-in -->
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2"></script>
+
+  <!-- Font Awesome for icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
+</head>
+<body>
+  <div id="app-wrapper">
+    <!-- MENU BUTTON (top-left, only for mobile) -->
+    <button id="menuToggle" class="mobile-only" aria-label="Toggle sidebar" aria-expanded="false"><i class="fa fa-bars"></i></button>
+
+    <!-- SIDEBAR CONTAINER (wraps the actual sidebar) -->
+    <aside id="sidebarContainer">
+      <div id="sidebar">
+        <div id="controls" class="panel">
+          <label for="yearSlider">Year: <span id="yearValue" class="mutableValue">2025</span></label>
+          <input id="yearSlider" class="slider" type="range"
+                min="{{ min_year }}" max="{{ max_year }}" />
+          <br />
+
+          <label for="weekSlider">Week: <span id="weekValue" class="mutableValue">1</span></label>
+          <input id="weekSlider" class="slider" type="range"
+                min="1" max="52" />
+          <br />
+
+          <label for="metricSelect">Dataset: </label>
+          <select id="metricSelect" class="select">
+            <option value="mortality_rate">Mortality</option>
+            <option value="population_density">Population Density</option>
+            <option value="temperature_rcp45">Temperature (RCP 4.5)</option>
+            <option value="temperature_rcp85">Temperature (RCP 8.5)</option>
+          </select>
+        </div>
+
+        <details class="panel collapsible" id="metricInfoSection" closed>
+          <summary><strong>Dataset Info</strong></summary>
+          <div id="metricInfo">
+            <h4 id="metricTitle"></h4>
+            <ul id="metricDesc"></ul>
+            <button id="metricSource">Go to source</button>
+          </div>
+        </details>        
+        
+        <div id="regionInfo" class="panel">
+          <ul>Hover on the map to display the region information.</ul>
+        </div>
+
+        <details class="panel collapsible" id="graphSection" open>
+          <summary><strong>Graph over Time</strong></summary>
+
+          <div class="dropdown-content">
+          <label for="compareSelect">Compare with:</label>
+          <select id="compareSelect" class="select">
+            <option value="">— none —</option>
+            <option value="mortality_rate">Mortality</option>
+            <option value="population_density">Population Density</option>
+            <option value="temperature_rcp45">Temperature (RCP 4.5)</option>
+            <option value="temperature_rcp85">Temperature (RCP 8.5)</option>
+          </select>
+          </div>
+
+          <div id="regionGraph" class="panel graph">
+            <!-- time series -->
+          </div>
+
+          <div id="rangeButtons">
+            <button data-range="6M">6M</button>
+            <button data-range="1Y">1Y</button>
+            <button data-range="5Y">5Y</button>
+            <button data-range="10Y">10Y</button>
+          </div>
+        </details>
+
+        <!-- Open questions button. On click, it takes you to the /questions page -->
+        <button id="goToQuestions" onclick="location.href='/questions'">Open Questions</button> 
+        
+        <!-- About section -->
+        {% include 'about.html' %}
+
+    </aside>
+
+    <!-- SPLITTER (between sidebar and map) -->
+    <div id="splitter"></div>
+
+    <!-- MAP (right column) -->
+    <div id="map">
+      <!-- BREADCRUMB (at the center of the map)  -->
+      <div id="breadcrumb" class="overlay breadcrumb"></div>
+    </div>
+    <!-- LOGO  (top-right, z-stacked above map) -->
+    <img id="logo"
+      src="{{ url_for('static', filename='logo.webp') }}"
+      alt="VIG logo"
+      class="overlay logo"
+    />
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Pass server vars -->
+  <script>
+    window.FLASK_CTX = {
+      centerLat : parseFloat("{{ center_lat }}"),
+      centerLon : parseFloat("{{ center_lon }}"),
+      zoom      : parseInt("{{ zoom }}", 10),
+      nutsID: "{{ nuts_id }}",
+      maxYear   : "{{ max_year }}",
+      availableIDs: "{{ ls_ids }}",
+    };
+  </script>
+
+  <!-- Application logic -->
+  <script src="{{ url_for('static', filename='map.js') }}"></script>
+</body>
+</html>
