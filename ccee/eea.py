@@ -61,9 +61,10 @@ def main(
     print(f"Wrote merged csv     -> {output_csv}")
 
     # Quick sanity print
-    print("Merged shape:", merged_df.shape)
-    print(merged_df.head())
+    if verbose:
+        print("Merged shape:", merged_df.shape)
+        print(merged_df.head())
 
 
 if __name__ == "__main__":
-    main()
+    main(verbose=True)
