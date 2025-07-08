@@ -81,7 +81,6 @@ header {
 }
 
 #sidebar {
-  width: 400px;
   max-width: 95%;
   display: flex;
   flex-direction: column;
@@ -148,6 +147,10 @@ header {
     width: auto;
     height: auto;
     overflow-y: visible;
+  }
+
+  #sidebar {
+    width: 400px;
   }
 
   #menuToggle,
