@@ -365,6 +365,7 @@ weekSlider.oninput = () => {
 metricSelect.onchange = () => {
   mainMetric = metricSelect.value;
   applyYearRange(METRIC_CFG[mainMetric].range);
+  updateWeekLabel();
   loadGeoJSON(FLASK_CTX.nutsID, yearSlider.value, weekSlider.value);
   updateMetricInfo(mainMetric);
   drawTimeSeries(holdRegionInfo.NUTS_ID, holdRegionInfo.name);  // redraw TS for the new metric
@@ -537,6 +538,11 @@ function renderDualAxisChart(labels, data1, data2, m1, m2, regionName) {
 
 // fetch both series in parallel, then render
 function drawTimeSeries(nutsId, regionName) {
+  // if the region is not selected, do nothing
+  if (!nutsId || nutsId === 'EU') {
+    document.getElementById('regionGraph').innerHTML = '<p>Select a region to see the time-series.</p>';
+    return;
+  }
 
   // build two fetches
   const p1 = fetch(
