@@ -300,6 +300,7 @@ header {
 
 .mutableValue {
   color: #000066;
+  font-size: 0.9em;
 }
 
 /* ---------- select (dropdown) ---------- */

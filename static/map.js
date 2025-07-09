@@ -317,10 +317,44 @@ function applyYearRange([minYear, maxYear]) {
 
 yearSlider.oninput = () => {
   yearValue.textContent = yearSlider.value;
+  updateWeekLabel();
   clearTimeout(debounce);
   debounce = setTimeout(() => loadGeoJSON(FLASK_CTX.nutsID, yearSlider.value, weekSlider.value), 250);
   drawTimeSeries(holdRegionInfo.NUTS_ID, holdRegionInfo.name);  // redraw TS for the new year
 };
+
+function getOrdinal(n) {
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
+
+function getISOWeekStartDate(year, week) {
+  const simple = new Date(year, 0, 1 + (week - 1) * 7);
+  const dow = simple.getDay();
+  const ISOweekStart = new Date(simple);
+  if (dow <= 4)
+    ISOweekStart.setDate(simple.getDate() - simple.getDay() + 1);
+  else
+    ISOweekStart.setDate(simple.getDate() + 8 - simple.getDay());
+  return ISOweekStart;
+}
+
+function updateWeekLabel() {
+  const week = parseInt(weekSlider.value);
+  const year = parseInt(yearSlider.value);
+  const startDate = getISOWeekStartDate(year, week);
+  const endDate = new Date(startDate);
+  endDate.setDate(startDate.getDate() + 6); // one full week
+
+  const startMonth = startDate.toLocaleString('default', { month: 'short' });
+  const endMonth = endDate.toLocaleString('default', { month: 'short' });
+
+  const startStr = `${startMonth} ${getOrdinal(startDate.getDate())}`;
+  const endStr = `${endMonth} ${getOrdinal(endDate.getDate())}`;
+
+  weekValue.textContent = `Week ${week} (${startStr} - ${endStr})`;
+}
 
 weekSlider.oninput = () => {
   updateWeekLabel();
@@ -335,24 +369,6 @@ metricSelect.onchange = () => {
   updateMetricInfo(mainMetric);
   drawTimeSeries(holdRegionInfo.NUTS_ID, holdRegionInfo.name);  // redraw TS for the new metric
 };
-
-function getMonthFromWeek(year, week) {
-  const simple = new Date(year, 0, 1 + (week - 1) * 7);
-  const dow = simple.getDay();
-  const ISOweekStart = simple;
-  if (dow <= 4)
-    ISOweekStart.setDate(simple.getDate() - simple.getDay() + 1);
-  else
-    ISOweekStart.setDate(simple.getDate() + 8 - simple.getDay());
-  return ISOweekStart.toLocaleString('default', { month: 'long' });
-}
-
-function updateWeekLabel() {
-  const week = parseInt(weekSlider.value);
-  const year = parseInt(yearSlider.value);
-  const month = getMonthFromWeek(year, week);
-  weekValue.textContent=`${week} (${month})`;
-}
 
 compareSelect.onchange = () => {
   compareMetric = compareSelect.value || null;
@@ -565,5 +581,5 @@ document.getElementById('menuToggle').addEventListener('click', () => {
 applyYearRange(METRIC_CFG[mainMetric].range);
 pushView('EU', 'Europe');
 loadGeoJSON(FLASK_CTX.nutsID, yearSlider.value, weekSlider.value);
-updateMetricInfo(mainMetric);
 updateWeekLabel();
+updateMetricInfo(mainMetric);
