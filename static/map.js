@@ -42,7 +42,10 @@ const METRIC_CFG = {
       '• Spatial resolution: NUTS-3 (district).',
       '• Coverage: 2013 - 2024 (weekly).'
     ],
-    url: 'https://doi.org/10.2908/DEMO_R_MWK3_TS'
+    url: 'https://doi.org/10.2908/DEMO_R_MWK3_TS',
+    colorbarStops: [[0, "#ffffcc"], [0.5, "#fd8d3c"], [1, "#800026"]],
+    colorbarMin: "0",
+    colorbarMax: "1500"
   },
 
   population_density: {
@@ -56,7 +59,10 @@ const METRIC_CFG = {
       '• Spatial resolution: NUTS-3.',
       '• Coverage: 2000 - 2023 (yearly).'
     ],
-    url: 'https://doi.org/10.2908/DEMO_R_D3DENS'
+    url: 'https://doi.org/10.2908/DEMO_R_D3DENS',
+    colorbarStops: [[0, "#000066"], [0.33, "#47bfff"], [0.66, "#e6f598"], [1, "#6dc201"]],
+    colorbarMin: "0",
+    colorbarMax: "500"
   },
 
   temperature_rcp45: {
@@ -70,7 +76,10 @@ const METRIC_CFG = {
       '• Spatial resolution: 0.11° (~12 km); sampled at region centroid.',
       '• Coverage: 2006 - 2100 (monthly, interpolated to daily in this dash).'
     ],
-    url: 'https://cordex.org/data-access/cordex-cmip5-data/cordex-cmip5-esgf/'
+    url: 'https://cordex.org/data-access/cordex-cmip5-data/cordex-cmip5-esgf/',
+    colorbarStops: [[0, "#4575b4"], [0.5, "#fee090"], [1, "#d73027"]],
+    colorbarMin: "-5",
+    colorbarMax: "40"
   },
 
   temperature_rcp85: {
@@ -84,7 +93,10 @@ const METRIC_CFG = {
       '• Spatial resolution: 0.11° (~12 km); sampled at region centroid.',
       '• Coverage: 2006 - 2100 (monthly, interpolated to weekly for the dashboard).'
     ],
-    url: 'https://cordex.org/data-access/cordex-cmip5-data/cordex-cmip5-esgf/'
+    url: 'https://cordex.org/data-access/cordex-cmip5-data/cordex-cmip5-esgf/',
+    colorbarStops: [[0, "#4575b4"], [0.5, "#fee090"], [1, "#d73027"]],
+    colorbarMin: "-5",
+    colorbarMax: "40"
   }
 };
 
@@ -203,6 +215,35 @@ function drawRegionInfo(feature) {
   holder.innerHTML = popupLines.join('<br>');
 }
 
+/* --- Colorbar for the current metric --- */
+
+function updateColorbar(metric) {
+  const cfg = METRIC_CFG[metric];
+  if (!cfg || !cfg.colorbarStops) {
+    console.warn(`Missing colorbar configuration for ${metric}`);
+    return;
+  }
+
+  const canvas = document.getElementById("colorbar-canvas");
+  const ctx = canvas.getContext("2d");
+  const width = canvas.width;
+  const height = canvas.height;
+
+  const gradient = ctx.createLinearGradient(0, 0, width, 0);
+  cfg.colorbarStops.forEach(([offset, color]) => {
+    gradient.addColorStop(offset, color);
+  });
+
+  ctx.clearRect(0, 0, width, height);
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, width, height);
+
+  // Update labels
+  document.getElementById("colorbar-label").textContent = cfg.label;
+  document.getElementById("colorbar-min").textContent = cfg.colorbarMin ?? '';
+  document.getElementById("colorbar-max").textContent = cfg.colorbarMax ?? '';
+}
+
 /* ========  BREADCRUMB  ======== */
 /* This breadcrumb controls the region levels in the map. */
 
@@ -317,13 +358,47 @@ function applyYearRange([minYear, maxYear]) {
 
 yearSlider.oninput = () => {
   yearValue.textContent = yearSlider.value;
+  updateWeekLabel();
   clearTimeout(debounce);
   debounce = setTimeout(() => loadGeoJSON(FLASK_CTX.nutsID, yearSlider.value, weekSlider.value), 250);
   drawTimeSeries(holdRegionInfo.NUTS_ID, holdRegionInfo.name);  // redraw TS for the new year
 };
 
+function getOrdinal(n) {
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
+
+function getISOWeekStartDate(year, week) {
+  const simple = new Date(year, 0, 1 + (week - 1) * 7);
+  const dow = simple.getDay();
+  const ISOweekStart = new Date(simple);
+  if (dow <= 4)
+    ISOweekStart.setDate(simple.getDate() - simple.getDay() + 1);
+  else
+    ISOweekStart.setDate(simple.getDate() + 8 - simple.getDay());
+  return ISOweekStart;
+}
+
+function updateWeekLabel() {
+  const week = parseInt(weekSlider.value);
+  const year = parseInt(yearSlider.value);
+  const startDate = getISOWeekStartDate(year, week);
+  const endDate = new Date(startDate);
+  endDate.setDate(startDate.getDate() + 6); // one full week
+
+  const startMonth = startDate.toLocaleString('default', { month: 'short' });
+  const endMonth = endDate.toLocaleString('default', { month: 'short' });
+
+  const startStr = `${startMonth} ${getOrdinal(startDate.getDate())}`;
+  const endStr = `${endMonth} ${getOrdinal(endDate.getDate())}`;
+
+  weekValue.textContent = `${week} (${startStr} - ${endStr})`;
+}
+
 weekSlider.oninput = () => {
-  weekValue.textContent = weekSlider.value;
+  updateWeekLabel();
   clearTimeout(debounce);
   debounce = setTimeout(() => loadGeoJSON(FLASK_CTX.nutsID, yearSlider.value, weekSlider.value), 250);
 };
@@ -331,8 +406,10 @@ weekSlider.oninput = () => {
 metricSelect.onchange = () => {
   mainMetric = metricSelect.value;
   applyYearRange(METRIC_CFG[mainMetric].range);
+  updateWeekLabel();
   loadGeoJSON(FLASK_CTX.nutsID, yearSlider.value, weekSlider.value);
   updateMetricInfo(mainMetric);
+  updateColorbar(mainMetric);
   drawTimeSeries(holdRegionInfo.NUTS_ID, holdRegionInfo.name);  // redraw TS for the new metric
 };
 
@@ -503,6 +580,11 @@ function renderDualAxisChart(labels, data1, data2, m1, m2, regionName) {
 
 // fetch both series in parallel, then render
 function drawTimeSeries(nutsId, regionName) {
+  // if the region is not selected, do nothing
+  if (!nutsId || nutsId === 'EU') {
+    document.getElementById('regionGraph').innerHTML = '<p>Select a region to see the time-series.</p>';
+    return;
+  }
 
   // build two fetches
   const p1 = fetch(
@@ -547,4 +629,6 @@ document.getElementById('menuToggle').addEventListener('click', () => {
 applyYearRange(METRIC_CFG[mainMetric].range);
 pushView('EU', 'Europe');
 loadGeoJSON(FLASK_CTX.nutsID, yearSlider.value, weekSlider.value);
+updateWeekLabel();
 updateMetricInfo(mainMetric);
+updateColorbar(mainMetric);

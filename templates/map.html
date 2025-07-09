@@ -34,17 +34,17 @@
     <aside id="sidebarContainer">
       <div id="sidebar">
         <div id="controls" class="panel">
-          <label for="yearSlider">Year: <span id="yearValue" class="mutableValue">2025</span></label>
+          <label for="yearSlider">Year <span id="yearValue" class="mutableValue">NULL</span></label>
           <input id="yearSlider" class="slider" type="range"
                 min="{{ min_year }}" max="{{ max_year }}" />
           <br />
 
-          <label for="weekSlider">Week: <span id="weekValue" class="mutableValue">1</span></label>
+          <label for="weekSlider">Week <span id="weekValue" class="mutableValue">NULL</span></label>
           <input id="weekSlider" class="slider" type="range"
                 min="1" max="52" />
           <br />
 
-          <label for="metricSelect">Dataset: </label>
+          <label for="metricSelect">Data to display: </label>
           <select id="metricSelect" class="select">
             <option value="mortality_rate">Mortality</option>
             <option value="population_density">Population Density</option>
@@ -107,6 +107,16 @@
     <div id="map">
       <!-- BREADCRUMB (at the center of the map)  -->
       <div id="breadcrumb" class="overlay breadcrumb"></div>
+
+      <!-- COLOBAR -->
+      <div id="colorbar" class="overlay colorbar">
+        <span id="colorbar-label"></span>
+        <canvas id="colorbar-canvas" width="150" height="12"></canvas>
+        <div id="colorbar-ticks">
+          <span id="colorbar-min">Low</span>
+          <span id="colorbar-max">High</span>
+        </div>
+      </div>      
     </div>
     <!-- LOGO  (top-right, z-stacked above map) -->
     <img id="logo"
