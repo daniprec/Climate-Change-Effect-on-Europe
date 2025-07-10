@@ -30,14 +30,34 @@ const tempColour = v => {
   return '#d7191c';                // red (≥ 25 °C)
 };
 
-/* --- PM10 colour palette, based on WHO guidelines ------------- */
-const PM10Colour = v => {
+/* --- Ozone colour palette, based on WHO guidelines ------------- */
+const O3Colour = v => {
   if (v < -90) return '#000000';   // black
   if (v < 50)   return '#6dc201';  // IE green (Good)
   if (v < 100)  return '#47bfff';   // IE light blue (Moderate)
-  if (v < 199)  return '#fee08b';   // yellow (unhealthy)
-  if (v < 300)  return '#d7191c';   // red (very unhealthy)
-  return '#800026';  // purple (dangerous)
+  if (v < 150)  return '#fee08b';   // yellow (Unhealthy)
+  if (v < 200)  return '#d7191c';   // red (Very unhealthy)
+  return '#800026';  // purple (Dangerous)
+}
+
+/* --- NOX colour palette, based on WHO guidelines ------------- */
+const NOXColour = v => {
+  if (v < -90) return '#000000';   // black
+  if (v < 10)   return '#6dc201';  // IE green (Good)
+  if (v < 20)  return '#47bfff';   // IE light blue (Moderate)
+  if (v < 30)  return '#fee08b';   // yellow (Unhealthy)
+  if (v < 40)  return '#d7191c';   // red (Very unhealthy)
+  return '#800026';  // purple (Dangerous)
+}
+
+/* --- PM10 colour palette, based on WHO guidelines ------------- */
+const PM10Colour = v => {
+  if (v < -90) return '#000000';   // black
+  if (v < 20)   return '#6dc201';  // IE green (Good)
+  if (v < 30)  return '#47bfff';   // IE light blue (Moderate)
+  if (v < 50)  return '#fee08b';   // yellow (Unhealthy)
+  if (v < 70)  return '#d7191c';   // red (Very unhealthy)
+  return '#800026';  // purple (Dangerous)
 }
 
 const METRIC_CFG = {
@@ -109,6 +129,40 @@ const METRIC_CFG = {
     colorbarMax: "40"
   },
 
+  NOX: {
+    label : 'Nitrogen Oxides (µg/m³)',
+    value : p => p.NOX ?? -99,
+    colour: NOXColour,
+    range : [2024, 2025],
+    description: [
+      '• Weekly average NOX concentration in µg/m³.',
+      '• Source: European Environment Agency (EEA).',
+      '• Spatial resolution: stations spread across each region.',
+      '• Coverage: 2023 - 2025 (hourly, averaged to weekly for the dashboard).'
+    ],
+    url: 'https://aqportal.discomap.eea.europa.eu/download-data/',
+    colorbarStops: [[0, "#6dc201"], [0.25, "#47bfff"], [0.5, "#fee08b"], [0.75, "#d7191c"], [1, "#800026"]],
+    colorbarMin: "0",
+    colorbarMax: "50",
+  },
+
+  O3: {
+    label : 'Ozone (µg/m³)',
+    value : p => p.O3 ?? -99,
+    colour: O3Colour,
+    range : [2024, 2025],
+    description: [
+      '• Weekly average Ozone concentration in µg/m³.',
+      '• Source: European Environment Agency (EEA).',
+      '• Spatial resolution: stations spread across each region.',
+      '• Coverage: 2023 - 2025 (hourly, averaged to weekly for the dashboard).'
+    ],
+    url: 'https://aqportal.discomap.eea.europa.eu/download-data/',
+    colorbarStops: [[0, "#6dc201"], [0.25, "#47bfff"], [0.5, "#fee08b"], [0.75, "#d7191c"], [1, "#800026"]],
+    colorbarMin: "0",
+    colorbarMax: "200",
+  },
+
   PM10: {
     label : 'Particle Matter (µg/m³)',
     value : p => p.PM10 ?? -99,
@@ -123,7 +177,7 @@ const METRIC_CFG = {
     url: 'https://aqportal.discomap.eea.europa.eu/download-data/',
     colorbarStops: [[0, "#6dc201"], [0.25, "#47bfff"], [0.5, "#fee08b"], [0.75, "#d7191c"], [1, "#800026"]],
     colorbarMin: "0",
-    colorbarMax: "300",
+    colorbarMax: "100",
   }
 };
 
@@ -225,7 +279,9 @@ function drawRegionInfo(feature) {
   if (p.population_density != null) popupLines.push(`Population Density: ${p.population_density} per km²`);
   if (p.temperature_rcp45 != null) popupLines.push(`Temperature (RCP 4.5): ${p.temperature_rcp45} °C`);
   if (p.temperature_rcp85 != null) popupLines.push(`Temperature (RCP 8.5): ${p.temperature_rcp85} °C`);
-  if (p.PM10 != null) popupLines.push(`PM10: ${p.PM10} µg/m³`);
+  if (p.NOX != null) popupLines.push(`Nitrogen Oxides (NOX): ${p.NOX} µg/m³`);
+  if (p.O3 != null) popupLines.push(`Ozone (O3): ${p.O3} µg/m³`);
+  if (p.PM10 != null) popupLines.push(`Particle Matters (PM10): ${p.PM10} µg/m³`);
 
   const nutsID = (p.NUTS_ID ?? '').toUpperCase();
   // If this code does not appear in /api/bbox, we do not display the button
