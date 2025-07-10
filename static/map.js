@@ -136,7 +136,7 @@ const METRIC_CFG = {
     range : [2024, 2025],
     description: [
       '• Weekly average NOX concentration in µg/m³.',
-      '• Source: European Environment Agency (EEA).',
+      '• Source: European Air Quality Portal, by the European Environment Agency (EEA).',
       '• Spatial resolution: stations spread across each region.',
       '• Coverage: 2023 - 2025 (hourly, averaged to weekly for the dashboard).'
     ],
@@ -153,7 +153,7 @@ const METRIC_CFG = {
     range : [2024, 2025],
     description: [
       '• Weekly average Ozone concentration in µg/m³.',
-      '• Source: European Environment Agency (EEA).',
+      '• Source: European Air Quality Portal, by the European Environment Agency (EEA).',
       '• Spatial resolution: stations spread across each region.',
       '• Coverage: 2023 - 2025 (hourly, averaged to weekly for the dashboard).'
     ],
@@ -170,7 +170,7 @@ const METRIC_CFG = {
     range : [2024, 2025],
     description: [
       '• Weekly average PM10 concentration in µg/m³.',
-      '• Source: European Environment Agency (EEA).',
+      '• Source: European Air Quality Portal, by the European Environment Agency (EEA).',
       '• Spatial resolution: stations spread across each region.',
       '• Coverage: 2023 - 2025 (hourly, averaged to weekly for the dashboard).'
     ],
