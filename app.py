@@ -32,7 +32,7 @@ REGION_META = {
 
 
 # Get minimum and maximum year
-df = pd.read_csv(CSV_MAP["EU"])
+df = pd.read_csv(CSV_MAP["EU"]).round(1)
 min_year = df["year"].min()
 max_year = df["year"].max()
 
@@ -70,7 +70,7 @@ def api_data():
         return jsonify({"error": "Invalid region specified"}), 400
 
     # Extract the DataFrame for the specified region, week and year
-    df = pd.read_csv(CSV_MAP[region])
+    df = pd.read_csv(CSV_MAP[region]).round(1)
     df = df[(df["year"] == int(year)) & (df["week"] == int(week))]
 
     # Check if the requested information exists in the DataFrame
@@ -108,7 +108,7 @@ def app_data_time_series():
         return jsonify({"error": "Invalid region specified"}), 400
 
     # Load the DataFrame for the specified region
-    df = pd.read_csv(CSV_MAP[region])
+    df = pd.read_csv(CSV_MAP[region]).round(1)
 
     # Filter by NUTS_ID
     df = df[df["NUTS_ID"] == nuts_id]
