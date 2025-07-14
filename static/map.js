@@ -151,7 +151,7 @@ function onEachFeature(feature, layer) {
       } else {
         holdRegionInfo.NUTS_ID = null;  // reset if clicked again
       }
-    }, 250);  // wait for double-click timeout
+    }, 500);  // wait for double-click timeout
   });
 
   // Double click -> zoom in on the region
