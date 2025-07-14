@@ -162,6 +162,9 @@ def download_data():
         df = df[df["NUTS_ID"] == nuts_id]
     # Drop rows that have NaN values in both metrics
     df = df.dropna(subset=metrics, how="all")
+    # If the DataFrame is empty, return an error
+    if df.empty:
+        return jsonify({"error": "No data available for the specified criteria"}), 400
     # Convert DataFrame to CSV
     csv_data = df.to_csv(index=False)
     # Return the CSV data as a response
