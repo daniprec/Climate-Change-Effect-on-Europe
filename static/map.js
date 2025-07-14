@@ -128,17 +128,30 @@ function featureStyle(feature) {
 function onEachFeature(feature, layer) {
   const p = feature.properties;
 
+  let clickTimeout = null;  // to prevent double-clicks from triggering single-click logic
+
   // Click -> show time-series
   layer.on('click', () => {
-    drawTimeSeries(p.NUTS_ID, p.name);
-    // Hold the region info to avoid flickering
-    if (holdRegionInfo.NUTS_ID !== p.NUTS_ID) {
-      holdRegionInfo.NUTS_ID = p.NUTS_ID;
-      holdRegionInfo.name = p.name;
-      drawRegionInfo(feature);  // display region info
-    } else {
-      holdRegionInfo.NUTS_ID = null;  // reset if clicked again
-    }
+    if (clickTimeout !== null) return;  // prevent double click from triggering single-click logic
+
+      clickTimeout = setTimeout(() => {
+        clickTimeout = null;
+      drawTimeSeries(p.NUTS_ID, p.name);
+      // Hold the region info to avoid flickering
+      if (holdRegionInfo.NUTS_ID !== p.NUTS_ID) {
+        holdRegionInfo.NUTS_ID = p.NUTS_ID;
+        holdRegionInfo.name = p.name;
+        drawRegionInfo(feature);  // display region info
+        // if we are in mobile mode, open the sidebar
+        if (window.innerWidth < 768) {
+          sidebarOpenClose();  // open sidebar on mobile
+          // and automatically scroll down to the graph section
+          document.getElementById('regionGraph').scrollIntoView({ behavior: 'smooth' });
+      }
+      } else {
+        holdRegionInfo.NUTS_ID = null;  // reset if clicked again
+      }
+    }, 250);  // wait for double-click timeout
   });
 
   // Double click -> zoom in on the region
@@ -618,20 +631,22 @@ document.getElementById('downloadData').addEventListener('click', () => {
 const menuIcon = document.getElementById('menuToggle');
 const sidebarContainer = document.getElementById('sidebarContainer');
 
-document.getElementById('menuToggle').addEventListener('click', () => {
-  /* If the sidebar was already active, remove it */
+function sidebarOpenClose() {
+  /* If the sidebar is already active, remove it */
   if (sidebarContainer.classList.contains('active')) {
     sidebarContainer.classList.remove('active');
     /* Change the menu icon back to bars */
-    /* We do this by changing its content */
     menuIcon.innerHTML = '<i class="fa-solid fa-bars"></i>';
   } else {
     /* If the sidebar is not active, show it */
     sidebarContainer.classList.add('active');
     /* Change the menu icon to a cross */
-    /* We do this by changing its content */
     menuIcon.innerHTML = '<i class="fa-solid fa-xmark"></i>';
   }
+}
+
+document.getElementById('menuToggle').addEventListener('click', () => {
+  sidebarOpenClose();
 });
 
 /* ====================== START-UP ====================== */
