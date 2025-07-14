@@ -253,6 +253,10 @@ header {
   #map {
     height: 100vh;
   }
+
+  .colorbar {
+    bottom: 20px; /* move colorbar up a bit */
+  }
 }
 
 /* ---------- overlay ---------- */

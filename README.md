@@ -11,6 +11,8 @@
 
 This Flask application visualizes European population, mortality, and temperature data interactively on a map. It supports multi-scale zoom and analysis, with additional granularity for Vienna at the NUTS-3 level.
 
+It is hosted on [Python Anywhere](https://ixlabs-daniprec.pythonanywhere.com/) for easy access and exploration.
+
 ## 📑 Table of Contents
 
 - [About](#-about)
