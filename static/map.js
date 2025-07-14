@@ -163,8 +163,8 @@ function onEachFeature(feature, layer) {
 }
 
 /* --- Load the initial GeoJSON data for the default region --- */
-function loadGeoJSON(region, year, week) {
-  return fetch(`/api/data?region=${region}&year=${year}&week=${week}&metric=${mainMetric}`)
+function loadGeoJSON(map_id, year, week) {
+  return fetch(`/api/data?map_id=${map_id}&year=${year}&week=${week}&metric=${mainMetric}`)
     .then(r => r.json())
     .then(data => {
       if (geoJsonLayer) map.removeLayer(geoJsonLayer);
@@ -201,7 +201,7 @@ function drawRegionInfo(feature) {
 
   const nutsID = (p.NUTS_ID ?? '').toUpperCase();
   // If this code does not appear in /api/bbox, we do not display the button
-  if (FLASK_CTX.availableIDs.includes(nutsID)) {
+  if (FLASK_CTX.availableMapIDs.includes(nutsID)) {
     popupLines.push(`<i>(Double click to zoom in)</i>`);
   }
 
@@ -258,9 +258,9 @@ function renderBreadcrumb() {
      .forEach(el => el.onclick = () => popTo(+el.dataset.d));
 }
 
-function pushView(nutsID, name) {
-  if (viewStack.at(-1)?.nutsID === nutsID) return;   // avoid duplicate push
-  viewStack.push({ nutsID, name });
+function pushView(mapID, name) {
+  if (viewStack.at(-1)?.mapID === mapID) return;   // avoid duplicate push
+  viewStack.push({ mapID, name });
   renderBreadcrumb();
 }
 
@@ -270,31 +270,31 @@ function popTo(depth) {
 
   const top = viewStack.at(-1);
   const name = top.name || 'Europe';
-  const nutsID = top.nutsID || 'EU';
-  changeRegion(nutsID, name);  // drill down to the top view
+  const mapID = top.mapID || 'EU';
+  changeRegion(mapID, name);  // drill down to the top view
 }
 
 /* Change the region in the map and update the breadcrumb. */
-function changeRegion(nutsID, name) {
+function changeRegion(mapID, name) {
   // First we make sure the region is valid
-  if (!FLASK_CTX.availableIDs.includes(nutsID)) {
+  if (!FLASK_CTX.availableMapIDs.includes(mapID)) {
     return;
   }
 
   // We get the bounding box for the selected region
-  fetch(`/api/bbox?nuts_id=${nutsID || 'EU'}`)
+  fetch(`/api/bbox?nuts_id=${mapID || 'EU'}`)
     .then(r => r.json())
     .then(({ bbox, center, zoom }) => {
       map.fitBounds(bbox);
       map.setView(center, zoom);
     })
     .catch(err => console.error('Error fetching bbox:', err));
-  // Change the current region nutsID
-  FLASK_CTX.nutsID = nutsID;
+  // Change the current region mapID
+  FLASK_CTX.mapID = mapID;
   // Update the breadcrumb
-  pushView(nutsID, name);
+  pushView(mapID, name);
   // Load the new region shapes
-  loadGeoJSON(FLASK_CTX.nutsID, yearSlider.value, weekSlider.value);
+  loadGeoJSON(FLASK_CTX.mapID, yearSlider.value, weekSlider.value);
 }
 
 /* ==================== SPLITTER DRAGGING =================== */
@@ -360,7 +360,7 @@ yearSlider.oninput = () => {
   yearValue.textContent = yearSlider.value;
   updateWeekLabel();
   clearTimeout(debounce);
-  debounce = setTimeout(() => loadGeoJSON(FLASK_CTX.nutsID, yearSlider.value, weekSlider.value), 250);
+  debounce = setTimeout(() => loadGeoJSON(FLASK_CTX.mapID, yearSlider.value, weekSlider.value), 250);
   drawTimeSeries(holdRegionInfo.NUTS_ID, holdRegionInfo.name);  // redraw TS for the new year
 };
 
@@ -400,14 +400,14 @@ function updateWeekLabel() {
 weekSlider.oninput = () => {
   updateWeekLabel();
   clearTimeout(debounce);
-  debounce = setTimeout(() => loadGeoJSON(FLASK_CTX.nutsID, yearSlider.value, weekSlider.value), 250);
+  debounce = setTimeout(() => loadGeoJSON(FLASK_CTX.mapID, yearSlider.value, weekSlider.value), 250);
 };
 
 metricSelect.onchange = () => {
   mainMetric = metricSelect.value;
   applyYearRange(METRIC_CFG[mainMetric].range);
   updateWeekLabel();
-  loadGeoJSON(FLASK_CTX.nutsID, yearSlider.value, weekSlider.value);
+  loadGeoJSON(FLASK_CTX.mapID, yearSlider.value, weekSlider.value);
   updateMetricInfo(mainMetric);
   updateColorbar(mainMetric);
   drawTimeSeries(holdRegionInfo.NUTS_ID, holdRegionInfo.name);  // redraw TS for the new metric
@@ -588,12 +588,12 @@ function drawTimeSeries(nutsId, regionName) {
 
   // build two fetches
   const p1 = fetch(
-    `/api/data/ts?region=${FLASK_CTX.nutsID}&metric=${mainMetric}&nuts_id=${nutsId}`
+    `/api/data/ts?map_id=${FLASK_CTX.mapID}&metric=${mainMetric}&nuts_id=${nutsId}`
   ).then(r=>r.json());
 
   const p2 = compareMetric
     ? fetch(
-        `/api/data/ts?region=${FLASK_CTX.nutsID}&metric=${compareMetric}&nuts_id=${nutsId}`
+        `/api/data/ts?map_id=${FLASK_CTX.mapID}&metric=${compareMetric}&nuts_id=${nutsId}`
       ).then(r=>r.json())
     : Promise.resolve({ data: [] });
 
@@ -604,6 +604,15 @@ function drawTimeSeries(nutsId, regionName) {
     renderDualAxisChart(labels, data1, data2, mainMetric, compareMetric, regionName);
   }).catch(console.error);
 }
+
+/* --- Download data button --- */
+document.getElementById('downloadData').addEventListener('click', () => {
+  const metric1 = mainMetric;
+  const metric2 = compareMetric || 'none';  // if no comparison, use 'none'
+  const nutsID = holdRegionInfo.NUTS_ID || 'none';  // use selected region or 'EU' if none
+  const url = `/api/data/download?map_id=${FLASK_CTX.mapID}&nuts_id=${nutsID}&metric=${metric1}&metric2=${metric2}`;
+  window.open(url, '_blank');
+});
 
 /* === MOBILE MENU === */
 const menuIcon = document.getElementById('menuToggle');
@@ -628,7 +637,7 @@ document.getElementById('menuToggle').addEventListener('click', () => {
 /* ====================== START-UP ====================== */
 applyYearRange(METRIC_CFG[mainMetric].range);
 pushView('EU', 'Europe');
-loadGeoJSON(FLASK_CTX.nutsID, yearSlider.value, weekSlider.value);
+loadGeoJSON(FLASK_CTX.mapID, yearSlider.value, weekSlider.value);
 updateWeekLabel();
 updateMetricInfo(mainMetric);
 updateColorbar(mainMetric);

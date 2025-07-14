@@ -2,7 +2,7 @@ import os
 
 import geopandas as gpd
 import pandas as pd
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, Response, jsonify, render_template, request
 
 app = Flask(__name__)
 
@@ -17,7 +17,7 @@ CSV_MAP = {
     "AT": os.path.join(BASE_DIR, "data", "austria.csv"),
 }
 
-REGION_META = {
+META_MAP = {
     "EU": {  # Europe layer
         "bbox": [[34, -25], [71, 45]],
         "center": [50, 20],
@@ -40,7 +40,7 @@ max_year = df["year"].max()
 @app.route("/")
 def map():
     # Render the base HTML page; the page can load data via AJAX.
-    meta = REGION_META["EU"]
+    meta = META_MAP["EU"]
     return render_template(
         "map.html",
         min_year=int(min_year),
@@ -48,8 +48,8 @@ def map():
         center_lat=meta["center"][0],
         center_lon=meta["center"][1],
         zoom=meta["zoom"],
-        nuts_id="EU",
-        ls_ids=list(CSV_MAP.keys()),
+        map_id="EU",
+        ls_map_ids=list(CSV_MAP.keys()),
     )
 
 
@@ -60,17 +60,17 @@ def questions():
 
 @app.get("/api/data")
 def api_data():
-    region = request.args.get("region", "EU").upper()
+    map_id = request.args.get("map_id", "EU").upper()
     year = request.args.get("year", "2023")
     week = request.args.get("week", "1")
     metric = request.args.get("metric", "mortality_rate")
 
-    # Check if the requested region is valid
-    if region not in CSV_MAP:
-        return jsonify({"error": "Invalid region specified"}), 400
+    # Check if the requested map_id is valid
+    if map_id not in CSV_MAP:
+        return jsonify({"error": "Invalid map_id specified"}), 400
 
-    # Extract the DataFrame for the specified region, week and year
-    df = pd.read_csv(CSV_MAP[region])
+    # Extract the DataFrame for the specified map_id, week and year
+    df = pd.read_csv(CSV_MAP[map_id])
     df = df[(df["year"] == int(year)) & (df["week"] == int(week))]
 
     # Check if the requested information exists in the DataFrame
@@ -89,7 +89,7 @@ def api_data():
 @app.get("/api/bbox")
 def api_bbox():
     iso = request.args.get("nuts_id", "EU").upper()
-    meta = REGION_META.get(iso)
+    meta = META_MAP.get(iso)
     return (
         jsonify(bbox=meta["bbox"], center=meta["center"], zoom=meta["zoom"])
         if meta
@@ -99,16 +99,16 @@ def api_bbox():
 
 @app.route("/api/data/ts")
 def app_data_time_series():
-    region = request.args.get("region", "EU").upper()
+    map_id = request.args.get("map_id", "EU").upper()
     metric = request.args.get("metric", "mortality_rate")
     nuts_id = request.args.get("nuts_id", "AT")
 
-    # Check if the requested region is valid
-    if region not in CSV_MAP:
-        return jsonify({"error": "Invalid region specified"}), 400
+    # Check if the requested map_id is valid
+    if map_id not in CSV_MAP:
+        return jsonify({"error": "Invalid map_id specified"}), 400
 
-    # Load the DataFrame for the specified region
-    df = pd.read_csv(CSV_MAP[region])
+    # Load the DataFrame for the specified map_id
+    df = pd.read_csv(CSV_MAP[map_id])
 
     # Filter by NUTS_ID
     df = df[df["NUTS_ID"] == nuts_id]
@@ -131,6 +131,45 @@ def app_data_time_series():
             "data": time_series_data,
         }
     )
+
+
+@app.route("/api/data/download")
+def download_data():
+    map_id = request.args.get("map_id", "EU").upper()
+    nuts_id = request.args.get("nuts_id", None).upper()
+    metric1 = request.args.get("metric", "mortality_rate")
+    metric2 = request.args.get("metric2", None)
+
+    # Load the DataFrame for the specified map_id
+    if map_id not in CSV_MAP:
+        return jsonify({"error": "Invalid map_id specified"}), 400
+    df = pd.read_csv(CSV_MAP[map_id])
+
+    # Validate metrics
+    if metric1 not in df.columns:
+        return jsonify({"error": f"No data available for metric '{metric1}'"}), 400
+    else:
+        metrics = [metric1]
+    if metric2 not in df.columns:
+        metric2 = None
+    else:
+        metrics.append(metric2)
+
+    # Prepare the DataFrame for download
+    df = df[["NUTS_ID", "year", "week"] + metrics]
+    # Mask NUTS_ID if specified
+    if nuts_id != "EU":
+        df = df[df["NUTS_ID"] == nuts_id]
+    # Drop rows that have NaN values in both metrics
+    df = df.dropna(subset=metrics, how="all")
+    # Convert DataFrame to CSV
+    csv_data = df.to_csv(index=False)
+    # Return the CSV data as a response
+    response = Response(csv_data, mimetype="text/csv")
+    response.headers["Content-Disposition"] = (
+        f'attachment; filename="{nuts_id}_data.csv"'
+    )
+    return response
 
 
 if __name__ == "__main__":

@@ -92,6 +92,9 @@
           </div>
         </details>
 
+        <!-- Download data button. It downloads the data displayed in the graph -->
+        <button id="downloadData">Download Data</button>
+
         <!-- Open questions button. On click, it takes you to the /questions page -->
         <button id="goToQuestions" onclick="location.href='/questions'">Open Questions</button> 
         
@@ -135,9 +138,9 @@
       centerLat : parseFloat("{{ center_lat }}"),
       centerLon : parseFloat("{{ center_lon }}"),
       zoom      : parseInt("{{ zoom }}", 10),
-      nutsID: "{{ nuts_id }}",
+      mapID: "{{ map_id }}",
       maxYear   : "{{ max_year }}",
-      availableIDs: "{{ ls_ids }}",
+      availableMapIDs: "{{ ls_map_ids }}",
     };
   </script>
 
