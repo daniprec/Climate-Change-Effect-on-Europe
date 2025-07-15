@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 
 from ccee.cordex import cordex_tas_to_dataframe_per_region
-from ccee.eea import download_eea_air_quality
+from ccee.eea import download_eea_air_quality_by_station
 from ccee.eurostat import (
     download_eurostat_mortality,
     download_eurostat_nuts2_population,
@@ -74,7 +74,7 @@ def main(path_data: str = "./data", path_geojson: str = "./data/regions.geojson"
         for nuts_id in df["NUTS_ID"].unique():
             # Download the air quality data for the specified pollutant and NUTS_ID
             print(f"[INFO] Downloading {pollutant} data for NUTS_ID {nuts_id}...")
-            df_aq = download_eea_air_quality(
+            df_aq = download_eea_air_quality_by_station(
                 path_data=path_data, pollutant=pollutant, nuts_id=nuts_id, verbose=True
             )
             # Rename the pollutant column to avoid confusion

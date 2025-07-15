@@ -1,6 +1,7 @@
 *.nc
 *.zip
 *.pyc
+*.tif
 
 build/
 cache/
