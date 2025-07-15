@@ -95,6 +95,8 @@
             <button data-range="1Y">1Y</button>
             <button data-range="5Y">5Y</button>
             <button data-range="10Y">10Y</button>
+            <!-- Download data button. It downloads the data displayed in the graph -->
+            <button id="downloadData">Download Data</button>
           </div>
         </details>
 
@@ -102,6 +104,7 @@
         <button id="goToQuestions" onclick="location.href='/questions'">Open Questions</button> 
         
         <!-- About section -->
+        {% include 'cite.html' %}
         {% include 'about.html' %}
 
     </aside>
@@ -122,6 +125,7 @@
           <span id="colorbar-min">Low</span>
           <span id="colorbar-max">High</span>
         </div>
+        <span id="colorbar-black" style="font-size: 0.65rem;">(Black regions have no data available)</span>
       </div>      
     </div>
     <!-- LOGO  (top-right, z-stacked above map) -->
@@ -141,9 +145,9 @@
       centerLat : parseFloat("{{ center_lat }}"),
       centerLon : parseFloat("{{ center_lon }}"),
       zoom      : parseInt("{{ zoom }}", 10),
-      nutsID: "{{ nuts_id }}",
+      mapID: "{{ map_id }}",
       maxYear   : "{{ max_year }}",
-      availableIDs: "{{ ls_ids }}",
+      availableMapIDs: "{{ ls_map_ids }}",
     };
   </script>
 
