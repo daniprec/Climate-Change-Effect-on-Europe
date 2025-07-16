@@ -14,7 +14,25 @@ DICT_POLLUTANTS = {5: "pm10", 7: "O3", 9: "NOx"}
 
 
 def download_file(url: str, dest: pathlib.Path, chunk=1 << 20) -> pathlib.Path:
-    """Stream-download url into dest. European Environment Agency (EEA)."""
+    """Stream-download url into dest. European Environment Agency (EEA).
+    NOTE: This function is not used in the main script, as downloading the
+    full dataset is not recommended due to its size.
+    It is provided for completeness and can be used to download specific files.
+
+    Parameters
+    ----------
+    url : str
+        URL to download.
+    dest : pathlib.Path
+        Destination path where the file will be saved.
+    chunk : int, optional
+        Size of the chunks to read from the response, by default 1 MB.
+
+    Returns
+    -------
+    pathlib.Path
+        The path to the downloaded file.
+    """
     dest.parent.mkdir(parents=True, exist_ok=True)
     with requests.get(url, stream=True, timeout=30) as r:
         r.raise_for_status()
@@ -31,7 +49,9 @@ def download_eea_air_quality_by_station(
 ) -> pd.DataFrame:
     """
     Download and process EEA pollutant data for a specific NUTS region.
-    This is a very heavy download.
+    NOTE: This function is not in use any longer, because it is a very heavy
+    download. Instead, we download the interpolated data for the specified
+    NUTS region and pollutant, using download_tif_from_eea_datastore_folder().
 
     Parameters
     ----------
