@@ -85,17 +85,17 @@ def download_eea_air_quality_by_station(
     list_files_before = list(path_data.rglob("*"))
 
     # Unzip the downloaded file in the same folder
-    with zipfile.ZipFile(path_zip, "r") as zip_ref:
-        try:
+    try:
+        with zipfile.ZipFile(path_zip, "r") as zip_ref:
             zip_ref.extractall(path_data)
-        except zipfile.BadZipFile:
-            print(
-                "The downloaded file is not a valid zip file. Please check the API response."
-            )
-            # Remove the zip file
-            os.remove(path_zip)
-            # Return an empty DataFrame with the expected columns
-            return pd.DataFrame(columns=["NUTS_ID", "year", "week"])
+    except zipfile.BadZipFile:
+        print(
+            "The downloaded file is not a valid zip file. Please check the API response."
+        )
+        # Remove the zip file
+        os.remove(path_zip)
+        # Return an empty DataFrame with the expected columns
+        return pd.DataFrame(columns=["NUTS_ID", "year", "week"])
 
     # Remove the zip file
     os.remove(path_zip)
