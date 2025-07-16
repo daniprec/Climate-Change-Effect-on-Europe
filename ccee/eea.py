@@ -15,9 +15,6 @@ DICT_POLLUTANTS = {5: "pm10", 7: "O3", 9: "NOx"}
 
 def download_file(url: str, dest: pathlib.Path, chunk=1 << 20) -> pathlib.Path:
     """Stream-download url into dest. European Environment Agency (EEA).
-    NOTE: This function is not used in the main script, as downloading the
-    full dataset is not recommended due to its size.
-    It is provided for completeness and can be used to download specific files.
 
     Parameters
     ----------
@@ -49,9 +46,8 @@ def download_eea_air_quality_by_station(
 ) -> pd.DataFrame:
     """
     Download and process EEA pollutant data for a specific NUTS region.
-    NOTE: This function is not in use any longer, because it is a very heavy
-    download. Instead, we download the interpolated data for the specified
-    NUTS region and pollutant, using download_tif_from_eea_datastore_folder().
+    NOTE: This is a heavy operation that downloads multiple parquet files
+    and processes them into a single DataFrame.
 
     Parameters
     ----------
@@ -203,6 +199,8 @@ def find_pollutant_eea_datastore_folders(
     url: str = "https://sdi.eea.europa.eu/webdav/datastore/public/",
 ) -> list[str]:
     """Find folders containing pollutant data on the EEA website.
+    NOTE: This function is not used because the interpolated data is a yearly
+    average. We want finer granularity, so we download the data by station.
 
     Parameters
     ----------
@@ -236,6 +234,9 @@ def find_pollutant_eea_datastore_folders(
 
 def download_tif_from_eea_datastore_folder(folder_url: str, path_data: str = "./data"):
     """Download all .tif files from a specified EEA datastore folder.
+    NOTE: The .tif files contain yearly averages, which are not suitable for
+    fine-grained analysis. This function is provided for completeness, but
+    it is not used in the main workflow.
 
     Parameters
     ----------
@@ -278,12 +279,16 @@ def download_tif_from_eea_datastore_folder(folder_url: str, path_data: str = "./
                 print(f"Failed to download {file_url}")
 
 
-def main():
-    for pollutant in DICT_POLLUTANTS.values():
-        nox_folders = find_pollutant_eea_datastore_folders(pollutant=pollutant)
-        for folder_url in nox_folders:
-            download_tif_from_eea_datastore_folder(folder_url)
-        print("All .tif files downloaded!")
+def main(download_tif: bool = False):
+    if not download_tif:
+        df = download_eea_air_quality_by_station(verbose=True)
+        print(df.head())
+    else:
+        for pollutant in DICT_POLLUTANTS.values():
+            nox_folders = find_pollutant_eea_datastore_folders(pollutant=pollutant)
+            for folder_url in nox_folders:
+                download_tif_from_eea_datastore_folder(folder_url)
+            print("All .tif files downloaded!")
 
 
 if __name__ == "__main__":
