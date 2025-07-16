@@ -1,47 +1,22 @@
 import logging
 import os
 import pathlib
-import tempfile
+import zipfile
 
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 import requests
 from bs4 import BeautifulSoup
-from tqdm import tqdm
 
 DICT_POLLUTANTS = {5: "pm10", 7: "O3", 9: "NOx"}
 
 
-def download_file(url: str, dest: pathlib.Path, chunk=1 << 20) -> pathlib.Path:
-    """Stream-download url into dest. European Environment Agency (EEA).
-
-    Parameters
-    ----------
-    url : str
-        URL to download.
-    dest : pathlib.Path
-        Destination path where the file will be saved.
-    chunk : int, optional
-        Size of the chunks to read from the response, by default 1 MB.
-
-    Returns
-    -------
-    pathlib.Path
-        The path to the downloaded file.
-    """
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    with requests.get(url, stream=True, timeout=30) as r:
-        r.raise_for_status()
-        with dest.open("wb") as fh:
-            for block in r.iter_content(chunk_size=chunk):
-                fh.write(block)
-
-
 def download_eea_air_quality_by_station(
     path_data: str = "./data/",
-    pollutant: str = "PM10",
     nuts_id: str = "AT",
+    agg_type: str = "day",
+    dataset: int = 3,
     verbose: bool = True,
 ) -> pd.DataFrame:
     """
@@ -49,15 +24,24 @@ def download_eea_air_quality_by_station(
     NOTE: This is a heavy operation that downloads multiple parquet files
     and processes them into a single DataFrame.
 
+    Source: https://eeadmz1-downloads-webapp.azurewebsites.net/
+    Instructions:
+    https://eeadmz1-downloads-webapp.azurewebsites.net/content/documentation/How_To_Downloads.pdf
+
     Parameters
     ----------
-    path_data : str
+    path_data : str, optional
         Path to the directory where the CSV file with parquet URLs is located.
-    pollutant : str
-        Pollutant to filter by. Options are "PM10", "O3", "NOx".
-    nuts_id : str
+    nuts_id : str, optional
         NUTS ID to filter the data by (e.g., "AT" for Austria).
-    verbose : bool
+    agg_type : str, optional
+        Aggregation type for the data. Options are "hour", "day" and "var" (variable)
+        Default is "day".
+    dataset : int, optional
+        (1) Unverified data transmitted continuously (Up-To-Date/UTD/E2a) data from the beginning of 2023.
+        (2) Verified data (E1a) from 2013 to 2022 reported by countries by 30 September each year for the previous year.
+        (3) Historical Airbase data delivered between 2002 and 2012 before Air Quality Directive 2008/50/EC entered into force
+    verbose : bool, optional
         If True, print additional information during processing.
 
     Returns
@@ -65,64 +49,77 @@ def download_eea_air_quality_by_station(
     pd.DataFrame
         DataFrame containing the averaged pollutant data for the specified NUTS region.
     """
+    # Check if the path_data exists, if not create it
     path_data = pathlib.Path(path_data)
-    path_csv = path_data / "eea" / f"ParquetFilesUrls_{pollutant}.csv"
-    if not path_csv.exists():
-        raise FileNotFoundError(
-            f"CSV file with parquet URLs not found at {path_csv}. "
-            "Please download it from the EEA website."
-        )
+    if not path_data.exists():
+        os.makedirs(path_data)
+        if verbose:
+            print(f"Created directory: {path_data}")
 
-    # Read the CSV that lists all parquet URLs
-    links_df = pd.read_csv(path_csv)
-    if "ParquetFileUrl" not in links_df.columns:
-        raise ValueError(f"`ParquetFileUrl` column not found in {path_csv}")
+    api_url = "https://eeadmz1-downloads-api-appservice.azurewebsites.net/"
+    # Both endpoints are invoked exactly the same way
+    endpoint = "ParquetFile/dynamic"
+    # Request body
+    request_body = {
+        "countries": [nuts_id],
+        "cities": [],
+        "pollutants": [
+            f"http://dd.eionet.europa.eu/vocabulary/aq/pollutant/{poll_id}"
+            for poll_id in DICT_POLLUTANTS.keys()
+        ],
+        "dataset": dataset,
+        "dateTimeStart": "2000-01-01T00:00:00.000Z",
+        "dateTimeEnd": "2050-12-31T23:59:59.000Z",
+        "aggregationType": agg_type,
+        "email": "daniel.precioso@ie.edu",
+    }
 
-    urls = links_df["ParquetFileUrl"].dropna().unique().tolist()
-    if not urls:
-        raise ValueError("No URLs found!")
+    # A get request to the API
+    download_file = requests.post(api_url + endpoint, json=request_body).content
+    # Store in local path
+    path_zip = path_data / f"eea_{nuts_id}.zip"
+    with open(path_zip, "wb") as output:
+        output.write(download_file)
 
-    # Take urls containing the specified NUTS_ID
-    urls = [url for url in urls if f"/{nuts_id}/" in url]
+    # Take a snapshot of the path_data directory before unpacking
+    list_files_before = list(path_data.rglob("*"))
 
-    if len(urls) == 0:
-        logging.warning(
-            f"No URLs found for NUTS_ID '{nuts_id}' and pollutant '{pollutant}'."
-        )
+    # Unzip the downloaded file in the same folder
+    with zipfile.ZipFile(path_zip, "r") as zip_ref:
+        try:
+            zip_ref.extractall(path_data)
+        except zipfile.BadZipFile:
+            print(
+                "The downloaded file is not a valid zip file. Please check the API response."
+            )
+            # Remove the zip file
+            os.remove(path_zip)
+            # Return an empty DataFrame with the expected columns
+            return pd.DataFrame(columns=["NUTS_ID", "year", "week"])
+
+    # Remove the zip file
+    os.remove(path_zip)
+
+    # Find the new extracted files
+    list_files_after = list(path_data.rglob("*.parquet"))
+    new_files = list(set(list_files_after) - set(list_files_before))
+
+    if len(new_files) == 0:
+        print("No parquet files could be read.")
         # Return an empty DataFrame with the expected columns
-        return pd.DataFrame(
-            columns=[
-                "NUTS_ID",
-                "year",
-                "week",
-                "Pollutant",
-                "Unit",
-                "AggType",
-                "Verification",
-                "Value",
-            ]
-        )
+        return pd.DataFrame(columns=["NUTS_ID", "year", "week"])
 
-    # Temporary folder to hold the downloads
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        tmp_dir = pathlib.Path(tmp_dir)
-        dfs = []
+    # Read the parquet files extracted from the zip file
+    # The can be in subfolders, so we use glob
+    dfs = []
+    for parquet_file in new_files:
+        table = pq.read_table(parquet_file)  # Arrow Table
+        dfs.append(table)
+        os.remove(parquet_file)
 
-        for url in tqdm(urls, desc="Downloading + reading"):
-            filename = tmp_dir / pathlib.Path(url).name
-            try:
-                download_file(url, filename)
-                table = pq.read_table(filename)  # Arrow Table
-                dfs.append(table)
-            except Exception as exc:
-                logging.warning(f"Skipped {url}: {exc}")
-
-        if not dfs:
-            raise RuntimeError("No parquet files could be read.")
-
-        # Concatenate the Arrow tables efficiently
-        merged_table = pa.concat_tables(dfs, promote=True)
-        merged_df = merged_table.to_pandas()
+    # Concatenate the Arrow tables efficiently
+    merged_table = pa.concat_tables(dfs, promote=True)
+    merged_df = merged_table.to_pandas()
 
     # Keep only valid rows
     mask_valid = merged_df["Validity"] == 1
@@ -141,19 +138,13 @@ def download_eea_air_quality_by_station(
     merged_df["Start"] = pd.to_datetime(merged_df["Start"])
     merged_df["Year"] = merged_df["Start"].dt.year
     merged_df["Week"] = merged_df["Start"].dt.isocalendar().week
+    # Turn None in "Unit" to "Unknown" to avoid issues later (with the groupby)
+    merged_df["Unit"] = merged_df["Unit"].fillna("Unknown")
 
     # Group by NUTS_ID, Year, Week, Pollutant. Average the Value
     merged_df = (
         merged_df.groupby(
-            [
-                "NUTS_ID",
-                "Year",
-                "Week",
-                "Pollutant",
-                "Unit",
-                "AggType",
-                "Verification",
-            ],
+            ["NUTS_ID", "Year", "Week", "Pollutant", "Unit", "AggType", "Verification"],
             as_index=False,
         )
         .agg({"Value": "mean"})
@@ -174,6 +165,8 @@ def download_eea_air_quality_by_station(
             merged_df[col] = merged_df.groupby(
                 ["NUTS_ID", "Year", "Week", "Pollutant"]
             )[col].transform("first")
+    # Drop these columns as they are not needed in the final output
+    merged_df.drop(columns=["Unit", "AggType", "Verification"], inplace=True)
 
     # Sort by NUTS_ID, Year, Week, Pollutant
     merged_df = merged_df.sort_values(
@@ -186,10 +179,17 @@ def download_eea_air_quality_by_station(
     )
 
     # Rename columns to match the rest of the project
-    merged_df.rename(
-        columns={"Year": "year", "Week": "week"},
-        inplace=True,
-    )
+    merged_df.rename(columns={"Year": "year", "Week": "week"}, inplace=True)
+
+    # Pivot the table:
+    # Columns: NUTS_ID, year, week, pollutant names (from "Pollutant")
+    # Value in each pollutant cell is the old "Value" column
+    merged_df = merged_df.pivot_table(
+        index=["NUTS_ID", "year", "week"],
+        columns="Pollutant",
+        values="Value",
+        aggfunc="mean",
+    ).reset_index()
 
     return merged_df
 

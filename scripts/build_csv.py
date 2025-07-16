@@ -67,26 +67,13 @@ def main(path_data: str = "./data", path_geojson: str = "./data/regions.geojson"
     df = df[df["year"] <= 2100].copy()
 
     # Include air quality data
-    for pollutant in ["PM10", "O3", "NOX"]:
-        # Initialize an empty list to store DataFrames for each NUTS_ID
-        ls_df_pollutant: list[pd.DataFrame] = []
-        # Iterate over each unique NUTS_ID in the DataFrame
-        for nuts_id in df["NUTS_ID"].unique():
-            # Download the air quality data for the specified pollutant and NUTS_ID
-            print(f"[INFO] Downloading {pollutant} data for NUTS_ID {nuts_id}...")
-            df_aq = download_eea_air_quality_by_station(
-                path_data=path_data, pollutant=pollutant, nuts_id=nuts_id, verbose=True
-            )
-            # Rename the pollutant column to avoid confusion
-            df_aq.rename(columns={"Value": f"{pollutant}"}, inplace=True)
-
-            # Take only the relevant columns
-            df_aq = df_aq[["NUTS_ID", "year", "week", f"{pollutant}"]]
-
-            ls_df_pollutant.append(df_aq)
-
-        # Stack all dataframes for the current pollutant
-        df_aq = pd.concat(ls_df_pollutant, ignore_index=True)
+    # Iterate over each unique NUTS_ID in the DataFrame
+    for nuts_id in df["NUTS_ID"].unique():
+        # Download the air quality data for the specified pollutant and NUTS_ID
+        print(f"[INFO] Downloading air quality data for NUTS_ID {nuts_id}...")
+        df_aq = download_eea_air_quality_by_station(
+            path_data=path_data, nuts_id=nuts_id, verbose=True
+        )
 
         # Merge the pollutant data with the main DataFrame
         df = df.merge(df_aq, on=["NUTS_ID", "year", "week"], how="outer")
