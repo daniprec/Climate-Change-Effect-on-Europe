@@ -1,4 +1,3 @@
-import logging
 import os
 import pathlib
 import zipfile
@@ -15,7 +14,7 @@ DICT_POLLUTANTS = {5: "pm10", 7: "O3", 9: "NOx"}
 def download_eea_air_quality_by_dataset(
     path_data: str = "./data/",
     nuts_id: str = "AT",
-    agg_type: str = "day",
+    agg_type: str = "hour",
     dataset: int = 3,
     verbose: bool = True,
 ) -> pd.DataFrame:
@@ -35,8 +34,7 @@ def download_eea_air_quality_by_dataset(
     nuts_id : str, optional
         NUTS ID to filter the data by (e.g., "AT" for Austria).
     agg_type : str, optional
-        Aggregation type for the data. Options are "hour", "day" and "var" (variable)
-        Default is "day".
+        Aggregation type for the data. Options are "hour", "day" and "var" (variable). Default is "hour".
     dataset : int, optional
         (1) Unverified data transmitted continuously (Up-To-Date/UTD/E2a) data from the beginning of 2023.
         (2) Verified data (E1a) from 2013 to 2022 reported by countries by 30 September each year for the previous year.
@@ -123,7 +121,7 @@ def download_eea_air_quality_by_dataset(
         os.remove(parquet_file)
 
     # Concatenate the Arrow tables efficiently
-    merged_table = pa.concat_tables(dfs, promote=True)
+    merged_table = pa.concat_tables(dfs, promote_options="default")
     merged_df = merged_table.to_pandas()
 
     # Keep only valid rows
@@ -163,7 +161,8 @@ def download_eea_air_quality_by_dataset(
             merged_df.groupby(["NUTS_ID", "Year", "Week", "Pollutant"])[col].nunique()
             > 1
         ).any():
-            logging.warning(
+            print(
+                f"[WARNING] EEA - {nuts_id} - dataset {dataset} - {agg_type} - "
                 f"Multiple unique values found in {col} for some combinations."
                 f"{merged_df[col].unique()}"
             )
@@ -203,7 +202,7 @@ def download_eea_air_quality_by_dataset(
 def download_eea_air_quality(
     path_data: str = "./data/",
     nuts_id: str = "AT",
-    agg_type: str = "day",
+    agg_type: str = "hour",
     verbose: bool = True,
 ) -> pd.DataFrame:
     """
@@ -218,7 +217,7 @@ def download_eea_air_quality(
     nuts_id : str, optional
         NUTS ID to filter the data by (e.g., "AT" for Austria).
     agg_type : str, optional
-        Aggregation type for the data. Options are "hour", "day" and "var" (variable). Default is "day".
+        Aggregation type for the data. Options are "hour", "day" and "var" (variable). Default is "hour".
     verbose : bool, optional
         If True, print additional information during processing.
 
