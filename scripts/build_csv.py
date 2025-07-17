@@ -67,6 +67,7 @@ def main(path_data: str = "./data", path_geojson: str = "./data/regions.geojson"
     df = df[df["year"] <= 2100].copy()
 
     # Include air quality data
+    ls_df_aq = []
     # Iterate over each unique NUTS_ID in the DataFrame
     for nuts_id in df["NUTS_ID"].unique():
         # Download the air quality data for the specified pollutant and NUTS_ID
@@ -74,9 +75,13 @@ def main(path_data: str = "./data", path_geojson: str = "./data/regions.geojson"
         df_aq = download_eea_air_quality(
             path_data=path_data, nuts_id=nuts_id, verbose=True
         )
+        ls_df_aq.append(df_aq)
 
-        # Merge the pollutant data with the main DataFrame
-        df = df.merge(df_aq, on=["NUTS_ID", "year", "week"], how="outer")
+    # Concatenate all air quality DataFrames
+    df_aq = pd.concat(ls_df_aq, ignore_index=True)
+
+    # Merge the pollutant data with the main DataFrame
+    df = df.merge(df_aq, on=["NUTS_ID", "year", "week"], how="outer")
 
     # Reset the index after all merges
     df.reset_index(drop=True, inplace=True)
