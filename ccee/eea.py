@@ -12,7 +12,7 @@ from bs4 import BeautifulSoup
 DICT_POLLUTANTS = {5: "pm10", 7: "O3", 9: "NOx"}
 
 
-def download_eea_air_quality_by_station(
+def download_eea_air_quality_by_dataset(
     path_data: str = "./data/",
     nuts_id: str = "AT",
     agg_type: str = "day",
@@ -105,7 +105,9 @@ def download_eea_air_quality_by_station(
     new_files = list(set(list_files_after) - set(list_files_before))
 
     if len(new_files) == 0:
-        print("No parquet files could be read.")
+        print(
+            f"No parquet files could be read for {nuts_id}, dataset {dataset}, aggregation type {agg_type}."
+        )
         # Return an empty DataFrame with the expected columns
         return pd.DataFrame(columns=["NUTS_ID", "year", "week"])
 
@@ -192,6 +194,54 @@ def download_eea_air_quality_by_station(
     ).reset_index()
 
     return merged_df
+
+
+def download_eea_air_quality(
+    path_data: str = "./data/",
+    nuts_id: str = "AT",
+    agg_type: str = "day",
+    verbose: bool = True,
+) -> pd.DataFrame:
+    """
+    Download and process EEA pollutant data for a specific NUTS region.
+    This function downloads data from multiple datasets (unverified, verified,
+    and historical) and concatenates them into a single DataFrame.
+
+    Parameters
+    ----------
+    path_data : str, optional
+        Path to the directory where the CSV file with parquet URLs is located.
+    nuts_id : str, optional
+        NUTS ID to filter the data by (e.g., "AT" for Austria).
+    agg_type : str, optional
+        Aggregation type for the data. Options are "hour", "day" and "var" (variable). Default is "day".
+    verbose : bool, optional
+        If True, print additional information during processing.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame containing the averaged pollutant data for the specified NUTS region.
+    """
+    ls_df: list[pd.DataFrame] = []
+    # (1) Unverified data transmitted continuously (Up-To-Date/UTD/E2a) data
+    # from the beginning of 2023.
+    # (2) Verified data (E1a) from 2013 to 2022 reported by countries by 30
+    # September each year for the previous year.
+    # (3) Historical Airbase data delivered between 2002 and 2012 before Air
+    # Quality Directive 2008/50/EC entered into force
+    for dataset in [1, 2, 3]:
+        df = download_eea_air_quality_by_dataset(
+            path_data=path_data,
+            nuts_id=nuts_id,
+            agg_type=agg_type,
+            dataset=dataset,
+            verbose=verbose,
+        )
+        ls_df.append(df)
+    # Concatenate all DataFrames
+    df = pd.concat(ls_df, ignore_index=True)
+    return df
 
 
 def find_pollutant_eea_datastore_folders(
@@ -281,8 +331,10 @@ def download_tif_from_eea_datastore_folder(folder_url: str, path_data: str = "./
 
 def main(download_tif: bool = False):
     if not download_tif:
-        df = download_eea_air_quality_by_station(verbose=True)
+        df = download_eea_air_quality(verbose=True)
+        df = df.sort_values(by=["NUTS_ID", "year", "week"]).reset_index(drop=True)
         print(df.head())
+        print(df.tail())
     else:
         for pollutant in DICT_POLLUTANTS.values():
             nox_folders = find_pollutant_eea_datastore_folders(pollutant=pollutant)
