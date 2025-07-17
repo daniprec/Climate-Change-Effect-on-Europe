@@ -75,7 +75,7 @@ def download_eurostat_data(dataset: str) -> pd.DataFrame:
     if not date_columns.empty:
         start_year = date_columns.min()
         end_year = date_columns.max()
-        print(f"Date range: {start_year} - {end_year}")
+        print(f"[INFO] Eurostat - Date range: {start_year} - {end_year}")
 
     return df
 

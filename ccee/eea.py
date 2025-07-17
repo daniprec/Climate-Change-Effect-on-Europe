@@ -90,7 +90,9 @@ def download_eea_air_quality_by_dataset(
             zip_ref.extractall(path_data)
     except zipfile.BadZipFile:
         print(
-            "The downloaded file is not a valid zip file. Please check the API response."
+            f"[ERROR] EEA - {nuts_id} - dataset {dataset} - {agg_type} - "
+            "The downloaded file is not a valid zip file. "
+            "Please check the API response."
         )
         # Remove the zip file
         os.remove(path_zip)
@@ -106,7 +108,8 @@ def download_eea_air_quality_by_dataset(
 
     if len(new_files) == 0:
         print(
-            f"No parquet files could be read for {nuts_id}, dataset {dataset}, aggregation type {agg_type}."
+            f"[ERROR] EEA - {nuts_id} - dataset {dataset} - {agg_type} - "
+            "No parquet files found in zip file."
         )
         # Return an empty DataFrame with the expected columns
         return pd.DataFrame(columns=["NUTS_ID", "year", "week"])
@@ -129,6 +132,7 @@ def download_eea_air_quality_by_dataset(
     if verbose:
         num_non_valid = (~mask_valid).sum()
         print(
+            f"[INFO] EEA - {nuts_id} - dataset {dataset} - {agg_type} - "
             f"Removed {num_non_valid} non-valid rows out of {len(merged_df)} total rows."
         )
 
@@ -198,7 +202,7 @@ def download_eea_air_quality_by_dataset(
 
 def download_eea_air_quality(
     path_data: str = "./data/",
-    nuts_id: str = "AT",
+    nuts_id: str = "CZ",
     agg_type: str = "day",
     verbose: bool = True,
 ) -> pd.DataFrame:
