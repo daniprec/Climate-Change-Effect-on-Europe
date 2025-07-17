@@ -3,7 +3,6 @@ import pathlib
 import zipfile
 
 import pandas as pd
-import pyarrow as pa
 import pyarrow.parquet as pq
 import requests
 from bs4 import BeautifulSoup
@@ -113,16 +112,15 @@ def download_and_process_eea_air_quality_from_API(
         return pd.DataFrame(columns=["NUTS_ID", "year", "week"])
 
     # Read the parquet files extracted from the zip file
-    # The can be in subfolders, so we use glob
     dfs = []
     for parquet_file in new_files:
-        table = pq.read_table(parquet_file)  # Arrow Table
-        dfs.append(table)
-        os.remove(parquet_file)
+        table = pq.read_table(parquet_file)
+        df = table.to_pandas()  # force full read into memory
+        dfs.append(df)
+        os.remove(parquet_file)  # now it's safe to delete
 
-    # Concatenate the Arrow tables efficiently
-    merged_table = pa.concat_tables(dfs, promote_options="default")
-    merged_df = merged_table.to_pandas()
+    # Concatenate the dataframes efficiently
+    merged_df = pd.concat(dfs, ignore_index=True)
     return merged_df
 
 
@@ -267,6 +265,15 @@ def download_and_process_eea_air_quality(
         ls_df.append(df)
     # Concatenate all DataFrames
     df = pd.concat(ls_df, ignore_index=True)
+    # Sometimes there can be no data for a specific NUTS_ID, year, week,
+    # so we need to check if the DataFrame is empty
+    if df.empty:
+        print(
+            f"[WARNING] EEA - {nuts_id} - {agg_type} - "
+            "No data found for the specified NUTS_ID, and aggregation type."
+        )
+        # Return an empty DataFrame with the expected columns
+        return df
     # Process the concatenated DataFrame
     df = process_eea_air_quality_data(df, verbose=verbose)
     return df
