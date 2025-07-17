@@ -202,7 +202,7 @@ def download_eea_air_quality_by_dataset(
 
 def download_eea_air_quality(
     path_data: str = "./data/",
-    nuts_id: str = "CZ",
+    nuts_id: str = "AT",
     agg_type: str = "day",
     verbose: bool = True,
 ) -> pd.DataFrame:
