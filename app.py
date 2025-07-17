@@ -32,7 +32,7 @@ META_MAP = {
 
 
 # Get minimum and maximum year
-df = pd.read_csv(CSV_MAP["EU"])
+df = pd.read_csv(CSV_MAP["EU"]).round(1)
 min_year = df["year"].min()
 max_year = df["year"].max()
 
@@ -69,8 +69,8 @@ def api_data():
     if map_id not in CSV_MAP:
         return jsonify({"error": "Invalid map_id specified"}), 400
 
-    # Extract the DataFrame for the specified map_id, week and year
-    df = pd.read_csv(CSV_MAP[map_id])
+    # Extract the DataFrame for the specified region, week and year
+    df = pd.read_csv(CSV_MAP[map_id]).round(1)
     df = df[(df["year"] == int(year)) & (df["week"] == int(week))]
 
     # Check if the requested information exists in the DataFrame
@@ -107,8 +107,8 @@ def app_data_time_series():
     if map_id not in CSV_MAP:
         return jsonify({"error": "Invalid map_id specified"}), 400
 
-    # Load the DataFrame for the specified map_id
-    df = pd.read_csv(CSV_MAP[map_id])
+    # Load the DataFrame for the specified region
+    df = pd.read_csv(CSV_MAP[map_id]).round(1)
 
     # Filter by NUTS_ID
     df = df[df["NUTS_ID"] == nuts_id]

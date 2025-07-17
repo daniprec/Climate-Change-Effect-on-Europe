@@ -16,6 +16,8 @@ It is hosted on [Python Anywhere](https://ixlabs-daniprec.pythonanywhere.com/) f
 ## 📑 Table of Contents
 
 - [About](#-about)
+- [Features](#-features)
+- [Project Structure](#-project-structure)
 - [How to Build](#-how-to-build)
 - [How to Download Data](#-how-to-download-data)
 - [License](#-license)
@@ -28,6 +30,26 @@ This project provides an interactive dashboard using **Flask** and **Folium** to
 - **Population & Mortality**: Monthly data per capita, visualized regionally.
 - **Temperature (tas)**: Monthly near-surface air temperature data.
 - Vienna supports detailed NUTS-3 level analysis.
+
+## ✨ Features
+
+- Interactive map with zoom and tooltip support
+- Time-series visualization by region
+- Population-normalized mortality overlays
+- NUTS-level granularity (with detailed view for Vienna)
+- Responsive Flask backend with pre-processed data cache
+
+## 📁 Project Structure
+
+```
+├── app.py # Flask server
+├── templates/ # HTML views
+├── static/ # JS, CSS, assets
+├── scripts/ # Data processing scripts
+├── data/ # Input and downloaded data
+├── requirements.txt
+└── README.md
+```
 
 ## 🛠️ How to Build
 
@@ -47,16 +69,27 @@ Then open your browser at [http://127.0.0.1:5000/](http://127.0.0.1:5000/) to be
 
 ## 📥 How to Download Data
 
+Most of the data used in this project is available through public APIs or data portals. You can build the files used by the map just by running:
+
+```bash
+python scripts/build_geojson.py
+python scripts/build_csv.py
+```
+
+The only data that needs to be downloaded manually is the CORDEX CMIP data, which requires a WGET script. Below are the instructions for downloading and preparing the data.
+
 ### 🌡️ CORDEX - CMIP (Climate Projections)
 
 Source: [ESGF Data Browser (LiU Node)](https://esg-dn1.nsc.liu.se/search/esgf-liu/)
+
+Official tutorial [link](https://cordex.org/wp-content/uploads/2023/08/How-to-download-CORDEX-data-from-the-ESGF.pdf)
 
 **Step-by-step**:
 
 1. Register to access the ESGF data.
 2. Search with the following filters:
    - **Project**: CORDEX
-   - **Experiment**: rcp85
+   - **Experiment**: rcp85 OR rcp45
    - **Variable**: tas (air temperature)
    - **Domain**: EUR-11
    - **Time Frequency**: mon
@@ -70,7 +103,37 @@ Source: [ESGF Data Browser (LiU Node)](https://esg-dn1.nsc.liu.se/search/esgf-li
 bash ./data/wget-YYYYMMDDHHMMSS.sh -H
 ```
 
-🧠 **Tip**: You'll need a Linux-based system (e.g., Ubuntu) to execute WGET scripts.
+**Tip**: You will need a Linux-based system (e.g., Ubuntu) to execute WGET scripts.
+
+Make sure you store the data inside the `data/rcp45` and `data/rcp85` directories. The functions inside `ccee/cordex.py` will take care of the rest.
+
+**Variables**:
+
+- `temperature_rcp45`: Near-surface air temperature (in Celsius) for RCP 4.5 scenario.
+- `temperature_rcp85`: Near-surface air temperature (in Celsius) for RCP 8.5 scenario.
+
+### 👥 Eurostat - Population and Mortality
+
+Source: [Eurostat](https://ec.europa.eu/eurostat/web/health/database)
+
+The Eurostat data can be downloaded directly from the website. Use the functions in `ccee/eurostat.py` to automate the process.
+
+**Variables:**
+
+- `population_density`: Yearly population density data. People per square kilometer.
+- `mortality_rate`: Weekly mortality rate per 100,000 inhabitants.
+
+### 🌍 European Environment Agency (EEA)
+
+Source: [European Air Quality Portal](https://aqportal.discomap.eea.europa.eu/download-data/)
+
+Air quality data can be downloaded from the EEA portal. The functions in `ccee/eea.py` call EEA's API to automate the process.
+
+**Variables:**
+
+- `O3`: Ozone (O3) concentration in the air, measured in micrograms per cubic meter (µg/m³).
+- `NOx`: Nitrogen oxides (NOx) concentration in the air, measured in micrograms per cubic meter (µg/m³).
+- `pm10`: Particulate matter (PM10) concentration in the air, measured in micrograms per cubic meter (µg/m³).
 
 ## 📃 License
 
