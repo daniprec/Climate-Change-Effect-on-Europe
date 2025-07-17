@@ -40,8 +40,8 @@ const O3Colour = v => {
   return '#800026';  // purple (Dangerous)
 }
 
-/* --- NOX colour palette, based on WHO guidelines ------------- */
-const NOXColour = v => {
+/* --- NOx colour palette, based on WHO guidelines ------------- */
+const NOxColour = v => {
   if (v < -90) return '#000000';   // black
   if (v < 10)   return '#6dc201';  // IE green (Good)
   if (v < 20)  return '#47bfff';   // IE light blue (Moderate)
@@ -50,8 +50,8 @@ const NOXColour = v => {
   return '#800026';  // purple (Dangerous)
 }
 
-/* --- PM10 colour palette, based on WHO guidelines ------------- */
-const PM10Colour = v => {
+/* --- pm10 colour palette, based on WHO guidelines ------------- */
+const pm10Colour = v => {
   if (v < -90) return '#000000';   // black
   if (v < 20)   return '#6dc201';  // IE green (Good)
   if (v < 30)  return '#47bfff';   // IE light blue (Moderate)
@@ -129,13 +129,13 @@ const METRIC_CFG = {
     colorbarMax: "40"
   },
 
-  NOX: {
+  NOx: {
     label : 'Nitrogen Oxides (µg/m³)',
-    value : p => p.NOX ?? -99,
-    colour: NOXColour,
-    range : [2024, 2025],
+    value : p => p.NOx ?? -99,
+    colour: NOxColour,
+    range : [2000, 2025],
     description: [
-      '• Weekly average NOX concentration in µg/m³.',
+      '• Weekly average NOx concentration in µg/m³.',
       '• Source: European Air Quality Portal, by the European Environment Agency (EEA).',
       '• Spatial resolution: stations spread across each region.',
       '• Coverage: 2023 - 2025 (hourly, averaged to weekly for the dashboard).'
@@ -150,7 +150,7 @@ const METRIC_CFG = {
     label : 'Ozone (µg/m³)',
     value : p => p.O3 ?? -99,
     colour: O3Colour,
-    range : [2024, 2025],
+    range : [2000, 2025],
     description: [
       '• Weekly average Ozone concentration in µg/m³.',
       '• Source: European Air Quality Portal, by the European Environment Agency (EEA).',
@@ -163,13 +163,13 @@ const METRIC_CFG = {
     colorbarMax: "200",
   },
 
-  PM10: {
+  pm10: {
     label : 'Particle Matter (µg/m³)',
-    value : p => p.PM10 ?? -99,
-    colour: PM10Colour,
-    range : [2024, 2025],
+    value : p => p.pm10 ?? -99,
+    colour: pm10Colour,
+    range : [2000, 2025],
     description: [
-      '• Weekly average PM10 concentration in µg/m³.',
+      '• Weekly average pm10 concentration in µg/m³.',
       '• Source: European Air Quality Portal, by the European Environment Agency (EEA).',
       '• Spatial resolution: stations spread across each region.',
       '• Coverage: 2023 - 2025 (hourly, averaged to weekly for the dashboard).'
@@ -292,9 +292,9 @@ function drawRegionInfo(feature) {
   if (p.population_density != null) popupLines.push(`Population Density: ${p.population_density} per km²`);
   if (p.temperature_rcp45 != null) popupLines.push(`Temperature (RCP 4.5): ${p.temperature_rcp45} °C`);
   if (p.temperature_rcp85 != null) popupLines.push(`Temperature (RCP 8.5): ${p.temperature_rcp85} °C`);
-  if (p.NOX != null) popupLines.push(`Nitrogen Oxides (NOX): ${p.NOX} µg/m³`);
+  if (p.NOx != null) popupLines.push(`Nitrogen Oxides (NOx): ${p.NOx} µg/m³`);
   if (p.O3 != null) popupLines.push(`Ozone (O3): ${p.O3} µg/m³`);
-  if (p.PM10 != null) popupLines.push(`Particle Matters (PM10): ${p.PM10} µg/m³`);
+  if (p.pm10 != null) popupLines.push(`Particle Matters (pm10): ${p.pm10} µg/m³`);
 
   const nutsID = (p.NUTS_ID ?? '').toUpperCase();
   // If this code does not appear in /api/bbox, we do not display the button
