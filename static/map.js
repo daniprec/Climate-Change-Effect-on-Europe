@@ -138,7 +138,7 @@ const METRIC_CFG = {
       '• Weekly average NOx concentration in µg/m³.',
       '• Source: European Air Quality Portal, by the European Environment Agency (EEA).',
       '• Spatial resolution: stations spread across each region.',
-      '• Coverage: 2023 - 2025 (hourly, averaged to weekly for the dashboard).'
+      '• Coverage: 2000 - 2025 (hourly, averaged to weekly for the dashboard).'
     ],
     url: 'https://aqportal.discomap.eea.europa.eu/download-data/',
     colorbarStops: [[0, "#6dc201"], [0.25, "#47bfff"], [0.5, "#fee08b"], [0.75, "#d7191c"], [1, "#800026"]],
@@ -155,7 +155,7 @@ const METRIC_CFG = {
       '• Weekly average Ozone concentration in µg/m³.',
       '• Source: European Air Quality Portal, by the European Environment Agency (EEA).',
       '• Spatial resolution: stations spread across each region.',
-      '• Coverage: 2023 - 2025 (hourly, averaged to weekly for the dashboard).'
+      '• Coverage: 2000 - 2025 (hourly, averaged to weekly for the dashboard).'
     ],
     url: 'https://aqportal.discomap.eea.europa.eu/download-data/',
     colorbarStops: [[0, "#6dc201"], [0.25, "#47bfff"], [0.5, "#fee08b"], [0.75, "#d7191c"], [1, "#800026"]],
@@ -172,7 +172,7 @@ const METRIC_CFG = {
       '• Weekly average pm10 concentration in µg/m³.',
       '• Source: European Air Quality Portal, by the European Environment Agency (EEA).',
       '• Spatial resolution: stations spread across each region.',
-      '• Coverage: 2023 - 2025 (hourly, averaged to weekly for the dashboard).'
+      '• Coverage: 2000 - 2025 (hourly, averaged to weekly for the dashboard).'
     ],
     url: 'https://aqportal.discomap.eea.europa.eu/download-data/',
     colorbarStops: [[0, "#6dc201"], [0.25, "#47bfff"], [0.5, "#fee08b"], [0.75, "#d7191c"], [1, "#800026"]],
