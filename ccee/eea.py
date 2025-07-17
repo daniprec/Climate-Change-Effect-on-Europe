@@ -276,7 +276,13 @@ def download_and_process_eea_air_quality(
         return df
     # Process the concatenated DataFrame
     df = process_eea_air_quality_data(df, verbose=verbose)
-    return df
+    # Keep the relevant columns only
+    columns = ["NUTS_ID", "year", "week"] + list(DICT_POLLUTANTS.values())
+    # Ensure all pollutants are present, even if they have no data
+    for pollutant in DICT_POLLUTANTS.values():
+        if pollutant not in df.columns:
+            df[pollutant] = None
+    return df[columns]
 
 
 def find_pollutant_eea_datastore_folders(
