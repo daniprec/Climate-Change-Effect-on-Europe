@@ -272,10 +272,10 @@ def download_and_process_eea_air_quality(
             f"[WARNING] EEA - {nuts_id} - {agg_type} - "
             "No data found for the specified NUTS_ID, and aggregation type."
         )
-        # Return an empty DataFrame with the expected columns
-        return df
-    # Process the concatenated DataFrame
-    df = process_eea_air_quality_data(df, verbose=verbose)
+    else:
+        # Process the concatenated DataFrame
+        df = process_eea_air_quality_data(df, verbose=verbose)
+
     # Keep the relevant columns only
     columns = ["NUTS_ID", "year", "week"] + list(DICT_POLLUTANTS.values())
     # Ensure all pollutants are present, even if they have no data
