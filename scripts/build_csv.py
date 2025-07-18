@@ -69,7 +69,7 @@ def main(path_data: str = "./data", path_geojson: str = "./data/regions.geojson"
     # Include air quality data
     ls_df_aq = []
     # Iterate over each unique NUTS_ID in the DataFrame
-    for nuts_id in df["NUTS_ID"].unique()[:5]:
+    for nuts_id in df["NUTS_ID"].unique():
         # Download the air quality data for the specified pollutant and NUTS_ID
         print(f"[INFO] Downloading air quality data for NUTS_ID {nuts_id}...")
         df_aq = download_and_process_eea_air_quality(
