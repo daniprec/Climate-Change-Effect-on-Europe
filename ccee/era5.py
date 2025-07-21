@@ -14,7 +14,7 @@ def download_era5_file(
     year: int = 1981,
     month: int = 1,
     data_format: str = "grid",
-    folder: str = "./data",
+    folder: str = "./data/era5-land",
     variable: str = "2m_temperature",
 ) -> str:
     """
@@ -46,13 +46,19 @@ def download_era5_file(
     # https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-land?tab=form
 
     # Name of the downloaded file
-    downloaded_file = f"ERA5-Land-hourly{DICT_FILE_TERMINATION[data_format]}"
+    fout = f"ERA5-Land-{year:04d}-{month:02d}{DICT_FILE_TERMINATION[data_format]}"
+    fout = os.path.join(folder, fout)
+
+    if not os.path.exists(folder):
+        os.makedirs(folder)
+    elif os.path.exists(fout):
+        # If the file already exists, return its path and skip the download
+        return fout
 
     # AREA to extract
     lon_min, lat_min, lon_max, lat_max = [-9.66, 35.37, 49.5, 71.55]  # EUROPA
 
     # Download
-    downloaded_file = os.path.join(folder, downloaded_file)
     start_day = 1
     end_day = 31
     days = [str(start_day + i).zfill(2) for i in range(end_day - start_day + 1)]
@@ -74,15 +80,15 @@ def download_era5_file(
             "download_format": "unarchived",
             "nocache": "123",  # to avoid caching the file
         },
-        downloaded_file,
+        fout,
     )
 
-    return downloaded_file
+    return fout
 
 
 def era5_reanalysis_to_dataframe_per_region(
     path_geojson: str = "./data/regions.geojson",
-    fin: str = "./data",
+    fin: str = "./data/era5-land",
     year: int = 2025,
     week_label: str = "W-SUN",  # choose "W-MON", "W-SUN"…
 ):
@@ -122,8 +128,8 @@ def era5_reanalysis_to_dataframe_per_region(
     # Sample tas at each centroid  (dims: point × time)
     # ------------------------------------------------------------------ #
     samp = temp.interp(
-        rlon=xr.DataArray(gdf["lon"], dims="point"),
-        rlat=xr.DataArray(gdf["lat"], dims="point"),
+        longitude=xr.DataArray(gdf["lon"], dims="point"),
+        latitude=xr.DataArray(gdf["lat"], dims="point"),
         method="nearest",
     ).transpose("point", "time")
 
@@ -149,6 +155,9 @@ def era5_reanalysis_to_dataframe_per_region(
     iso = df_long["time"].dt.isocalendar()  # ISO year/week/day
     df_long["year"] = iso.year
     df_long["week"] = iso.week
+
+    # We can now close the xarray dataset to free resources
+    era5.close()
 
     return df_long[["NUTS_ID", "year", "week", "temperature"]]
 
