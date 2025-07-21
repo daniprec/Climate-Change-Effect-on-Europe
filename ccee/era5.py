@@ -102,7 +102,7 @@ def era5_reanalysis_to_dataframe_per_region(
         Pandas/xarray resample code (default 'W-SUN' = ISO weeks ending Sunday).
     """
     # ------------------------------------------------------------------ #
-    # 1.  Region centroids
+    # Region centroids
     # ------------------------------------------------------------------ #
     gdf = gpd.read_file(path_geojson).set_crs(4326)
 
@@ -112,14 +112,14 @@ def era5_reanalysis_to_dataframe_per_region(
     gdf["lat"] = centroids.y
 
     # ------------------------------------------------------------------ #
-    # 2.  Load ERA5 2m-temp  (daily)  -> °C
+    # Load ERA5 2m-temp  (daily)  -> °C
     # ------------------------------------------------------------------ #
     era5_file = download_era5_file(year=year, folder=fin, data_format="grib")
     era5 = xr.open_dataset(era5_file, engine="cfgrib")
     temp = era5["t2m"]
 
     # ------------------------------------------------------------------ #
-    # 3.  Sample tas at each centroid  (dims: point × time)
+    # Sample tas at each centroid  (dims: point × time)
     # ------------------------------------------------------------------ #
     samp = temp.interp(
         rlon=xr.DataArray(gdf["lon"], dims="point"),
@@ -128,13 +128,13 @@ def era5_reanalysis_to_dataframe_per_region(
     ).transpose("point", "time")
 
     # ------------------------------------------------------------------ #
-    # 4.  DAILY -> WEEKLY (mean)
+    # DAILY -> WEEKLY (mean)
     # ------------------------------------------------------------------ #
     # Resample to weekly means, using the specified week label
     samp_week = samp.resample(time=week_label).mean()
 
     # ------------------------------------------------------------------ #
-    # 6.  Long-format DataFrame
+    # Long-format DataFrame
     # ------------------------------------------------------------------ #
     df_long = (
         samp_week.to_dataframe(name="temperature")  # point | time | temperature

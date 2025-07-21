@@ -146,7 +146,7 @@ def cordex_tas_to_dataframe_per_region(
         Pandas/xarray resample code (default 'W-SUN' = ISO weeks ending Sunday).
     """
     # ------------------------------------------------------------------ #
-    # 1.  Region centroids
+    # Region centroids
     # ------------------------------------------------------------------ #
     gdf = gpd.read_file(path_geojson).set_crs(4326)
     # metric CRS for a trustworthy centroid
@@ -155,13 +155,13 @@ def cordex_tas_to_dataframe_per_region(
     gdf["lat"] = centroids.y
 
     # ------------------------------------------------------------------ #
-    # 2.  Load CORDEX tas  (monthly)  -> °C
+    # Load CORDEX tas  (monthly)  -> °C
     # ------------------------------------------------------------------ #
     cor = load_eurocordex_data(fin=fin, year=year, rcp=rcp)  # user-supplied loader
     tas = cor["tas"] - 273.15  # Kelvin -> Celsius
 
     # ------------------------------------------------------------------ #
-    # 3.  Transform lon/lat -> rotated-pole grid coords
+    # Transform lon/lat -> rotated-pole grid coords
     # ------------------------------------------------------------------ #
     tfm = Transformer.from_crs(
         CRS.from_epsg(4326),
@@ -171,7 +171,7 @@ def cordex_tas_to_dataframe_per_region(
     rlon, rlat = tfm.transform(gdf["lon"].values, gdf["lat"].values)
 
     # ------------------------------------------------------------------ #
-    # 4.  Sample tas at each centroid  (dims: point × time)
+    # Sample tas at each centroid  (dims: point × time)
     # ------------------------------------------------------------------ #
     samp = tas.interp(
         rlon=xr.DataArray(rlon, dims="point"),
@@ -180,7 +180,7 @@ def cordex_tas_to_dataframe_per_region(
     ).transpose("point", "time")
 
     # ------------------------------------------------------------------ #
-    # 5.  MONTHLY -> DAILY (linear) -> WEEKLY (mean)
+    # MONTHLY -> DAILY (linear) -> WEEKLY (mean)
     # ------------------------------------------------------------------ #
     # build a full daily index spanning the monthly series
     # We grab the first day of the first year and the last day of the last year
@@ -197,7 +197,7 @@ def cordex_tas_to_dataframe_per_region(
     samp_week = samp_daily.resample(time=week_label).mean()  # weekly mean
 
     # ------------------------------------------------------------------ #
-    # 6.  Long-format DataFrame
+    # Long-format DataFrame
     # ------------------------------------------------------------------ #
     df_long = (
         samp_week.to_dataframe(name="temperature")  # point | time | temperature
