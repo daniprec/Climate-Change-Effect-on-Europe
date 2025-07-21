@@ -124,9 +124,9 @@ def plot_eurocordex_data(
 
 def cordex_tas_to_dataframe_per_region(
     path_geojson: str = "./data/regions.geojson",
-    fin: str = "../data",
+    fin: str = "./data",
     year: int = 2025,
-    week_label: str = "W-MON",  # choose "W-MON", "W-SUN"…
+    week_label: str = "W-SUN",  # choose "W-MON", "W-SUN"…
     rcp: int = 85,  # Representative Concentration Pathway (RCP) scenario
 ):
     """
@@ -143,16 +143,14 @@ def cordex_tas_to_dataframe_per_region(
     year : int
         Year to open from the CORDEX archive.
     week_label : str
-        Pandas/xarray resample code (default 'W-MON' = ISO weeks ending Monday).
+        Pandas/xarray resample code (default 'W-SUN' = ISO weeks ending Sunday).
     """
     # ------------------------------------------------------------------ #
     # 1.  Region centroids
     # ------------------------------------------------------------------ #
     gdf = gpd.read_file(path_geojson).set_crs(4326)
-
-    centroids = gdf.to_crs(3035).geometry.centroid.to_crs(
-        4326
-    )  # metric CRS for a trustworthy centroid
+    # metric CRS for a trustworthy centroid
+    centroids = gdf.to_crs(3035).geometry.centroid.to_crs(4326)
     gdf["lon"] = centroids.x
     gdf["lat"] = centroids.y
 
