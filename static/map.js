@@ -184,6 +184,29 @@ const METRIC_CFG = {
 /* ======================= INIT PARAMS ====================== */
 Chart.register(window.ChartZoom);   // make Chart.js aware of the plugin
 
+/* ======================= MOBILE MODE ====================== */
+// Set a global variable (attached to window)
+window.isMobile = window.innerWidth <= 768;
+
+// Function to check and update the global variable
+function checkWindowSize() {
+  const currentMobile = window.innerWidth <= 768;
+  if (window.isMobile !== currentMobile) {
+    window.isMobile = currentMobile;
+  }
+}
+
+// Initial check
+checkWindowSize();
+
+// Attach listener to window resize
+window.addEventListener("resize", checkWindowSize);
+
+// If the window is resized, reload the GeoJSON data
+window.addEventListener("resize", () => {
+  loadGeoJSON(FLASK_CTX.mapID, yearSlider.value, weekSlider.value);
+});
+
 /* ======================= MAP ======================= */
 
 const map = L.map('map', {
@@ -216,7 +239,7 @@ function onEachFeature(feature, layer) {
   let clickTimeout = null;  // to prevent double-clicks from triggering single-click logic
 
   // timeout depends whether we are on mobile or desktop
-  const timeout = window.innerWidth < 768 ? 500 : 0;  // 500ms on mobile, none on desktop
+  let timeout = window.isMobile ? 500 : 0;  // 500ms on mobile, none on desktop
 
   // Click -> show time-series
   layer.on('click', () => {
@@ -231,7 +254,7 @@ function onEachFeature(feature, layer) {
         holdRegionProperties.name = p.name;
         writeRegionProperties(feature);  // display region info
         // if we are in mobile mode, open the sidebar
-        if (window.innerWidth < 768) {
+        if (window.isMobile) {
           sidebarOpenClose();  // open sidebar on mobile
           // and automatically scroll down to the graph section
           document.getElementById('regionGraph').scrollIntoView({ behavior: 'smooth' });
