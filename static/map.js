@@ -331,7 +331,7 @@ function writeRegionProperties(feature) {
   const nutsID = (p.NUTS_ID ?? '').toUpperCase();
   // If this code does not appear in /api/bbox, we do not display the button
   if (FLASK_CTX.availableMapIDs.includes(nutsID)) {
-    popupLines.push(`<i>(Double click to zoom in)</i>`);
+    popupLines.push(`<br><i>(Double click to zoom in)</i>`);
   }
 
   // If no info is available for this region, we show a message
@@ -715,7 +715,7 @@ function renderDualAxisChart(labels, data1, data2, m1, m2, regionName) {
 function drawTimeSeries(nutsId, regionName) {
   // if the region is not selected, do nothing
   if (!nutsId || nutsId === 'EU') {
-    document.getElementById('regionGraph').innerHTML = '<p>Select a region to see the time-series.</p>';
+    document.getElementById('regionGraph').innerHTML = '<p>Click on a region to see the time-series.</p>';
     return;
   }
 
