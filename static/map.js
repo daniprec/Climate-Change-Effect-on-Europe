@@ -215,6 +215,9 @@ function onEachFeature(feature, layer) {
 
   let clickTimeout = null;  // to prevent double-clicks from triggering single-click logic
 
+  // timeout depends whether we are on mobile or desktop
+  const timeout = window.innerWidth < 768 ? 500 : 0;  // 500ms on mobile, none on desktop
+
   // Click -> show time-series
   layer.on('click', () => {
     if (clickTimeout !== null) return;  // prevent double click from triggering single-click logic
@@ -237,7 +240,7 @@ function onEachFeature(feature, layer) {
         holdRegionProperties.NUTS_ID = null;  // reset if clicked again
         holdRegionProperties.name = null;
       }
-    }, 500);  // wait for double-click timeout
+    }, timeout);  // wait for double-click timeout
   });
 
   // Double click -> zoom in on the region
