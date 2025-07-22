@@ -292,7 +292,8 @@ function writeRegionProperties(feature) {
 
   // Build the list only with fields that exist
   const popupLines = [`<b>${p.name}</b>`];
-
+  
+  popupLines.push(`<span style="font-size: smaller;">${p.year} ${weekStartEnd}<br></span>`);
   if (p.mortality_rate   != null) popupLines.push(`Mortality: ${p.mortality_rate} per 100 k`);
   if (p.population_density != null) popupLines.push(`Population Density: ${p.population_density} per km²`);
   if (p.temperature_rcp45 != null) popupLines.push(`Temperature (RCP 4.5): ${p.temperature_rcp45} °C`);
@@ -483,6 +484,8 @@ function getISOWeekStartDate(year, week) {
   return ISOweekStart;
 }
 
+let weekStartEnd = ``;  // to hold the start-end date string for the week
+
 function updateWeekLabel() {
   const week = parseInt(weekSlider.value);
   const year = parseInt(yearSlider.value);
@@ -497,6 +500,8 @@ function updateWeekLabel() {
   const endStr = `${endMonth} ${getOrdinal(endDate.getDate())}`;
 
   weekValue.textContent = `${week} (${startStr} - ${endStr})`;
+  // Update the global weekStartEnd variable
+  weekStartEnd = `(${startStr} - ${endStr})`;
 }
 
 weekSlider.oninput = () => {
