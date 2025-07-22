@@ -232,6 +232,11 @@ function featureStyle(feature) {
 function onEachFeature(feature, layer) {
   const p = feature.properties;
 
+  layer.bindTooltip(p.name, {
+    direction: 'top',
+    sticky: true
+  });
+
   if (holdRegionProperties.NUTS_ID === p.NUTS_ID) {
     writeRegionProperties(feature);  // if we are holding this region, display its info
   }
@@ -274,6 +279,8 @@ function onEachFeature(feature, layer) {
   /* hover glue  */
   layer.on({
     mouseover: e => {
+      // display the name as tooltip
+      
       if (holdRegionProperties.NUTS_ID == null) {writeRegionProperties(feature)};
       e.target.setStyle(highlightStyle());
       // keep it on top so the thick edge isn't hidden
