@@ -209,6 +209,10 @@ function featureStyle(feature) {
 function onEachFeature(feature, layer) {
   const p = feature.properties;
 
+  if (holdRegionProperties.NUTS_ID === p.NUTS_ID) {
+    writeRegionProperties(feature);  // if we are holding this region, display its info
+  }
+
   let clickTimeout = null;  // to prevent double-clicks from triggering single-click logic
 
   // Click -> show time-series
@@ -219,10 +223,10 @@ function onEachFeature(feature, layer) {
         clickTimeout = null;
       drawTimeSeries(p.NUTS_ID, p.name);
       // Hold the region info to avoid flickering
-      if (holdRegionInfo.NUTS_ID !== p.NUTS_ID) {
-        holdRegionInfo.NUTS_ID = p.NUTS_ID;
-        holdRegionInfo.name = p.name;
-        drawRegionInfo(feature);  // display region info
+      if (holdRegionProperties.NUTS_ID !== p.NUTS_ID) {
+        holdRegionProperties.NUTS_ID = p.NUTS_ID;
+        holdRegionProperties.name = p.name;
+        writeRegionProperties(feature);  // display region info
         // if we are in mobile mode, open the sidebar
         if (window.innerWidth < 768) {
           sidebarOpenClose();  // open sidebar on mobile
@@ -230,7 +234,8 @@ function onEachFeature(feature, layer) {
           document.getElementById('regionGraph').scrollIntoView({ behavior: 'smooth' });
       }
       } else {
-        holdRegionInfo.NUTS_ID = null;  // reset if clicked again
+        holdRegionProperties.NUTS_ID = null;  // reset if clicked again
+        holdRegionProperties.name = null;
       }
     }, 500);  // wait for double-click timeout
   });
@@ -243,7 +248,7 @@ function onEachFeature(feature, layer) {
   /* hover glue  */
   layer.on({
     mouseover: e => {
-      if (holdRegionInfo.NUTS_ID == null) {drawRegionInfo(feature)};
+      if (holdRegionProperties.NUTS_ID == null) {writeRegionProperties(feature)};
       e.target.setStyle(highlightStyle());
       // keep it on top so the thick edge isn't hidden
       if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
@@ -277,12 +282,12 @@ function highlightStyle() {
 }
 
 /* ---------- regionInfo ---------- */
-let holdRegionInfo = {
+let holdRegionProperties = {
   NUTS_ID: null,
   name: null
 };  // hold the last region info to avoid flickering
 
-function drawRegionInfo(feature) {
+function writeRegionProperties(feature) {
   const p = feature.properties;
 
   // Build the list only with fields that exist
@@ -458,7 +463,7 @@ yearSlider.oninput = () => {
   updateWeekLabel();
   clearTimeout(debounce);
   debounce = setTimeout(() => loadGeoJSON(FLASK_CTX.mapID, yearSlider.value, weekSlider.value), 250);
-  drawTimeSeries(holdRegionInfo.NUTS_ID, holdRegionInfo.name);  // redraw TS for the new year
+  drawTimeSeries(holdRegionProperties.NUTS_ID, holdRegionProperties.name);  // redraw TS for the new year
 };
 
 function getOrdinal(n) {
@@ -507,12 +512,12 @@ metricSelect.onchange = () => {
   loadGeoJSON(FLASK_CTX.mapID, yearSlider.value, weekSlider.value);
   updateMetricInfo(mainMetric);
   updateColorbar(mainMetric);
-  drawTimeSeries(holdRegionInfo.NUTS_ID, holdRegionInfo.name);  // redraw TS for the new metric
+  drawTimeSeries(holdRegionProperties.NUTS_ID, holdRegionProperties.name);  // redraw TS for the new metric
 };
 
 compareSelect.onchange = () => {
   compareMetric = compareSelect.value || null;
-  drawTimeSeries(holdRegionInfo.NUTS_ID, holdRegionInfo.name);
+  drawTimeSeries(holdRegionProperties.NUTS_ID, holdRegionProperties.name);
 };
 
 /* ----------Information panel ---------- */
@@ -550,7 +555,7 @@ rangeButtons.forEach(btn => {
     rangeButtons.forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
     activeRange = parseRange(btn.dataset.range);
-    drawTimeSeries(holdRegionInfo.NUTS_ID, holdRegionInfo.name);  // redraw TS for the new range
+    drawTimeSeries(holdRegionProperties.NUTS_ID, holdRegionProperties.name);  // redraw TS for the new range
   };
 });
 
@@ -706,7 +711,7 @@ function drawTimeSeries(nutsId, regionName) {
 document.getElementById('downloadData').addEventListener('click', () => {
   const metric1 = mainMetric;
   const metric2 = compareMetric || 'none';  // if no comparison, use 'none'
-  const nutsID = holdRegionInfo.NUTS_ID || 'none';  // use selected region or 'EU' if none
+  const nutsID = holdRegionProperties.NUTS_ID || 'none';  // use selected region or 'EU' if none
   const url = `/api/data/download?map_id=${FLASK_CTX.mapID}&nuts_id=${nutsID}&metric=${metric1}&metric2=${metric2}`;
   window.open(url, '_blank');
 });
