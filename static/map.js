@@ -232,6 +232,7 @@ function featureStyle(feature) {
 function onEachFeature(feature, layer) {
   const p = feature.properties;
 
+  // Display the name as tooltip
   layer.bindTooltip(p.name, {
     direction: 'top',
     sticky: true
