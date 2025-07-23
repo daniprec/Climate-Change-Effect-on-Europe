@@ -2,6 +2,7 @@ import os
 
 import cdsapi
 import geopandas as gpd
+import pandas as pd
 import xarray as xr
 
 DICT_FILE_TERMINATION = {
@@ -19,6 +20,7 @@ def download_era5_file(
 ) -> str:
     """
     Download ERA5-Land reanalysis data for a specified period and region.
+    A single year and month has to be downloaded at a time, as the CDS API does not support downloading multiple months or years in a single request.
     Source: https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-land?tab=form
     Reference: Loïc Duffar, https://github.com/loicduffar/ERA5-tools
 
@@ -85,15 +87,17 @@ def download_era5_file(
     return fout
 
 
-def era5_reanalysis_to_dataframe_per_region(
+def download_era5_single_year_month(
     path_geojson: str = "./data/regions.geojson",
     fin: str = "./data/era5-land",
     year: int = 2025,
+    month: int = 1,
     week_label: str = "W-SUN",  # choose "W-MON", "W-SUN"…
-):
+) -> pd.DataFrame:
     """
     Return a DataFrame with weekly mean 2m temperature for each region in the
     provided GeoJSON file, sampled from ERA5-Land reanalysis data.
+    A single year and month has to be downloaded at a time, as the CDS API does not support downloading multiple months or years in a single request.
 
     Parameters
     ----------
@@ -105,6 +109,12 @@ def era5_reanalysis_to_dataframe_per_region(
         Year to open from the ERA5-Land reanalysis data (default 2025).
     week_label : str
         Pandas/xarray resample code (default 'W-SUN' = ISO weeks ending Sunday).
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame containing weekly mean 2m temperature for each region in the
+        provided GeoJSON file, sampled from ERA5-Land reanalysis data.
     """
     # ------------------------------------------------------------------ #
     # Region centroids
@@ -119,7 +129,9 @@ def era5_reanalysis_to_dataframe_per_region(
     # ------------------------------------------------------------------ #
     # Load ERA5 2m-temp  (daily)  -> °C
     # ------------------------------------------------------------------ #
-    era5_file = download_era5_file(year=year, folder=fin, data_format="grib")
+    era5_file = download_era5_file(
+        year=year, month=month, folder=fin, data_format="grib"
+    )
     era5 = xr.open_dataset(era5_file, engine="cfgrib")
     temp = era5["t2m"]
 
@@ -170,11 +182,56 @@ def era5_reanalysis_to_dataframe_per_region(
     return df_long[["NUTS_ID", "year", "week", "temperature"]]
 
 
-def main(year: int = 2025):
+def download_era5_land_reanalysis(
+    path_geojson: str = "./data/regions.geojson",
+    fin: str = "./data/era5-land",
+    year_min: int = 1980,
+    year_max: int = 2025,
+    week_label: str = "W-SUN",  # choose "W-MON", "W-SUN"…
+) -> pd.DataFrame:
+    """Download ERA5-Land reanalysis data for multiple years and return a DataFrame. This function has to perform a for loop over each year and month,
+    as the CDS API does not support downloading multiple months or years in a single request.
+
+    Parameters
+    ----------
+    path_geojson : str
+        GeoJSON with polygons and a `NUTS_ID` column.
+    fin : str
+        Folder or file pattern understood by `download_era5_file`.
+    year_min : int
+        Minimum year to open from the ERA5-Land reanalysis data (default 1980).
+    year_max : int
+        Maximum year to open from the ERA5-Land reanalysis data (default 2025).
+    week_label : str
+        Pandas/xarray resample code (default 'W-SUN' = ISO weeks ending Sunday).
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame containing weekly mean 2m temperature for each region in the
+        provided GeoJSON file, sampled from ERA5-Land reanalysis data.
+    """
+    ls_df: list[pd.DataFrame] = []
+    for year in range(year_min, year_max + 1):
+        for month in range(1, 13):
+            # Download and process each month
+            df = download_era5_single_year_month(
+                path_geojson=path_geojson,
+                fin=fin,
+                year=year,
+                month=month,
+                week_label=week_label,
+            )
+            ls_df.append(df)
+    df_all = pd.concat(ls_df, ignore_index=True)
+    return df_all
+
+
+def main():
     """
     Main function to execute the ERA5 reanalysis to DataFrame conversion.
     """
-    df = era5_reanalysis_to_dataframe_per_region(year=year)
+    df = download_era5_land_reanalysis()
     print(df.head())
 
 
