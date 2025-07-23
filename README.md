@@ -115,6 +115,23 @@ Make sure you store the data inside the `data/rcp45` and `data/rcp85` directorie
 - `temperature_rcp45`: Near-surface air temperature (in Celsius) for RCP 4.5 scenario.
 - `temperature_rcp85`: Near-surface air temperature (in Celsius) for RCP 8.5 scenario.
 
+### ERA5 - Land Reanalysis Data
+
+Source: [Copernicus Climate Data Store](https://cds.climate.copernicus.eu/datasets/reanalysis-era5-land?tab=overview)
+
+[How to **authorize** the execution of the Python code on Windows?](https://cds.climate.copernicus.eu/how-to-api) (only once)
+
+- If you do not have an account, please register on the CDS registration page.
+- Log in.
+- Copy the code with your personal key into the file "USER/.cdsapirc" (in Windows environment)
+  > The file starting with a dot can be created using Notepad: File > Save as > Type: All files > File name: .cdsfapirc
+
+Once you have completed the steps above, the ERA5 data can be downloaded using the functions inside `ccee/era5.py`.
+
+**Variables**:
+
+- `temperature`: Hourly near-surface air temperature data from ERA5-Land, in degrees Celsius.
+
 ### Eurostat - Population and Mortality
 
 Source: [Eurostat](https://ec.europa.eu/eurostat/web/health/database)
