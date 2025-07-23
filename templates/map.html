@@ -33,6 +33,14 @@
     <!-- SIDEBAR CONTAINER (wraps the actual sidebar) -->
     <aside id="sidebarContainer">
       <div id="sidebar">
+        <div id="titlePanel">
+          <h2>VIG-IE Insurance and Tech Lab</h2>
+        </div>
+
+        <div id="regionInfo" class="panel">
+          <ul>Hover on the map to display the region information.</ul>
+        </div>
+
         <div id="controls" class="panel">
           <label for="yearSlider">Year <span id="yearValue" class="mutableValue">NULL</span></label>
           <input id="yearSlider" class="slider" type="range"
@@ -44,7 +52,7 @@
                 min="1" max="52" />
           <br />
 
-          <label for="metricSelect">Data to display: </label>
+          <label for="metricSelect">Display on map: </label>
           <select id="metricSelect" class="select">
             <option value="mortality_rate">Mortality</option>
             <option value="population_density">Population Density</option>
@@ -54,26 +62,12 @@
             <option value="O3">Ozone</option>
             <option value="pm10">Particule Matter</option>
           </select>
-        </div>
-
-        <details class="panel collapsible" id="metricInfoSection" closed>
-          <summary><strong>Dataset Info</strong></summary>
-          <div id="metricInfo">
-            <h4 id="metricTitle"></h4>
-            <ul id="metricDesc"></ul>
-            <button id="metricSource">Go to source</button>
-          </div>
-        </details>        
-        
-        <div id="regionInfo" class="panel">
-          <ul>Hover on the map to display the region information.</ul>
-        </div>
+        </div>   
 
         <details class="panel collapsible" id="graphSection" open>
-          <summary><strong>Graph over Time</strong></summary>
+          <summary><strong>Compare With</strong></summary>
 
           <div class="dropdown-content">
-          <label for="compareSelect">Compare with:</label>
           <select id="compareSelect" class="select">
             <option value="">— none —</option>
             <option value="mortality_rate">Mortality</option>
@@ -99,6 +93,15 @@
             <button id="downloadData">Download Data</button>
           </div>
         </details>
+
+        <details class="panel collapsible" id="metricInfoSection" closed>
+          <summary><strong>Dataset Info</strong></summary>
+          <div id="metricInfo">
+            <h4 id="metricTitle"></h4>
+            <ul id="metricDesc"></ul>
+            <button id="metricSource">Go to source</button>
+          </div>
+        </details>     
 
         <!-- Open questions button. On click, it takes you to the /questions page -->
         <button id="goToQuestions" onclick="location.href='/questions'">Open Questions</button> 
@@ -130,7 +133,7 @@
     </div>
     <!-- LOGO  (top-right, z-stacked above map) -->
     <img id="logo"
-      src="{{ url_for('static', filename='logo.webp') }}"
+      src="{{ url_for('static', filename='logo.svg') }}"
       alt="VIG logo"
       class="overlay logo"
     />

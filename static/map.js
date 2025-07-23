@@ -184,6 +184,29 @@ const METRIC_CFG = {
 /* ======================= INIT PARAMS ====================== */
 Chart.register(window.ChartZoom);   // make Chart.js aware of the plugin
 
+/* ======================= MOBILE MODE ====================== */
+// Set a global variable (attached to window)
+window.isMobile = window.innerWidth <= 768;
+
+// Function to check and update the global variable
+function checkWindowSize() {
+  const currentMobile = window.innerWidth <= 768;
+  if (window.isMobile !== currentMobile) {
+    window.isMobile = currentMobile;
+  }
+}
+
+// Initial check
+checkWindowSize();
+
+// Attach listener to window resize
+window.addEventListener("resize", checkWindowSize);
+
+// If the window is resized, reload the GeoJSON data
+window.addEventListener("resize", () => {
+  loadGeoJSON(FLASK_CTX.mapID, yearSlider.value, weekSlider.value);
+});
+
 /* ======================= MAP ======================= */
 
 const map = L.map('map', {
@@ -209,7 +232,20 @@ function featureStyle(feature) {
 function onEachFeature(feature, layer) {
   const p = feature.properties;
 
+  // Display the name as tooltip
+  layer.bindTooltip(p.name, {
+    direction: 'top',
+    sticky: true
+  });
+
+  if (holdRegionProperties.NUTS_ID === p.NUTS_ID) {
+    writeRegionProperties(feature);  // if we are holding this region, display its info
+  }
+
   let clickTimeout = null;  // to prevent double-clicks from triggering single-click logic
+
+  // timeout depends whether we are on mobile or desktop
+  let timeout = window.isMobile ? 500 : 0;  // 500ms on mobile, none on desktop
 
   // Click -> show time-series
   layer.on('click', () => {
@@ -219,20 +255,21 @@ function onEachFeature(feature, layer) {
         clickTimeout = null;
       drawTimeSeries(p.NUTS_ID, p.name);
       // Hold the region info to avoid flickering
-      if (holdRegionInfo.NUTS_ID !== p.NUTS_ID) {
-        holdRegionInfo.NUTS_ID = p.NUTS_ID;
-        holdRegionInfo.name = p.name;
-        drawRegionInfo(feature);  // display region info
+      if (holdRegionProperties.NUTS_ID !== p.NUTS_ID) {
+        holdRegionProperties.NUTS_ID = p.NUTS_ID;
+        holdRegionProperties.name = p.name;
+        writeRegionProperties(feature);  // display region info
         // if we are in mobile mode, open the sidebar
-        if (window.innerWidth < 768) {
+        if (window.isMobile) {
           sidebarOpenClose();  // open sidebar on mobile
           // and automatically scroll down to the graph section
           document.getElementById('regionGraph').scrollIntoView({ behavior: 'smooth' });
       }
       } else {
-        holdRegionInfo.NUTS_ID = null;  // reset if clicked again
+        holdRegionProperties.NUTS_ID = null;  // reset if clicked again
+        holdRegionProperties.name = null;
       }
-    }, 500);  // wait for double-click timeout
+    }, timeout);  // wait for double-click timeout
   });
 
   // Double click -> zoom in on the region
@@ -243,7 +280,8 @@ function onEachFeature(feature, layer) {
   /* hover glue  */
   layer.on({
     mouseover: e => {
-      if (holdRegionInfo.NUTS_ID == null) {drawRegionInfo(feature)};
+      
+      if (holdRegionProperties.NUTS_ID == null) {writeRegionProperties(feature)};
       e.target.setStyle(highlightStyle());
       // keep it on top so the thick edge isn't hidden
       if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
@@ -277,17 +315,18 @@ function highlightStyle() {
 }
 
 /* ---------- regionInfo ---------- */
-let holdRegionInfo = {
+let holdRegionProperties = {
   NUTS_ID: null,
   name: null
 };  // hold the last region info to avoid flickering
 
-function drawRegionInfo(feature) {
+function writeRegionProperties(feature) {
   const p = feature.properties;
 
   // Build the list only with fields that exist
   const popupLines = [`<b>${p.name}</b>`];
-
+  
+  popupLines.push(`<span style="font-size: smaller;">${p.year} ${weekStartEnd}<br></span>`);
   if (p.mortality_rate   != null) popupLines.push(`Mortality: ${p.mortality_rate} per 100 k`);
   if (p.population_density != null) popupLines.push(`Population Density: ${p.population_density} per km²`);
   if (p.temperature_rcp45 != null) popupLines.push(`Temperature (RCP 4.5): ${p.temperature_rcp45} °C`);
@@ -299,7 +338,7 @@ function drawRegionInfo(feature) {
   const nutsID = (p.NUTS_ID ?? '').toUpperCase();
   // If this code does not appear in /api/bbox, we do not display the button
   if (FLASK_CTX.availableMapIDs.includes(nutsID)) {
-    popupLines.push(`<i>(Double click to zoom in)</i>`);
+    popupLines.push(`<br><i>(Double click to zoom in)</i>`);
   }
 
   // If no info is available for this region, we show a message
@@ -458,7 +497,7 @@ yearSlider.oninput = () => {
   updateWeekLabel();
   clearTimeout(debounce);
   debounce = setTimeout(() => loadGeoJSON(FLASK_CTX.mapID, yearSlider.value, weekSlider.value), 250);
-  drawTimeSeries(holdRegionInfo.NUTS_ID, holdRegionInfo.name);  // redraw TS for the new year
+  drawTimeSeries(holdRegionProperties.NUTS_ID, holdRegionProperties.name);  // redraw TS for the new year
 };
 
 function getOrdinal(n) {
@@ -478,6 +517,8 @@ function getISOWeekStartDate(year, week) {
   return ISOweekStart;
 }
 
+let weekStartEnd = ``;  // to hold the start-end date string for the week
+
 function updateWeekLabel() {
   const week = parseInt(weekSlider.value);
   const year = parseInt(yearSlider.value);
@@ -492,6 +533,8 @@ function updateWeekLabel() {
   const endStr = `${endMonth} ${getOrdinal(endDate.getDate())}`;
 
   weekValue.textContent = `${week} (${startStr} - ${endStr})`;
+  // Update the global weekStartEnd variable
+  weekStartEnd = `(${startStr} - ${endStr})`;
 }
 
 weekSlider.oninput = () => {
@@ -507,12 +550,12 @@ metricSelect.onchange = () => {
   loadGeoJSON(FLASK_CTX.mapID, yearSlider.value, weekSlider.value);
   updateMetricInfo(mainMetric);
   updateColorbar(mainMetric);
-  drawTimeSeries(holdRegionInfo.NUTS_ID, holdRegionInfo.name);  // redraw TS for the new metric
+  drawTimeSeries(holdRegionProperties.NUTS_ID, holdRegionProperties.name);  // redraw TS for the new metric
 };
 
 compareSelect.onchange = () => {
   compareMetric = compareSelect.value || null;
-  drawTimeSeries(holdRegionInfo.NUTS_ID, holdRegionInfo.name);
+  drawTimeSeries(holdRegionProperties.NUTS_ID, holdRegionProperties.name);
 };
 
 /* ----------Information panel ---------- */
@@ -550,7 +593,7 @@ rangeButtons.forEach(btn => {
     rangeButtons.forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
     activeRange = parseRange(btn.dataset.range);
-    drawTimeSeries(holdRegionInfo.NUTS_ID, holdRegionInfo.name);  // redraw TS for the new range
+    drawTimeSeries(holdRegionProperties.NUTS_ID, holdRegionProperties.name);  // redraw TS for the new range
   };
 });
 
@@ -679,7 +722,7 @@ function renderDualAxisChart(labels, data1, data2, m1, m2, regionName) {
 function drawTimeSeries(nutsId, regionName) {
   // if the region is not selected, do nothing
   if (!nutsId || nutsId === 'EU') {
-    document.getElementById('regionGraph').innerHTML = '<p>Select a region to see the time-series.</p>';
+    document.getElementById('regionGraph').innerHTML = '<p>Click on a region to see the time-series.</p>';
     return;
   }
 
@@ -706,7 +749,7 @@ function drawTimeSeries(nutsId, regionName) {
 document.getElementById('downloadData').addEventListener('click', () => {
   const metric1 = mainMetric;
   const metric2 = compareMetric || 'none';  // if no comparison, use 'none'
-  const nutsID = holdRegionInfo.NUTS_ID || 'none';  // use selected region or 'EU' if none
+  const nutsID = holdRegionProperties.NUTS_ID || 'none';  // use selected region or 'EU' if none
   const url = `/api/data/download?map_id=${FLASK_CTX.mapID}&nuts_id=${nutsID}&metric=${metric1}&metric2=${metric2}`;
   window.open(url, '_blank');
 });
