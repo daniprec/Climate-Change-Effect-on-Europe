@@ -14,7 +14,7 @@ DICT_FILE_TERMINATION = {
 def download_era5_file(
     year: int = 1981,
     month: int = 1,
-    data_format: str = "grid",
+    data_format: str = "grib",
     folder: str = "./data/era5-land",
 ) -> str:
     """
@@ -230,8 +230,10 @@ def main():
     """
     Main function to execute the ERA5 reanalysis to DataFrame conversion.
     """
-    df = download_era5_land_reanalysis()
-    print(df.head())
+    # Download all files first
+    for year in range(1981, 2025 + 1):
+        for month in range(1, 13):
+            download_era5_file(year=year, month=month)
 
 
 if __name__ == "__main__":
