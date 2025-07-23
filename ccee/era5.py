@@ -123,20 +123,29 @@ def era5_reanalysis_to_dataframe_per_region(
     era5 = xr.open_dataset(era5_file, engine="cfgrib")
     temp = era5["t2m"]
 
+    # Coordinates:
+    # time: day
+    # step: hour (0, 1, ..., 23)
+
+    # Temperature is in Kelvin, convert to Celsius
+    temp = temp - 273.15  # Convert from Kelvin to Celsius
+
     # ------------------------------------------------------------------ #
-    # Sample tas at each centroid  (dims: point × time)
+    # Sample tas at each centroid  (dims: point x time x step)
     # ------------------------------------------------------------------ #
     samp = temp.interp(
         longitude=xr.DataArray(gdf["lon"], dims="point"),
         latitude=xr.DataArray(gdf["lat"], dims="point"),
         method="nearest",
-    ).transpose("point", "time")
+    ).transpose("point", "time", "step")
 
     # ------------------------------------------------------------------ #
-    # DAILY -> WEEKLY (mean)
+    # HOURLY -> DAILY -> WEEKLY (mean)
     # ------------------------------------------------------------------ #
+    # Average through the day (average all "step")
+    samp_day = samp.mean(dim="step", skipna=True)
     # Resample to weekly means, using the specified week label
-    samp_week = samp.resample(time=week_label).mean()
+    samp_week = samp_day.resample(time=week_label).mean(skipna=True)
 
     # ------------------------------------------------------------------ #
     # Long-format DataFrame
