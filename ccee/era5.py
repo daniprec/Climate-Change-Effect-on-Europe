@@ -231,7 +231,7 @@ def main():
     Main function to execute the ERA5 reanalysis to DataFrame conversion.
     """
     # Download all files first
-    for year in range(1981, 2025 + 1):
+    for year in range(2000, 2025 + 1):
         for month in range(1, 13):
             download_era5_file(year=year, month=month)
 
