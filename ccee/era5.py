@@ -19,6 +19,7 @@ def download_era5_file(
 ) -> str:
     """
     Download ERA5-Land reanalysis data for a specified period and region.
+    Source: https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-land?tab=form
     Reference: Loïc Duffar, https://github.com/loicduffar/ERA5-tools
 
     Parameters
@@ -42,8 +43,6 @@ def download_era5_file(
     str
         Path to the downloaded file.
     """
-
-    # https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-land?tab=form
 
     # Name of the downloaded file
     fout = f"ERA5-Land-{year:04d}-{month:02d}{DICT_FILE_TERMINATION[data_format]}"
