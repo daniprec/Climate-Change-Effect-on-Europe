@@ -16,7 +16,6 @@ def download_era5_file(
     month: int = 1,
     data_format: str = "grid",
     folder: str = "./data/era5-land",
-    variable: str = "2m_temperature",
 ) -> str:
     """
     Download ERA5-Land reanalysis data for a specified period and region.
@@ -35,10 +34,6 @@ def download_era5_file(
         format recommended by the Copernicus Climate Data Store (CDS), which is 'grib'.
     folder : str
         Folder where the downloaded file will be saved (default is './data').
-    variable : str
-        Variable to download, default is '2m_temperature'. Other options include
-        'total_precipitation', 'surface_pressure', etc. Check the CDS documentation
-        for available variables.
 
     Returns
     -------
@@ -68,9 +63,13 @@ def download_era5_file(
 
     c.retrieve(
         "reanalysis-era5-land",
+        # See the CDS API documentation for more options.
         {
             "product_type": "reanalysis",
-            "variable": variable,
+            "variable": [
+                "2m_temperature",
+                "specific_humidity",
+            ],  # Variables to download.
             "year": f"{year:04d}",  # Year in YYYY format
             "month": f"{month:02d}",  # Month in MM format
             "day": days,  # All days of the month
@@ -185,7 +184,7 @@ def download_era5_single_year_month(
 def download_era5_land_reanalysis(
     path_geojson: str = "./data/regions.geojson",
     fin: str = "./data/era5-land",
-    year_min: int = 1980,
+    year_min: int = 2000,
     year_max: int = 2025,
     week_label: str = "W-SUN",  # choose "W-MON", "W-SUN"…
 ) -> pd.DataFrame:
