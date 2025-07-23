@@ -1,7 +1,8 @@
+*.grib
 *.nc
-*.zip
 *.pyc
 *.tif
+*.zip
 
 build/
 cache/
