@@ -280,7 +280,6 @@ function onEachFeature(feature, layer) {
   /* hover glue  */
   layer.on({
     mouseover: e => {
-      // display the name as tooltip
       
       if (holdRegionProperties.NUTS_ID == null) {writeRegionProperties(feature)};
       e.target.setStyle(highlightStyle());
