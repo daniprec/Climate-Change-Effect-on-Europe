@@ -76,7 +76,7 @@ def download_era5_file(
             "day": days,  # All days of the month
             "time": [f"{h:02d}:00" for h in range(24)],  # All hours
             "area": [lat_min, lon_min, lat_max, lon_max],
-            # "grid": [0.1, 0.1],  # 0.1° grid resolution
+            # "grid": [0.25, 0.25],  # 0.25° grid resolution
             "data_format": data_format,
             "download_format": "unarchived",
             "nocache": "123",  # to avoid caching the file
