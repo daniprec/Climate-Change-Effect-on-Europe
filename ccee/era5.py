@@ -186,7 +186,7 @@ def download_era5_land_reanalysis(
     path_geojson: str = "./data/regions.geojson",
     fin: str = "./data/era5-land",
     year_min: int = 2000,
-    year_max: int = 2025,
+    year_max: int | None = None,
     week_label: str = "W-SUN",  # choose "W-MON", "W-SUN"…
 ) -> pd.DataFrame:
     """Download ERA5-Land reanalysis data for multiple years and return a DataFrame. This function has to perform a for loop over each year and month,
@@ -201,7 +201,7 @@ def download_era5_land_reanalysis(
     year_min : int
         Minimum year to open from the ERA5-Land reanalysis data (default 1980).
     year_max : int
-        Maximum year to open from the ERA5-Land reanalysis data (default 2025).
+        Maximum year to open from the ERA5-Land reanalysis data (default current year).
     week_label : str
         Pandas/xarray resample code (default 'W-SUN' = ISO weeks ending Sunday).
 
@@ -211,7 +211,11 @@ def download_era5_land_reanalysis(
         DataFrame containing weekly mean 2m temperature for each region in the
         provided GeoJSON file, sampled from ERA5-Land reanalysis data.
     """
+    # Use current year if not specified
+    year_max = year_max or dt.datetime.now().year
+    # Initialize an empty list to store DataFrames for each month
     ls_df: list[pd.DataFrame] = []
+    # Iterate over each year and month in the specified range
     for year in range(year_min, year_max + 1):
         for month in range(1, 13):
             # Download and process each month
