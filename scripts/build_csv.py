@@ -41,6 +41,8 @@ def main(path_data: str = "./data", path_geojson: str = "./data/regions.geojson"
     df = df_demomwk.merge(df_popdensity, on=["NUTS_ID", "year"], how="outer")
     df = df.merge(df_pop, on=["NUTS_ID", "year"], how="outer")
     df = df.merge(df_era5, on=["NUTS_ID", "year", "week"], how="outer")
+    # Rename the temperature column to avoid confusion
+    df.rename(columns={"temperature": "temperature_era5"}, inplace=True)
 
     # Use the mortality and population to calculate the mortality rate
     df["mortality_rate"] = 100000 * df["mortality"] / df["population"]

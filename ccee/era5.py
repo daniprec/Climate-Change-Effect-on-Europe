@@ -4,6 +4,7 @@ import os
 import cdsapi
 import geopandas as gpd
 import pandas as pd
+import requests
 import xarray as xr
 
 DICT_FILE_TERMINATION = {
@@ -218,14 +219,20 @@ def download_era5_land_reanalysis(
     # Iterate over each year and month in the specified range
     for year in range(year_min, year_max + 1):
         for month in range(1, 13):
-            # Download and process each month
-            df = download_era5_single_year_month(
-                path_geojson=path_geojson,
-                fin=fin,
-                year=year,
-                month=month,
-                week_label=week_label,
-            )
+            try:
+                # Download and process each month
+                df = download_era5_single_year_month(
+                    path_geojson=path_geojson,
+                    fin=fin,
+                    year=year,
+                    month=month,
+                    week_label=week_label,
+                )
+            except requests.exceptions.HTTPError as e:
+                print(
+                    f"Error downloading data for {year}-{month:02d}: {e}. Skipping this month."
+                )
+                continue
             ls_df.append(df)
     df_all = pd.concat(ls_df, ignore_index=True)
     return df_all
