@@ -1,6 +1,6 @@
 /* ======================= IMPORTS ====================== */
 import { METRIC_CFG } from './config.js';
-import { drawTimeSeries } from './plot.js';
+import { drawTimeSeries, drawRRCurve } from './plot.js';
 
 /* ======================= INIT PARAMS ====================== */
 Chart.register(window.ChartZoom);   // make Chart.js aware of the plugin
@@ -475,9 +475,9 @@ document.getElementById('generateRR').addEventListener('click', () => {
   if (metric1 === metric2) {
     alert('Cannot generate RR curve. Please select a secondary metric different than the main metric.');
     return;
-  }
-  const url = `/api/data/rr_curve?map_id=${FLASK_CTX.mapID}&nuts_id=${nutsID}&metric=${metric1}&metric2=${metric2}`;
-  window.open(url, '_blank');
+  }  
+  /* plot.js export expects (nutsId, metric, maxLag, FLASK_CTX) */
+    drawRRCurve(nutsID, metric1, metric2, FLASK_CTX);
 });
 
 /* === MOBILE MENU === */

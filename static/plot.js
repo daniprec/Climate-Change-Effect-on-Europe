@@ -2,20 +2,20 @@
 import { METRIC_CFG } from './config.js';
 
 
-/* ======================= CHARTS ====================== */
+/* ======================= TIME SERIES CHARTS ====================== */
 
 let currentTimeSeries = null;
 
 // inject or replace the <canvas> inside #regionGraph
-function prepareCanvas() {
-  const holder = document.getElementById('regionGraph');
+function prepareCanvas(canvasID) {
+  const holder = document.getElementById(canvasID);
   holder.innerHTML = '<canvas></canvas>';
   return holder.querySelector('canvas').getContext('2d');
 }
   
 // actually render Chart.js with two Y-axes
 function renderTimeSeriesChart(labels, data1, data2, m1, m2, regionName, activeRange) {
-  const ctx = prepareCanvas();
+  const ctx = prepareCanvas('regionGraph');
   if (currentTimeSeries) currentTimeSeries.destroy();
 
   const datasets = [{
@@ -158,4 +158,96 @@ export function drawTimeSeries(
     const data2  = res2.data.map(d => d.value);
     renderTimeSeriesChart(labels, data1, data2, mainMetric, compareMetric, regionName, activeRange);
   }).catch(console.error);
+}
+
+/* ======================= RR CURVE ====================== */
+
+/* -------------------- CONFIG -------------------- */
+const COLORS = {
+  line : '#b30000',
+  shade: 'rgba(179,0,0,.20)',
+  axis : '#444'
+};
+
+/* -------------------- MAIN PLOTTER -------------- */
+let  currentRRCurve = null;
+
+function renderRRCurve(json) {
+  const ctx = prepareCanvas('RRCurve');
+  if ( currentRRCurve)  currentRRCurve.destroy();
+
+  const { x_grid, rr, rr_low, rr_high, ref_value, label, units } = json;
+
+  /* We create three datasets:
+     0 = lower bound  (invisible)
+     1 = upper bound  (invisible, fills to previous to make ribbon)
+     2 = RR line
+  */
+  const datasets = [
+    {
+      label: 'CI 95% lower',
+      data : rr_low,
+      borderColor: 'rgba(0,0,0,0)',
+      backgroundColor: COLORS.shade,
+      fill : '+1',      // fill to the *next* dataset (index 1)
+      pointRadius: 0
+    },
+    {
+      label: 'CI 95 % upper',
+      data : rr_high,
+      borderColor: 'rgba(0,0,0,0)',
+      backgroundColor: COLORS.shade,
+      fill : '-1',      // fill back to previous dataset (index 0)
+      pointRadius: 0
+    },
+    {
+      label: 'Relative Risk',
+      data : rr,
+      borderColor: COLORS.line,
+      backgroundColor: COLORS.line,
+      tension: 0.25,
+      pointRadius: 0,
+      fill: false
+    }
+  ];
+
+   currentRRCurve = new Chart(ctx, {
+    type: 'line',
+    data: { labels: x_grid, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: {
+          title: { display: true, text: `${label} (${units})`, color: COLORS.axis },
+          ticks: { autoSkip: true, maxTicksLimit: 10 }
+        },
+        y: {
+          title: { display: true, text: 'Relative Risk', color: COLORS.axis },
+          beginAtZero: false,
+          grid: { color: 'rgba(0,0,0,.1)' }
+        }
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: { mode: 'index', intersect: false }
+      }
+    }
+  });
+}
+
+/* -------------------- PUBLIC API --------------- */
+
+export function drawRRCurve(nutsId, metric, metric2, FLASK_CTX) {
+  const url = `/api/data/rr_curve?map_id=${FLASK_CTX.mapID}&nuts_id=${nutsId}` +
+              `&metric=${metric}&metric2=${metric2}`;
+
+  fetch(url)
+    .then(resp => resp.json())
+    .then(renderRRCurve)
+    .catch(err => {
+      console.error(err);
+      document.getElementById('RRCurve').innerHTML =
+        '<p style="color:red">Unable to load RR curve.</p>';
+    });
 }
