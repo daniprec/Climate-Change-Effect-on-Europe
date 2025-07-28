@@ -82,6 +82,7 @@ function onEachFeature(feature, layer) {
           FLASK_CTX,
           activeRange
         );
+        hideRRCurve();
       // Hold the region info to avoid flickering
       if (holdRegionProperties.NUTS_ID !== p.NUTS_ID) {
         holdRegionProperties.NUTS_ID = p.NUTS_ID;
@@ -103,6 +104,7 @@ function onEachFeature(feature, layer) {
   // Double click -> zoom in on the region
   layer.on('dblclick', () => {
     changeRegion(p.NUTS_ID, p.name);
+    hideRRCurve();
   });
 
   /* hover glue  */
@@ -394,6 +396,7 @@ metricSelect.onchange = () => {
     FLASK_CTX,
     activeRange
   ); // redraw TS for the new metric
+  hideRRCurve();
 };
 
 compareSelect.onchange = () => {
@@ -406,6 +409,7 @@ compareSelect.onchange = () => {
     FLASK_CTX,
     activeRange
   );
+  hideRRCurve();
 };
 
 /* ----------Information panel ---------- */
@@ -453,7 +457,7 @@ rangeButtons.forEach(btn => {
   };
 });
 
-/* --- Download data button --- */
+/* --- Button: Download data --- */
 document.getElementById('downloadData').addEventListener('click', () => {
   const metric1 = mainMetric;
   const metric2 = compareMetric || 'none';  // if no comparison, use 'none'
@@ -462,7 +466,7 @@ document.getElementById('downloadData').addEventListener('click', () => {
   window.open(url, '_blank');
 });
 
-/* --- Generate RR curve button --- */
+/* --- Button: Generate RR curve --- */
 document.getElementById('generateRR').addEventListener('click', () => {
   const nutsID = holdRegionProperties.NUTS_ID || 'none';  // use selected region or 'EU' if none
   if (nutsID === 'none') {
@@ -477,8 +481,17 @@ document.getElementById('generateRR').addEventListener('click', () => {
     return;
   }  
   /* plot.js export expects (nutsId, metric, maxLag, FLASK_CTX) */
-    drawRRCurve(nutsID, metric1, metric2, FLASK_CTX);
+  drawRRCurve(nutsID, metric1, metric2, FLASK_CTX);
+  /* Show the graph */
+  document.getElementById('RRCurve').style.display = 'block';
 });
+
+/* Function to hide the RR curve */
+function hideRRCurve() {
+  // Hide only if it is currently displayed
+  if (document.getElementById('RRCurve').style.display === 'block')
+    {document.getElementById('RRCurve').style.display = 'none';}
+}
 
 /* === MOBILE MENU === */
 const menuIcon = document.getElementById('menuToggle');

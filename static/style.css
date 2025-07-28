@@ -111,6 +111,11 @@ header {
   font-size: 1em;
 }
 
+/* The RR curve is hidden by default */
+#RRCurve {
+  display: none;
+}
+
 #splitter {
   width: 5px;
   cursor: col-resize;
