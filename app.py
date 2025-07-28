@@ -193,16 +193,6 @@ def rr_curve():
         return jsonify({"error": "Invalid map_id specified"}), 400
     df = pd.read_csv(CSV_MAP[map_id])
 
-    # Validate metrics
-    if metric1 not in df.columns:
-        return jsonify({"error": f"No data available for metric '{metric1}'"}), 400
-    else:
-        metrics = [metric1]
-    if metric2 not in df.columns:
-        metric2 = None
-    else:
-        metrics.append(metric2)
-
     # Drop rows with NaNs in x or y columns
     df.dropna(subset=[metric2, metric1], inplace=True)
 
