@@ -283,10 +283,10 @@ def generate_rr_curve(
 
     # Return as a dictionary
     return {
-        "x_grid": x_grid,
-        "rr": np.exp(log_rr),
-        "rr_low": np.exp(log_rr - 1.96 * se),
-        "rr_high": np.exp(log_rr + 1.96 * se),
+        "x_grid": x_grid.tolist(),
+        "rr": np.exp(log_rr).tolist(),
+        "rr_low": np.exp(log_rr - 1.96 * se).tolist(),
+        "rr_high": np.exp(log_rr + 1.96 * se).tolist(),
         "ref_value": ref_value,
         "label": label,
         "units": units,
