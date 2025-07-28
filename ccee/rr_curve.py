@@ -185,7 +185,7 @@ def plot_rr_curve(
     max_lag: int,
     ref_value: float = None,
     n_grid: int = 100,
-):
+) -> Tuple[plt.Figure, plt.Axes]:
     """
     Plot the overall (lag-integrated) X-risk curve derived from a
     fitted DLNM.
@@ -214,8 +214,10 @@ def plot_rr_curve(
 
     Returns
     -------
-    None
-        The function creates a Matplotlib figure and shows it.
+    fig : matplotlib.figure.Figure
+        Figure object containing the plot.
+    axs : matplotlib.axes.Axes
+        Axes object containing the plot.
 
     Notes
     -----
@@ -281,19 +283,21 @@ def plot_rr_curve(
     rr_high = np.exp(log_rr + 1.96 * se)
 
     # plot
-    plt.figure(figsize=(7, 4))
-    plt.plot(x_grid, rr, color="darkred", lw=2, label="Marginal RR")
-    plt.fill_between(
+    fig = plt.figure(figsize=(7, 4))
+    axs = fig.add_subplot(111)
+    axs.plot(x_grid, rr, color="darkred", lw=2, label="Marginal RR")
+    axs.fill_between(
         x_grid, rr_low, rr_high, color="darkred", alpha=0.25, label="95% CI"
     )
-    plt.axhline(1.0, ls="--", color="gray")
+    axs.axhline(1.0, ls="--", color="gray")
     label, units = DICT_LABELS.get(spline_spec["x_col"], (spline_spec["x_col"], ""))
-    plt.xlabel(f"{label} ({units})")
-    plt.ylabel("Relative Risk (RR)")
-    plt.title(f"Marginal RR vs {label} (ref = {ref_value:.1f} {units})")
-    plt.grid(True, ls=":", lw=0.5)
-    plt.legend()
-    plt.tight_layout()
+    axs.set_xlabel(f"{label} ({units})")
+    axs.set_ylabel("Relative Risk (RR)")
+    axs.set_title(f"Marginal RR vs {label} (ref = {ref_value:.1f} {units})")
+    axs.grid(True, ls=":", lw=0.5)
+    axs.legend()
+    fig.tight_layout()
+    return fig, axs
 
 
 def main(
@@ -324,13 +328,15 @@ def main(
     model, spline_df, spline_spec = fit_dlnm_weekly(df_sub, x, y)
 
     # Plot the relative risk curve
-    plot_rr_curve(model, spline_spec, xrange=(-20, 40), max_lag=5)
+    fig, axs = plot_rr_curve(model, spline_spec, xrange=(-20, 40), max_lag=5)
 
     # Make sure the output directory exists
     path_out = Path(fout)
     path_out.mkdir(parents=True, exist_ok=True)
     # Save the plot
-    plt.savefig(path_out / f"rr_curve_{code}.png", dpi=300)
+    fig.savefig(path_out / f"rr_curve_{code}.png", dpi=300)
+    # Close
+    plt.close(fig)
 
 
 if __name__ == "__main__":
