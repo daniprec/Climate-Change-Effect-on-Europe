@@ -178,6 +178,121 @@ def fit_dlnm_weekly(
     return model, crossbasis_df, spec
 
 
+def generate_rr_curve(
+    model: GLMResults,
+    spline_spec: dict,
+    xrange: tuple,
+    max_lag: int,
+    ref_value: float | None = None,
+    n_grid: int = 100,
+) -> dict:
+    """
+    Generate the overall (lag-integrated) X-risk curve derived from a
+    fitted DLNM.
+
+    The function constructs the marginal cross-basis row
+    ∑_ell C(ell) cx B(x) (i.e. integrates over lags) and combines it with the
+    coefficient vector and its covariance to obtain point estimates and
+    95 % confidence bands for the Relative Risk (RR) across a X grid.
+
+    Parameters
+    ----------
+    model : statsmodels.genmod.generalized_linear_model.GLMResults
+        GLM returned by fit_dlnm_weekly.
+    spline_spec : dict
+        Output crossbasis_spec from fit_dlnm_weekly.
+    xrange : tuple
+        Lower and upper bounds of the X grid in the same units as
+        x_col.
+    max_lag : int
+        Maximum lag (must match the value used at fitting time).
+    ref_value : float or None, default None
+        X value at which RR = 1.  If None, the X with minimum estimated RR on
+        the grid is used.
+    n_grid : int, default 100
+        Number of equally spaced X points for the plot.
+
+    Returns
+    -------
+    dict
+        Dictionary containing the X grid, RR estimates, lower and upper
+        confidence intervals, and the reference value.
+
+    Notes
+    -----
+    * Confidence intervals are computed via the delta method using the full
+      coefficient covariance matrix model.cov_params.  If a quasi-Poisson
+      model was fitted, remember to inflate the standard errors by
+      √model.scale before plotting.
+    * This is conceptually identical to the crosspred(..., type="overall")
+      method in the dlnm R package (Gasparrini 2010).
+
+    References
+    ----------
+    Gasparrini, A. (2010). Distributed lag non-linear models. Statistics in
+    Medicine, 29(21), 2224-2234. https://doi.org/10.1002/sim.3940
+    """
+    # Build X grid & basis
+    x_grid = np.linspace(*xrange, n_grid)
+    Zg = dmatrix(spline_spec["formula"], {"x": x_grid}, return_type="dataframe")
+    n_x = Zg.shape[1]
+
+    # Lag-basis rows & their sum (∑_lag c_k(ℓ))
+    C = dmatrix(
+        spline_spec["lag_formula"],
+        {"lag": np.arange(max_lag + 1)},
+        return_type="dataframe",
+    )
+    lag_sum = C.sum(axis=0).to_numpy()  # (n_lag,)
+    n_lag = lag_sum.size
+
+    # Coefficient vector & covariance
+    cross_names = [f"cb_{i}_{j}" for j in range(n_lag) for i in range(n_x)]
+    beta = model.params[cross_names].to_numpy()
+    V = model.cov_params().loc[cross_names, cross_names].to_numpy()
+
+    # Helper to build cross-basis row = kron(lag_sum, Z_row)
+    def cross_row(z_row: np.ndarray) -> np.ndarray:
+        return np.kron(lag_sum, z_row)  # length n_x * n_lag
+
+    # Compute log-RR & SE for the grid
+    log_rr, se = [], []
+    for z in Zg.to_numpy():
+        s = cross_row(z)
+        log_rr.append(s @ beta)
+        se.append(np.sqrt(s @ V @ s))
+    log_rr = np.array(log_rr)
+    se = np.array(se)
+
+    # Reference X
+    if ref_value is None:
+        idx_ref = np.argmin(np.exp(log_rr))
+        ref_value = x_grid[idx_ref]
+        ref_log_rr = log_rr[idx_ref]
+    else:
+        z_ref = dmatrix(
+            spline_spec["formula"], {"x": [ref_value]}, return_type="dataframe"
+        ).to_numpy()[0]
+        ref_log_rr = cross_row(z_ref) @ beta
+
+    # Normalise & exponentiate
+    log_rr -= ref_log_rr
+
+    # Get label and units for the x-axis
+    label, units = DICT_LABELS.get(spline_spec["x_col"], (spline_spec["x_col"], ""))
+
+    # Return as a dictionary
+    return {
+        "x_grid": x_grid,
+        "rr": np.exp(log_rr),
+        "rr_low": np.exp(log_rr - 1.96 * se),
+        "rr_high": np.exp(log_rr + 1.96 * se),
+        "ref_value": ref_value,
+        "label": label,
+        "units": units,
+    }
+
+
 def plot_rr_curve(
     model: GLMResults,
     spline_spec: dict,
@@ -233,56 +348,22 @@ def plot_rr_curve(
     Gasparrini, A. (2010). Distributed lag non-linear models. Statistics in
     Medicine, 29(21), 2224-2234. https://doi.org/10.1002/sim.3940
     """
-    # build X grid & basis
-    x_grid = np.linspace(*xrange, n_grid)
-    Zg = dmatrix(spline_spec["formula"], {"x": x_grid}, return_type="dataframe")
-    n_x = Zg.shape[1]
-
-    # lag-basis rows & their sum (∑_lag c_k(ℓ))
-    C = dmatrix(
-        spline_spec["lag_formula"],
-        {"lag": np.arange(max_lag + 1)},
-        return_type="dataframe",
+    dict_curve = generate_rr_curve(
+        model,
+        spline_spec,
+        xrange=xrange,
+        max_lag=max_lag,
+        ref_value=ref_value,
+        n_grid=n_grid,
     )
-    lag_sum = C.sum(axis=0).to_numpy()  # (n_lag,)
-    n_lag = lag_sum.size
+    x_grid = dict_curve["x_grid"]
+    rr = dict_curve["rr"]
+    rr_low = dict_curve["rr_low"]
+    rr_high = dict_curve["rr_high"]
+    ref_value = dict_curve["ref_value"]
+    label = dict_curve["label"]
+    units = dict_curve["units"]
 
-    # coefficient vector & covariance
-    cross_names = [f"cb_{i}_{j}" for j in range(n_lag) for i in range(n_x)]
-    beta = model.params[cross_names].to_numpy()
-    V = model.cov_params().loc[cross_names, cross_names].to_numpy()
-
-    # helper to build cross-basis row = kron(lag_sum, Z_row)
-    def cross_row(z_row: np.ndarray) -> np.ndarray:
-        return np.kron(lag_sum, z_row)  # length n_x * n_lag
-
-    # compute log-RR & SE for the grid
-    log_rr, se = [], []
-    for z in Zg.to_numpy():
-        s = cross_row(z)
-        log_rr.append(s @ beta)
-        se.append(np.sqrt(s @ V @ s))
-    log_rr = np.array(log_rr)
-    se = np.array(se)
-
-    # reference X
-    if ref_value is None:
-        idx_ref = np.argmin(np.exp(log_rr))
-        ref_value = x_grid[idx_ref]
-        ref_log_rr = log_rr[idx_ref]
-    else:
-        z_ref = dmatrix(
-            spline_spec["formula"], {"x": [ref_value]}, return_type="dataframe"
-        ).to_numpy()[0]
-        ref_log_rr = cross_row(z_ref) @ beta
-
-    # normalise & exponentiate
-    log_rr -= ref_log_rr
-    rr = np.exp(log_rr)
-    rr_low = np.exp(log_rr - 1.96 * se)
-    rr_high = np.exp(log_rr + 1.96 * se)
-
-    # plot
     fig = plt.figure(figsize=(7, 4))
     axs = fig.add_subplot(111)
     axs.plot(x_grid, rr, color="darkred", lw=2, label="Marginal RR")
@@ -290,7 +371,6 @@ def plot_rr_curve(
         x_grid, rr_low, rr_high, color="darkred", alpha=0.25, label="95% CI"
     )
     axs.axhline(1.0, ls="--", color="gray")
-    label, units = DICT_LABELS.get(spline_spec["x_col"], (spline_spec["x_col"], ""))
     axs.set_xlabel(f"{label} ({units})")
     axs.set_ylabel("Relative Risk (RR)")
     axs.set_title(f"Marginal RR vs {label} (ref = {ref_value:.1f} {units})")
