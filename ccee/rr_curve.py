@@ -1,12 +1,16 @@
+from pathlib import Path
 from typing import Dict, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import statsmodels.api as sm
+import typer
 from patsy import dmatrix
 from scipy.stats import percentileofscore
 from statsmodels.genmod.generalized_linear_model import GLMResults
+
+DICT_LABELS = {"temperature_era5": ("Temperature", "ºC")}
 
 
 def compute_percentiles(
@@ -45,7 +49,7 @@ def fit_dlnm_weekly(
 ) -> Tuple[GLMResults, pd.DataFrame, Dict]:
     """
     Fit a weekly Distributed Lag Non-linear Model (DLNM) with a
-    temperature-lag cross-basis built from B-spline bases and estimate the
+    x-lag cross-basis built from B-spline bases and estimate the
     association through a Poisson GLM.
 
     Parameters
@@ -63,7 +67,7 @@ def fit_dlnm_weekly(
         Maximum number of weeks to lag x_col when constructing the
         cross-basis.
     knots_percentiles : list of int, default [10, 75, 90]
-        Percentiles used to position internal knots for the temperature
+        Percentiles used to position internal knots for the X
         spline. Passed verbatim to :func:numpy.percentile.
     lag_knots : list or None, default None
         Explicit positions (in weeks) of internal knots for the lag spline.
@@ -78,7 +82,7 @@ def fit_dlnm_weekly(
         Fitted log-linear (Poisson) GLM.
     crossbasis_df : pandas.DataFrame
         The full cross-basis design matrix supplied to the GLM; has
-        n_temp x n_lag columns labelled cb_i_j.
+        n_x x n_lag columns labelled cb_i_j.
     crossbasis_spec : dict
         Metadata needed for post-estimation tasks (knots, formulas, degrees,
         etc.).
@@ -86,7 +90,7 @@ def fit_dlnm_weekly(
     Notes
     -----
     * The cross-basis W is constructed as the Kronecker product of the
-      temperature basis B(x_t) and the lag basis C(ell) and follows the
+      X basis B(x_t) and the lag basis C(ell) and follows the
       definition in Equation (7) of Gasparrini (2010).
     * Fixed effects for calendar week and year are added to control for
       seasonality and long-term trends; customise this block if you need a
@@ -101,12 +105,12 @@ def fit_dlnm_weekly(
     """
     df = df[[x_col, y_col]].copy().dropna()
 
-    # Temperature spline basis specification
-    temp_knots = np.percentile(df[x_col], knots_percentiles)
-    temp_formula = f"bs(x, knots={list(temp_knots)}, degree=2, include_intercept=False)"
-    Z = dmatrix(temp_formula, {"x": df[x_col]}, return_type="dataframe")
+    # X spline basis specification
+    knots = np.percentile(df[x_col], knots_percentiles)
+    formula = f"bs(x, knots={list(knots)}, degree=2, include_intercept=False)"
+    Z = dmatrix(formula, {"x": df[x_col]}, return_type="dataframe")
     Z.reset_index(drop=True, inplace=True)
-    n_temp = Z.shape[1]
+    n_x = Z.shape[1]
 
     # Lag spline basis (time-invariant)
     if lag_knots is None:
@@ -117,25 +121,25 @@ def fit_dlnm_weekly(
     n_lag = C.shape[1]
 
     # Build cross-basis for every observation
-    #     cb_{i}_{j}  where i = temp basis, j = lag basis
-    cross_cols = [f"cb_{i}_{j}" for j in range(n_lag) for i in range(n_temp)]
+    #     cb_{i}_{j}  where i = x basis, j = lag basis
+    cross_cols = [f"cb_{i}_{j}" for j in range(n_lag) for i in range(n_x)]
     crossbasis_df = pd.DataFrame(0.0, index=df.index, columns=cross_cols)
 
     for ell in range(max_lag + 1):
-        # temperature values at lag ell
+        # X values at lag ell
         x_lag = df[x_col].shift(ell)
         # rows that became NaN because of the shift should be skipped
         valid = x_lag.notna()
         if not valid.any():
             continue
 
-        temp_basis_lag = dmatrix(
-            temp_formula, {"x": x_lag[valid]}, return_type="dataframe"
-        ).to_numpy()  # (n_valid, n_temp)
+        basis_lag = dmatrix(
+            formula, {"x": x_lag[valid]}, return_type="dataframe"
+        ).to_numpy()  # (n_valid, n_x)
         w = C.loc[ell].to_numpy()  # (n_lag,)
 
-        # Add contributions: Z_lag (n_valid x n_temp) ⊗ w (n_lag,)
-        kron_block = np.kron(w, temp_basis_lag)  # (n_valid, n_temp*n_lag)
+        # Add contributions: Z_lag (n_valid x n_x) ⊗ w (n_lag,)
+        kron_block = np.kron(w, basis_lag)  # (n_valid, n_x*n_lag)
         crossbasis_df.loc[valid, cross_cols] += kron_block
 
     # drop rows with any remaining NaNs (due to initial lags)
@@ -159,13 +163,13 @@ def fit_dlnm_weekly(
         print(model.summary())
 
     spec = {
-        "temp_formula": temp_formula,
+        "formula": formula,
         "lag_formula": lag_formula,
-        "temp_knots": temp_knots.tolist(),
+        "knots": knots.tolist(),
         "lag_knots": list(lag_knots),
-        "temp_degree": 2,
+        "degree": 2,
         "lag_degree": 2,
-        "n_temp": n_temp,
+        "n_x": n_x,
         "n_lag": n_lag,
         "max_lag": max_lag,
         "x_col": x_col,
@@ -179,17 +183,17 @@ def plot_rr_curve(
     spline_spec: dict,
     xrange: tuple,
     max_lag: int,
-    ref_temp: float = None,
+    ref_value: float = None,
     n_grid: int = 100,
 ):
     """
-    Plot the overall (lag-integrated) temperature-risk curve derived from a
+    Plot the overall (lag-integrated) X-risk curve derived from a
     fitted DLNM.
 
     The function constructs the marginal cross-basis row
     ∑_ell C(ell) cx B(x) (i.e. integrates over lags) and combines it with the
     coefficient vector and its covariance to obtain point estimates and
-    95 % confidence bands for the Relative Risk (RR) across a temperature grid.
+    95 % confidence bands for the Relative Risk (RR) across a X grid.
 
     Parameters
     ----------
@@ -198,15 +202,15 @@ def plot_rr_curve(
     spline_spec : dict
         Output crossbasis_spec from fit_dlnm_weekly.
     xrange : tuple
-        Lower and upper bounds of the temperature grid in the same units as
+        Lower and upper bounds of the X grid in the same units as
         x_col.
     max_lag : int
         Maximum lag (must match the value used at fitting time).
-    ref_temp : float or None, default None
-        Temperature at which RR = 1.  If None, the temperature with
-        minimum estimated RR on the grid is used.
+    ref_value : float or None, default None
+        X value at which RR = 1.  If None, the X with minimum estimated RR on
+        the grid is used.
     n_grid : int, default 100
-        Number of equally spaced temperature points for the plot.
+        Number of equally spaced X points for the plot.
 
     Returns
     -------
@@ -227,10 +231,10 @@ def plot_rr_curve(
     Gasparrini, A. (2010). Distributed lag non-linear models. Statistics in
     Medicine, 29(21), 2224-2234. https://doi.org/10.1002/sim.3940
     """
-    # build temperature grid & basis
-    temps = np.linspace(*xrange, n_grid)
-    Zg = dmatrix(spline_spec["temp_formula"], {"x": temps}, return_type="dataframe")
-    n_temp = Zg.shape[1]
+    # build X grid & basis
+    x_grid = np.linspace(*xrange, n_grid)
+    Zg = dmatrix(spline_spec["formula"], {"x": x_grid}, return_type="dataframe")
+    n_x = Zg.shape[1]
 
     # lag-basis rows & their sum (∑_lag c_k(ℓ))
     C = dmatrix(
@@ -242,13 +246,13 @@ def plot_rr_curve(
     n_lag = lag_sum.size
 
     # coefficient vector & covariance
-    cross_names = [f"cb_{i}_{j}" for j in range(n_lag) for i in range(n_temp)]
+    cross_names = [f"cb_{i}_{j}" for j in range(n_lag) for i in range(n_x)]
     beta = model.params[cross_names].to_numpy()
     V = model.cov_params().loc[cross_names, cross_names].to_numpy()
 
     # helper to build cross-basis row = kron(lag_sum, Z_row)
     def cross_row(z_row: np.ndarray) -> np.ndarray:
-        return np.kron(lag_sum, z_row)  # length n_temp * n_lag
+        return np.kron(lag_sum, z_row)  # length n_x * n_lag
 
     # compute log-RR & SE for the grid
     log_rr, se = [], []
@@ -259,14 +263,14 @@ def plot_rr_curve(
     log_rr = np.array(log_rr)
     se = np.array(se)
 
-    # reference temperature
-    if ref_temp is None:
+    # reference X
+    if ref_value is None:
         idx_ref = np.argmin(np.exp(log_rr))
-        ref_temp = temps[idx_ref]
+        ref_value = x_grid[idx_ref]
         ref_log_rr = log_rr[idx_ref]
     else:
         z_ref = dmatrix(
-            spline_spec["temp_formula"], {"x": [ref_temp]}, return_type="dataframe"
+            spline_spec["formula"], {"x": [ref_value]}, return_type="dataframe"
         ).to_numpy()[0]
         ref_log_rr = cross_row(z_ref) @ beta
 
@@ -278,15 +282,56 @@ def plot_rr_curve(
 
     # plot
     plt.figure(figsize=(7, 4))
-    plt.plot(temps, rr, color="darkred", lw=2, label="Marginal RR")
+    plt.plot(x_grid, rr, color="darkred", lw=2, label="Marginal RR")
     plt.fill_between(
-        temps, rr_low, rr_high, color="darkred", alpha=0.25, label="95% CI"
+        x_grid, rr_low, rr_high, color="darkred", alpha=0.25, label="95% CI"
     )
     plt.axhline(1.0, ls="--", color="gray")
-    plt.xlabel("Temperature (°C)")
+    label, units = DICT_LABELS.get(spline_spec["x_col"], (spline_spec["x_col"], ""))
+    plt.xlabel(f"{label} ({units})")
     plt.ylabel("Relative Risk (RR)")
-    plt.title(f"Marginal RR vs Temperature (ref = {ref_temp:.1f}°C)")
+    plt.title(f"Marginal RR vs {label} (ref = {ref_value:.1f} {units})")
     plt.grid(True, ls=":", lw=0.5)
     plt.legend()
     plt.tight_layout()
-    plt.show()
+
+
+def main(
+    file: str = "./data/europe.csv",
+    code: str = "AT",
+    x: str = "temperature_era5",
+    y: str = "mortality",
+    fout: str = "output",
+):
+    # Load the dataset
+    df = pd.read_csv(file)
+
+    # Drop rows with NaNs in x or y columns
+    df.dropna(subset=[x, y], inplace=True)
+
+    # Create column "date" from "year" and "week"
+    df["date"] = pd.to_datetime(
+        df["year"].astype(str) + df["week"].astype(str) + "0", format="%Y%W%w"
+    )
+
+    # Set date as index
+    df.set_index("date", inplace=True)
+
+    # Choose a code
+    df_sub = df[df["NUTS_ID"] == code]
+
+    # Fit the DLNM model
+    model, spline_df, spline_spec = fit_dlnm_weekly(df_sub, x, y)
+
+    # Plot the relative risk curve
+    plot_rr_curve(model, spline_spec, xrange=(-20, 40), max_lag=5)
+
+    # Make sure the output directory exists
+    path_out = Path(fout)
+    path_out.mkdir(parents=True, exist_ok=True)
+    # Save the plot
+    plt.savefig(path_out / f"rr_curve_{code}.png", dpi=300)
+
+
+if __name__ == "__main__":
+    typer.run(main)
