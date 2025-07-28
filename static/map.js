@@ -95,6 +95,23 @@ const METRIC_CFG = {
     colorbarMax: "500"
   },
 
+  temperature_era5: {
+    label : 'Temperature (°C)',
+    value : p => p.temperature_era5 ?? -99,
+    colour: tempColour,
+    range : [2000, 2025],
+    description: [
+      '• Mean 2-m air temperature from ERA5 reanalysis data.',
+      '• Source: Copernicus Climate Change Service (C3S), variable "2m_temperature".',
+      '• Spatial resolution: 0.25° (~30 km); sampled at region centroid.',
+      '• Coverage: 2000 - 2025 (hourly, averaged to weekly in this dash).'
+    ],
+    url: 'https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-land?tab=form',
+    colorbarStops: [[0, "#4575b4"], [0.5, "#fee090"], [1, "#d73027"]],
+    colorbarMin: "-5",
+    colorbarMax: "40"
+  },
+
   temperature_rcp45: {
     label : 'Temperature (°C)',
     value : p => p.temperature_rcp45 ?? -99,
