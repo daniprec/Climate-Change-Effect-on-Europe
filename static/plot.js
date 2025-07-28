@@ -183,9 +183,6 @@ function renderRRCurve(json) {
   const label   = json.label;
   const units   = json.units;
 
-  // Calculate the y-axis max: min(3, max(rr_high))
-  const maxY = Math.min(3, Math.max(...rr_high));
-
   /* We create three datasets:
      0 = lower bound  (invisible)
      1 = upper bound  (invisible, fills to previous to make ribbon)
@@ -232,7 +229,6 @@ function renderRRCurve(json) {
         },
         y: {
           title: { display: true, text: 'Relative Risk', color: COLORS.axis },
-          max: maxY,
           beginAtZero: false,
           grid: { color: 'rgba(0,0,0,.1)' }
         }
