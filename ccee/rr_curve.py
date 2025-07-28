@@ -183,7 +183,7 @@ def plot_rr_curve(
     spline_spec: dict,
     xrange: tuple,
     max_lag: int,
-    ref_value: float = None,
+    ref_value: float | None = None,
     n_grid: int = 100,
 ) -> Tuple[plt.Figure, plt.Axes]:
     """
