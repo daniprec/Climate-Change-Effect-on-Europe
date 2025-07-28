@@ -193,6 +193,9 @@ def rr_curve():
         return jsonify({"error": "Invalid map_id specified"}), 400
     df = pd.read_csv(CSV_MAP[map_id])
 
+    # Choose a code
+    df = df[df["NUTS_ID"] == nuts_id]
+
     # Drop rows with NaNs in x or y columns
     df.dropna(subset=[metric2, metric1], inplace=True)
 
@@ -204,11 +207,8 @@ def rr_curve():
     # Set date as index
     df.set_index("date", inplace=True)
 
-    # Choose a code
-    df_sub = df[df["NUTS_ID"] == nuts_id]
-
     # Fit the DLNM model
-    model, spline_df, spline_spec = fit_dlnm_weekly(df_sub, metric2, metric1)
+    model, spline_df, spline_spec = fit_dlnm_weekly(df, metric2, metric1)
 
     # Plot the relative risk curve
     dict_curve = generate_rr_curve(model, spline_spec, xrange=(-20, 40), max_lag=5)

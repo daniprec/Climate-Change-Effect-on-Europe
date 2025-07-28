@@ -390,6 +390,9 @@ def main(
     # Load the dataset
     df = pd.read_csv(file)
 
+    # Choose a code
+    df = df[df["NUTS_ID"] == code]
+
     # Drop rows with NaNs in x or y columns
     df.dropna(subset=[x, y], inplace=True)
 
@@ -401,11 +404,8 @@ def main(
     # Set date as index
     df.set_index("date", inplace=True)
 
-    # Choose a code
-    df_sub = df[df["NUTS_ID"] == code]
-
     # Fit the DLNM model
-    model, spline_df, spline_spec = fit_dlnm_weekly(df_sub, x, y)
+    model, spline_df, spline_spec = fit_dlnm_weekly(df, x, y)
 
     # Plot the relative risk curve
     fig, axs = plot_rr_curve(model, spline_spec, xrange=(-20, 40), max_lag=5)

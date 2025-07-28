@@ -176,7 +176,16 @@ function renderRRCurve(json) {
   const ctx = prepareCanvas('RRCurve');
   if ( currentRRCurve)  currentRRCurve.destroy();
 
-  const { x_grid, rr, rr_low, rr_high, ref_value, label, units } = json;
+  // Extract the values from the JSON response
+  const x_grid = json.x_grid;
+  const rr = json.rr;
+  const rr_low = json.rr_low;
+  const rr_high = json.rr_high;
+  const label   = json.label;
+  const units   = json.units;
+
+  // Calculate the y-axis max: min(3, max(rr_high))
+  const maxY = Math.min(3, Math.max(...rr_high));
 
   /* We create three datasets:
      0 = lower bound  (invisible)
@@ -224,6 +233,7 @@ function renderRRCurve(json) {
         },
         y: {
           title: { display: true, text: 'Relative Risk', color: COLORS.axis },
+          max: maxY,
           beginAtZero: false,
           grid: { color: 'rgba(0,0,0,.1)' }
         }
