@@ -141,7 +141,8 @@ The Eurostat data can be downloaded directly from the website. Use the functions
 **Variables:**
 
 - `population_density`: Yearly population density data. People per square kilometer.
-- `mortality_rate`: Weekly mortality rate per 100,000 inhabitants.
+- `mortality`: Weekly number of total deaths by any cause.
+- `mortality_rate`: Weekly mortality rate per 100,000 inhabitants. This value is derived from the two above.
 
 ### European Environment Agency (EEA)
 

@@ -65,7 +65,7 @@ export const METRIC_CFG = {
         colour: mortalityColour,
         range : [2014, 2024],
         description: [
-        '• WEEKLY all-cause deaths per 100 000 inhabitants.',
+        '• WEEKLY all-cause deaths per 100 000 inhabitants. This value is derived by dividing the number of deaths in a week by the population of the region, and multiplying by 100 000.',
         '• Source: Eurostat - "demo_r_mwk3_ts".',
         '• Spatial resolution: NUTS-3 (district).',
         '• Coverage: 2013 - 2024 (weekly).'
