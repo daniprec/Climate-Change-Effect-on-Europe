@@ -141,7 +141,7 @@ The Eurostat data can be downloaded directly from the website. Use the functions
 **Variables:**
 
 - `population_density`: Yearly population density data. People per square kilometer. Eurostat ID: "demo_r_d3dens". Coverage: 2000 - today.
-- `population`: Yearly population data. Eurostat IDs: "tps00001" (country level, NUTS-2), "demo_r_pjanaggr3" (region level, NUTS-3) Coverage: 2014 - today. When not covered, we estimate it from the `population_density` and the country area.
+- `population`: Yearly population data. Eurostat IDs: "tps00001" (country level, NUTS-2), "demo_r_pjanaggr3" (region level, NUTS-3). Coverage: 2014 - today. When not covered, we estimate it from the `population_density` and the country area.
 - `mortality`: Weekly number of total deaths by any cause. Eurostat ID: "demo_r_mwk3_t". Coverage: 2000 - today.
 - `mortality_rate`: Weekly mortality rate per 100,000 inhabitants. This value is derived from `mortality` and `population`.
 
