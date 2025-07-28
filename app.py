@@ -103,6 +103,7 @@ def api_bbox():
 def app_data_time_series():
     map_id = request.args.get("map_id", "EU").upper()
     metric = request.args.get("metric", "mortality_rate")
+    metric2 = request.args.get("metric2", None)
     nuts_id = request.args.get("nuts_id", "AT")
 
     # Check if the requested map_id is valid
@@ -118,12 +119,20 @@ def app_data_time_series():
     # Validate metric
     if metric not in df.columns:
         return jsonify({"error": f"No data available for metric '{metric}'"}), 400
+    elif metric2 and metric2 not in df.columns:
+        return jsonify({"error": f"No data available for metric '{metric2}'"}), 400
+
+    columns = ["year", "week", metric]
+    rename = {metric: "value"}
+    if metric2:
+        columns.append(metric2)
+        rename[metric2] = "value2"
 
     # Prepare structured JSON
     time_series_data = (
-        df[["year", "week", metric]]
+        df[columns]
         .sort_values(["year", "week"])
-        .rename(columns={metric: "value"})
+        .rename(columns=rename)
         .dropna()
         .to_dict(orient="records")
     )

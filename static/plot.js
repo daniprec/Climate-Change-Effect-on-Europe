@@ -141,21 +141,15 @@ export function drawTimeSeries(
     return;
   }
 
-  // build two fetches
-  const p1 = fetch(
-    `/api/data/ts?map_id=${FLASK_CTX.mapID}&metric=${mainMetric}&nuts_id=${nutsId}`
-  ).then(r=>r.json());
-
-  const p2 = compareMetric
-    ? fetch(
-        `/api/data/ts?map_id=${FLASK_CTX.mapID}&metric=${compareMetric}&nuts_id=${nutsId}`
-      ).then(r=>r.json())
-    : Promise.resolve({ data: [] });
-
-  Promise.all([p1, p2]).then(([res1, res2]) => {
-    const labels = res1.data.map(d => `${d.year}-W${String(d.week).padStart(2,'0')}`);
-    const data1  = res1.data.map(d => d.value);
-    const data2  = res2.data.map(d => d.value);
+  // build fetch
+  const url = `/api/data/ts?map_id=${FLASK_CTX.mapID}&nuts_id=${nutsId}`
+    +`&metric=${mainMetric}&metric2=${compareMetric}`;
+  fetch(url)
+  .then(r=>r.json())
+  .then((res) => {
+    const labels = res.data.map(d => `${d.year}-W${String(d.week).padStart(2,'0')}`);
+    const data1  = res.data.map(d => d.value);
+    const data2  = res.data.map(d => d.value2);
     renderTimeSeriesChart(labels, data1, data2, mainMetric, compareMetric, regionName, activeRange);
   }).catch(console.error);
 }
