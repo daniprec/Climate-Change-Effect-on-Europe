@@ -229,7 +229,7 @@ def rr_curve():
             "nuts_id": nuts_id,
             "metric1": metric1,
             "metric2": metric2,
-            "rr_curve": dict_curve,
+            **dict_curve,
         }
     )
 
