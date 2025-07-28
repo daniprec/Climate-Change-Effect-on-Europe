@@ -149,7 +149,12 @@ export function drawTimeSeries(
   .then((res) => {
     const labels = res.data.map(d => `${d.year}-W${String(d.week).padStart(2,'0')}`);
     const data1  = res.data.map(d => d.value);
-    const data2  = res.data.map(d => d.value2);
+    let data2;
+    if (compareMetric !== null) {
+      data2  = res.data.map(d => d.value2);
+    } else {
+      data2 = [];
+    }
     renderTimeSeriesChart(labels, data1, data2, mainMetric, compareMetric, regionName, activeRange);
   }).catch(console.error);
 }

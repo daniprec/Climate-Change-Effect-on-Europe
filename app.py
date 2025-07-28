@@ -104,6 +104,8 @@ def app_data_time_series():
     map_id = request.args.get("map_id", "EU").upper()
     metric = request.args.get("metric", "mortality_rate")
     metric2 = request.args.get("metric2", None)
+    # "null" means no second metric
+    metric2 = metric2 if metric2 != "null" else None
     nuts_id = request.args.get("nuts_id", "AT")
 
     # Check if the requested map_id is valid
