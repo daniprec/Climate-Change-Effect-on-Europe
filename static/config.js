@@ -63,7 +63,7 @@ export const METRIC_CFG = {
         label : 'Mortality (per 100 k)',
         value : p => p.mortality_rate ?? -99,
         colour: mortalityColour,
-        range : [2013, 2024],
+        range : [2014, 2024],
         description: [
         '• WEEKLY all-cause deaths per 100 000 inhabitants.',
         '• Source: Eurostat - "demo_r_mwk3_ts".',

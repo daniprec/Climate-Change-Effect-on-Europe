@@ -384,7 +384,7 @@ def main(
     file: str = "./data/europe.csv",
     code: str = "AT",
     x: str = "temperature_era5",
-    y: str = "mortality",
+    y: str = "mortality_rate",
     fout: str = "output",
 ):
     # Load the dataset
@@ -403,6 +403,11 @@ def main(
 
     # Set date as index
     df.set_index("date", inplace=True)
+
+    # Print date range
+    print(
+        f"[INFO] Processing data for {code} from {df.index.min()} to {df.index.max()}"
+    )
 
     # Fit the DLNM model
     model, spline_df, spline_spec = fit_dlnm_weekly(df, x, y)
