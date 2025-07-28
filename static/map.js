@@ -1,202 +1,6 @@
-/* ======================= CONFIG ======================= */
-
-const mortalityColour = v => {
-  if (v < 0)   return '#000000';   // black
-  if (v < 5)   return '#66c2a5';   // light blue
-  if (v < 10)  return '#abdda4';   // teal
-  if (v < 15)  return '#e6f598';   // light green
-  if (v < 20)  return '#fee08b';   // yellow
-  if (v < 25)  return '#fdae61';   // orange
-  return '#d7191c';                // red
-};
-
-const populationDensityColour = v => {
-  if (v < 0)   return '#000000';   // black
-  if (v < 50) return '#000066';   // IE dark blue
-  if (v < 100) return '#47bfff';   // IE light blue
-  if (v < 200) return '#e6f598';   // mixed blue to green
-  return '#6dc201';                // IE green
-};
-
-/* --- shared, step-wise palette for all temperature metrics ------------- */
-const tempColour = v => {
-  if (v < -90) return '#000000';   // black
-  if (v < 0)   return '#2b83ba';   // deep blue
-  if (v < 5)   return '#66c2a5';   // light blue
-  if (v < 10)  return '#abdda4';   // teal
-  if (v < 15)  return '#e6f598';   // light green
-  if (v < 20)  return '#fee08b';   // yellow
-  if (v < 25)  return '#fdae61';   // orange
-  return '#d7191c';                // red (≥ 25 °C)
-};
-
-/* --- Ozone colour palette, based on WHO guidelines ------------- */
-const O3Colour = v => {
-  if (v < -90) return '#000000';   // black
-  if (v < 50)   return '#6dc201';  // IE green (Good)
-  if (v < 100)  return '#47bfff';   // IE light blue (Moderate)
-  if (v < 150)  return '#fee08b';   // yellow (Unhealthy)
-  if (v < 200)  return '#d7191c';   // red (Very unhealthy)
-  return '#800026';  // purple (Dangerous)
-}
-
-/* --- NOx colour palette, based on WHO guidelines ------------- */
-const NOxColour = v => {
-  if (v < -90) return '#000000';   // black
-  if (v < 10)   return '#6dc201';  // IE green (Good)
-  if (v < 20)  return '#47bfff';   // IE light blue (Moderate)
-  if (v < 30)  return '#fee08b';   // yellow (Unhealthy)
-  if (v < 40)  return '#d7191c';   // red (Very unhealthy)
-  return '#800026';  // purple (Dangerous)
-}
-
-/* --- pm10 colour palette, based on WHO guidelines ------------- */
-const pm10Colour = v => {
-  if (v < -90) return '#000000';   // black
-  if (v < 20)   return '#6dc201';  // IE green (Good)
-  if (v < 30)  return '#47bfff';   // IE light blue (Moderate)
-  if (v < 50)  return '#fee08b';   // yellow (Unhealthy)
-  if (v < 70)  return '#d7191c';   // red (Very unhealthy)
-  return '#800026';  // purple (Dangerous)
-}
-
-const METRIC_CFG = {
-  mortality_rate: {
-    label : 'Mortality (per 100 k)',
-    value : p => p.mortality_rate ?? -99,
-    colour: mortalityColour,
-    range : [2013, 2024],
-    description: [
-      '• WEEKLY all-cause deaths per 100 000 inhabitants.',
-      '• Source: Eurostat - "demo_r_mwk3_ts".',
-      '• Spatial resolution: NUTS-3 (district).',
-      '• Coverage: 2013 - 2024 (weekly).'
-    ],
-    url: 'https://doi.org/10.2908/DEMO_R_MWK3_TS',
-    colorbarStops: [[0, "#ffffcc"], [0.5, "#fd8d3c"], [1, "#800026"]],
-    colorbarMin: "0",
-    colorbarMax: "1500"
-  },
-
-  population_density: {
-    label : 'Population Density (km²)',
-    value : p => p.population_density ?? -99,
-    colour: populationDensityColour,
-    range : [2000, 2023],
-    description: [
-      '• Annual population per km² (mid-year stock).',
-      '• Source: Eurostat - "demo_r_d3dens".',
-      '• Spatial resolution: NUTS-3.',
-      '• Coverage: 2000 - 2023 (yearly).'
-    ],
-    url: 'https://doi.org/10.2908/DEMO_R_D3DENS',
-    colorbarStops: [[0, "#000066"], [0.33, "#47bfff"], [0.66, "#e6f598"], [1, "#6dc201"]],
-    colorbarMin: "0",
-    colorbarMax: "500"
-  },
-
-  temperature_era5: {
-    label : 'Temperature (°C)',
-    value : p => p.temperature_era5 ?? -99,
-    colour: tempColour,
-    range : [2000, 2025],
-    description: [
-      '• Mean 2-m air temperature from ERA5 reanalysis data.',
-      '• Source: Copernicus Climate Change Service (C3S), variable "2m_temperature".',
-      '• Spatial resolution: 0.25° (~30 km); sampled at region centroid.',
-      '• Coverage: 2000 - 2025 (hourly, averaged to weekly in this dash).'
-    ],
-    url: 'https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-land?tab=form',
-    colorbarStops: [[0, "#4575b4"], [0.5, "#fee090"], [1, "#d73027"]],
-    colorbarMin: "-5",
-    colorbarMax: "40"
-  },
-
-  temperature_rcp45: {
-    label : 'Temperature (°C)',
-    value : p => p.temperature_rcp45 ?? -99,
-    colour: tempColour, 
-    range : [2006, 2100],
-    description: [
-      '• Mean 2-m air temperature under medium-emission scenario RCP 4.5.',
-      '• Source: EURO-CORDEX / ESGF, variable "tas".',
-      '• Spatial resolution: 0.11° (~12 km); sampled at region centroid.',
-      '• Coverage: 2006 - 2100 (monthly, interpolated to daily in this dash).'
-    ],
-    url: 'https://cordex.org/data-access/cordex-cmip5-data/cordex-cmip5-esgf/',
-    colorbarStops: [[0, "#4575b4"], [0.5, "#fee090"], [1, "#d73027"]],
-    colorbarMin: "-5",
-    colorbarMax: "40"
-  },
-
-  temperature_rcp85: {
-    label : 'Temperature (°C)',
-    value : p => p.temperature_rcp85 ?? -99,
-    colour: tempColour,
-    range : [2006, 2100],
-    description: [
-      '• Mean 2-m air temperature under high-emission scenario RCP 8.5.',
-      '• Source: EURO-CORDEX / ESGF, variable "tas".',
-      '• Spatial resolution: 0.11° (~12 km); sampled at region centroid.',
-      '• Coverage: 2006 - 2100 (monthly, interpolated to weekly for the dashboard).'
-    ],
-    url: 'https://cordex.org/data-access/cordex-cmip5-data/cordex-cmip5-esgf/',
-    colorbarStops: [[0, "#4575b4"], [0.5, "#fee090"], [1, "#d73027"]],
-    colorbarMin: "-5",
-    colorbarMax: "40"
-  },
-
-  NOx: {
-    label : 'Nitrogen Oxides (µg/m³)',
-    value : p => p.NOx ?? -99,
-    colour: NOxColour,
-    range : [2000, 2025],
-    description: [
-      '• Weekly average NOx concentration in µg/m³.',
-      '• Source: European Air Quality Portal, by the European Environment Agency (EEA).',
-      '• Spatial resolution: stations spread across each region.',
-      '• Coverage: 2000 - 2025 (hourly, averaged to weekly for the dashboard).'
-    ],
-    url: 'https://aqportal.discomap.eea.europa.eu/download-data/',
-    colorbarStops: [[0, "#6dc201"], [0.25, "#47bfff"], [0.5, "#fee08b"], [0.75, "#d7191c"], [1, "#800026"]],
-    colorbarMin: "0",
-    colorbarMax: "50",
-  },
-
-  O3: {
-    label : 'Ozone (µg/m³)',
-    value : p => p.O3 ?? -99,
-    colour: O3Colour,
-    range : [2000, 2025],
-    description: [
-      '• Weekly average Ozone concentration in µg/m³.',
-      '• Source: European Air Quality Portal, by the European Environment Agency (EEA).',
-      '• Spatial resolution: stations spread across each region.',
-      '• Coverage: 2000 - 2025 (hourly, averaged to weekly for the dashboard).'
-    ],
-    url: 'https://aqportal.discomap.eea.europa.eu/download-data/',
-    colorbarStops: [[0, "#6dc201"], [0.25, "#47bfff"], [0.5, "#fee08b"], [0.75, "#d7191c"], [1, "#800026"]],
-    colorbarMin: "0",
-    colorbarMax: "200",
-  },
-
-  pm10: {
-    label : 'Particle Matter (µg/m³)',
-    value : p => p.pm10 ?? -99,
-    colour: pm10Colour,
-    range : [2000, 2025],
-    description: [
-      '• Weekly average pm10 concentration in µg/m³.',
-      '• Source: European Air Quality Portal, by the European Environment Agency (EEA).',
-      '• Spatial resolution: stations spread across each region.',
-      '• Coverage: 2000 - 2025 (hourly, averaged to weekly for the dashboard).'
-    ],
-    url: 'https://aqportal.discomap.eea.europa.eu/download-data/',
-    colorbarStops: [[0, "#6dc201"], [0.25, "#47bfff"], [0.5, "#fee08b"], [0.75, "#d7191c"], [1, "#800026"]],
-    colorbarMin: "0",
-    colorbarMax: "100",
-  }
-};
+/* ======================= IMPORTS ====================== */
+import { METRIC_CFG } from './config.js';
+import { drawTimeSeries } from './plot.js';
 
 /* ======================= INIT PARAMS ====================== */
 Chart.register(window.ChartZoom);   // make Chart.js aware of the plugin
@@ -270,7 +74,14 @@ function onEachFeature(feature, layer) {
 
       clickTimeout = setTimeout(() => {
         clickTimeout = null;
-      drawTimeSeries(p.NUTS_ID, p.name);
+        drawTimeSeries(
+          p.NUTS_ID,
+          p.name,
+          mainMetric,
+          compareMetric,
+          FLASK_CTX,
+          activeRange
+        );
       // Hold the region info to avoid flickering
       if (holdRegionProperties.NUTS_ID !== p.NUTS_ID) {
         holdRegionProperties.NUTS_ID = p.NUTS_ID;
@@ -346,6 +157,7 @@ function writeRegionProperties(feature) {
   popupLines.push(`<span style="font-size: smaller;">${p.year} ${weekStartEnd}<br></span>`);
   if (p.mortality_rate   != null) popupLines.push(`Mortality: ${p.mortality_rate} per 100 k`);
   if (p.population_density != null) popupLines.push(`Population Density: ${p.population_density} per km²`);
+  if (p.temperature_era5 != null) popupLines.push(`Temperature (ERA5): ${p.temperature_era5} °C`);
   if (p.temperature_rcp45 != null) popupLines.push(`Temperature (RCP 4.5): ${p.temperature_rcp45} °C`);
   if (p.temperature_rcp85 != null) popupLines.push(`Temperature (RCP 8.5): ${p.temperature_rcp85} °C`);
   if (p.NOx != null) popupLines.push(`Nitrogen Oxides (NOx): ${p.NOx} µg/m³`);
@@ -514,7 +326,14 @@ yearSlider.oninput = () => {
   updateWeekLabel();
   clearTimeout(debounce);
   debounce = setTimeout(() => loadGeoJSON(FLASK_CTX.mapID, yearSlider.value, weekSlider.value), 250);
-  drawTimeSeries(holdRegionProperties.NUTS_ID, holdRegionProperties.name);  // redraw TS for the new year
+  drawTimeSeries(
+    holdRegionProperties.NUTS_ID,
+    holdRegionProperties.name,
+    mainMetric,
+    compareMetric,
+    FLASK_CTX,
+    activeRange
+  );  // redraw TS for the new year
 };
 
 function getOrdinal(n) {
@@ -567,12 +386,26 @@ metricSelect.onchange = () => {
   loadGeoJSON(FLASK_CTX.mapID, yearSlider.value, weekSlider.value);
   updateMetricInfo(mainMetric);
   updateColorbar(mainMetric);
-  drawTimeSeries(holdRegionProperties.NUTS_ID, holdRegionProperties.name);  // redraw TS for the new metric
+  drawTimeSeries(
+    holdRegionProperties.NUTS_ID,
+    holdRegionProperties.name,
+    mainMetric,
+    compareMetric,
+    FLASK_CTX,
+    activeRange
+  ); // redraw TS for the new metric
 };
 
 compareSelect.onchange = () => {
   compareMetric = compareSelect.value || null;
-  drawTimeSeries(holdRegionProperties.NUTS_ID, holdRegionProperties.name);
+  drawTimeSeries(
+    holdRegionProperties.NUTS_ID,
+    holdRegionProperties.name,
+    mainMetric,
+    compareMetric,
+    FLASK_CTX,
+    activeRange
+  );
 };
 
 /* ----------Information panel ---------- */
@@ -593,7 +426,6 @@ function updateMetricInfo(metric) {
 }
 
 /* ---------- Time-series ---------- */
-let currentChart = null;
 
 // parse a range string like "10Y" or "5M" into an object
 function parseRange(r) {
@@ -610,157 +442,16 @@ rangeButtons.forEach(btn => {
     rangeButtons.forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
     activeRange = parseRange(btn.dataset.range);
-    drawTimeSeries(holdRegionProperties.NUTS_ID, holdRegionProperties.name);  // redraw TS for the new range
+    drawTimeSeries(
+      holdRegionProperties.NUTS_ID,
+      holdRegionProperties.name,
+      mainMetric,
+      compareMetric,
+      FLASK_CTX,
+      activeRange
+    );  // redraw TS for the new range
   };
 });
-
-// inject or replace the <canvas> inside #regionGraph
-function prepareCanvas() {
-  const holder = document.getElementById('regionGraph');
-  holder.innerHTML = '<canvas></canvas>';
-  return holder.querySelector('canvas').getContext('2d');
-}
-
-// actually render Chart.js with two Y-axes
-function renderDualAxisChart(labels, data1, data2, m1, m2, regionName) {
-  const ctx = prepareCanvas();
-  if (currentChart) currentChart.destroy();
-
-  const datasets = [{
-    label   : `${METRIC_CFG[m1].label} — ${regionName}`,
-    data    : data1,
-    yAxisID : 'yLeft',
-    borderColor: '#6dc201',
-    backgroundColor: '#6dc2014d',
-    fill  : true,
-    tension: 0.25,
-    pointRadius: 0,
-    pointHitRadius: 20
-  }];
-
-  if (m2) {
-    datasets.push({
-      label   : `${METRIC_CFG[m2].label} — ${regionName}`,
-      data    : data2,
-      yAxisID : 'yRight',
-      borderColor: '#000066',
-      fill: false,
-      // prevent grid lines from cluttering
-      grid: { drawOnChartArea: false }
-    });
-  }
-
-  // assume `activeRange` is in years
-  const curYear  = +yearSlider.value;
-  const curWeek  = +weekSlider.value;
-  const weekCount = 53;               // enough to cover any ISO week overlap
-
-  // flatten current position to a single number
-  const curIndex = curYear * weekCount + curWeek;
-  const delta    = activeRange * weekCount;
-
-  // precompute label-indices once
-  const labelIndices = labels.map(l => {
-    // l === "2023-W05"
-    const [yearStr, weekStr] = l.split('-W');
-    const y = +yearStr, w = +weekStr;
-    return y * weekCount + w;
-  });
-
-  // now find min/max positions
-  let minTarget = curIndex - delta;
-  let maxTarget = curIndex + delta;
-
-  // if the minTarget goes below the first label, we need to adjust the
-  // maxTarget to account for that difference
-  if (minTarget < labelIndices[0]) {
-    const diff = labelIndices[0] - minTarget;
-    // adjust maxTarget to keep the range size
-    maxTarget += diff;
-  }
-  // if the maxTarget goes above the last label, we need to adjust the
-  // minTarget to account for that difference
-  if (maxTarget > labelIndices.at(-1)) {
-    const diff = maxTarget - labelIndices.at(-1);
-    // adjust minTarget to keep the range size
-    minTarget -= diff;
-  }
-
-  const minLabel = labelIndices.findIndex(idx => idx >= minTarget);
-  const maxLabel = labelIndices.map((idx, i) => idx <= maxTarget ? i : -1)
-                              .filter(i => i >= 0).pop();
-
-  currentChart = new Chart(ctx, {
-    type: 'line',
-    data: { labels, datasets },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        x: {
-          ticks : { autoSkip: true, maxTicksLimit:12 },
-          min   : labels[minLabel],
-          max   : labels[maxLabel]
-        },
-        yLeft: {
-          beginAtZero:true,
-          type:'linear',
-          position:'left',
-          title:{ display:true, text: METRIC_CFG[m1].label }
-        },
-        // only show right axis if comparing
-        ...(m2 && {
-          yRight: {
-            beginAtZero:true,
-            type:'linear',
-            position:'right',
-            title:{ display:true, text: METRIC_CFG[m2].label }
-          }
-        })
-      },
-      plugins: {
-        zoom: {
-          limits: { x: {min: labels[0], max: labels.at(-1)} },
-          zoom: {
-            wheel   : { enabled:true },
-            mode    : 'x'
-          },
-          pan: {
-            enabled: true,   // allow panning
-            mode   : 'x'     // x-axis only
-          } 
-        }
-      }
-    }
-  });
-}
-
-// fetch both series in parallel, then render
-function drawTimeSeries(nutsId, regionName) {
-  // if the region is not selected, do nothing
-  if (!nutsId || nutsId === 'EU') {
-    document.getElementById('regionGraph').innerHTML = '<p>Click on a region to see the time-series.</p>';
-    return;
-  }
-
-  // build two fetches
-  const p1 = fetch(
-    `/api/data/ts?map_id=${FLASK_CTX.mapID}&metric=${mainMetric}&nuts_id=${nutsId}`
-  ).then(r=>r.json());
-
-  const p2 = compareMetric
-    ? fetch(
-        `/api/data/ts?map_id=${FLASK_CTX.mapID}&metric=${compareMetric}&nuts_id=${nutsId}`
-      ).then(r=>r.json())
-    : Promise.resolve({ data: [] });
-
-  Promise.all([p1, p2]).then(([res1, res2]) => {
-    const labels = res1.data.map(d => `${d.year}-W${String(d.week).padStart(2,'0')}`);
-    const data1  = res1.data.map(d => d.value);
-    const data2  = res2.data.map(d => d.value);
-    renderDualAxisChart(labels, data1, data2, mainMetric, compareMetric, regionName);
-  }).catch(console.error);
-}
 
 /* --- Download data button --- */
 document.getElementById('downloadData').addEventListener('click', () => {
@@ -768,6 +459,24 @@ document.getElementById('downloadData').addEventListener('click', () => {
   const metric2 = compareMetric || 'none';  // if no comparison, use 'none'
   const nutsID = holdRegionProperties.NUTS_ID || 'none';  // use selected region or 'EU' if none
   const url = `/api/data/download?map_id=${FLASK_CTX.mapID}&nuts_id=${nutsID}&metric=${metric1}&metric2=${metric2}`;
+  window.open(url, '_blank');
+});
+
+/* --- Generate RR curve button --- */
+document.getElementById('generateRR').addEventListener('click', () => {
+  const nutsID = holdRegionProperties.NUTS_ID || 'none';  // use selected region or 'EU' if none
+  if (nutsID === 'none') {
+    alert('Please select a region to generate the RR curve.');
+    return;
+  }
+  const metric1 = mainMetric;
+  const metric2 = compareMetric || metric1;  // if no comparison, use 'none'
+  // If metrics are the same, we do not generate RR curve
+  if (metric1 === metric2) {
+    alert('Cannot generate RR curve. Please select a secondary metric different than the main metric.');
+    return;
+  }
+  const url = `/api/data/rr_curve?map_id=${FLASK_CTX.mapID}&nuts_id=${nutsID}&metric=${metric1}&metric2=${metric2}`;
   window.open(url, '_blank');
 });
 

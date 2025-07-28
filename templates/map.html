@@ -93,6 +93,8 @@
             <button data-range="10Y">10Y</button>
             <!-- Download data button. It downloads the data displayed in the graph -->
             <button id="downloadData">Download Data</button>
+            <!-- Generate RR button. It plots the RR curve when pressed -->
+            <button id="generateRR">Generate RR Curve</button>
           </div>
         </details>
 
@@ -157,6 +159,6 @@
   </script>
 
   <!-- Application logic -->
-  <script src="{{ url_for('static', filename='map.js') }}"></script>
+  <script type="module" src="{{ url_for('static', filename='map.js') }}"></script>
 </body>
 </html>
