@@ -19,7 +19,7 @@ It is hosted on [Python Anywhere](https://ixlabs-daniprec.pythonanywhere.com/) f
 - [About](#about)
 - [Features](#features)
 - [Project Structure](#project-structure)
-- [How to Build](#how-to-build)
+- [Quick‑Start Guide](#quick-start-quide)
 - [How to Download Data](#how-to-download-data)
 - [License](#license)
 - [Contacts](#contacts)
@@ -52,33 +52,67 @@ This project provides an interactive dashboard using **Flask** and **Folium** to
 └── README.md
 ```
 
-## How to Build
+## Quick‑Start Guide
 
-Clone the repo and install dependencies:
+### 1 . Clone the repository
 
 ```bash
+git clone https://github.com/daniprec/Climate-Change-Effect-on-Europe.git
+cd Climate-Change-Effect-on-Europe
+```
+
+### 2 . Choose which dependencies to install
+
+| Scenario                                   | File to install        | Typical use           |
+| ------------------------------------------ | ---------------------- | --------------------- |
+| **Run the web app only**                   | `requirements.txt`     | PythonAnywhere / prod |
+| **Do data prep, notebooks, model fitting** | `requirements‑dev.txt` | Local dev / CI        |
+
+```bash
+# minimal runtime stack
 pip install -r requirements.txt
+
+# OR full analytics stack
+pip install -r requirements‑dev.txt
 ```
 
-In case you need to process the data, you will need the full dependencies. Run this command instead:
+### 3 . Install the project package itself
 
-```bash
-pip install -r requirements-dev.txt
-```
-
-Next, install this repository (library name `ccee`):
+This makes the `ccee` library importable:
 
 ```bash
 pip install .
 ```
 
-Start the Flask server:
+*(Editable mode for active development)*
+
+```bash
+pip install -e .
+```
+
+### 4 . Launch the Flask server
 
 ```bash
 python app.py
 ```
 
-Then open your browser at [http://127.0.0.1:5000/](http://127.0.0.1:5000/) to begin exploring the map.
+Open your browser at [http://127.0.0.1:5000/](http://127.0.0.1:5000/) to explore the interactive map.
+
+---
+
+**Tips**
+
+* If you work in a virtual‑env, create and activate it **before** step 2.
+
+  ```bash
+  python -m venv .venv && source .venv/bin/activate
+  ```
+* For hot‑reload during development, set `FLASK_ENV=development` or run
+
+  ```bash
+  flask --app app run --debug
+  ```
+* On PythonAnywhere deploy only `requirements.txt` to keep the footprint small; use `requirements‑dev.txt` locally for notebooks and batch jobs.
 
 ## How to Download Data
 
