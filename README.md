@@ -60,6 +60,18 @@ Clone the repo and install dependencies:
 pip install -r requirements.txt
 ```
 
+In case you need to process the data, you will need the full dependencies. Run this command instead:
+
+```bash
+pip install -r requirements-dev.txt
+```
+
+Next, install this repository (library name `ccee`):
+
+```bash
+pip install .
+```
+
 Start the Flask server:
 
 ```bash
