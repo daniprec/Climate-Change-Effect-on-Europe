@@ -6,7 +6,9 @@ import pandas as pd
 
 from ccee.cordex import cordex_tas_to_dataframe_per_region
 from ccee.eea import download_and_process_eea_air_quality
+from ccee.era5 import download_era5_land_reanalysis
 from ccee.eurostat import (
+    compute_population_from_density,
     download_eurostat_mortality,
     download_eurostat_nuts2_population,
     download_eurostat_nuts3_population,
@@ -29,6 +31,7 @@ def main(path_data: str = "./data", path_geojson: str = "./data/regions.geojson"
     df_popdensity = download_eurostat_population_density(ls_ids=ls_ids)
     df_pop3 = download_eurostat_nuts3_population()
     df_pop2 = download_eurostat_nuts2_population()
+    df_era5 = download_era5_land_reanalysis()
 
     # First we stack both population dataframes, so we have one for NUTS-3 and one for NUTS-2
     df_pop = pd.concat([df_pop2, df_pop3], ignore_index=True)
@@ -38,6 +41,12 @@ def main(path_data: str = "./data", path_geojson: str = "./data/regions.geojson"
     # Merge all of them by NUTS_ID and year
     df = df_demomwk.merge(df_popdensity, on=["NUTS_ID", "year"], how="outer")
     df = df.merge(df_pop, on=["NUTS_ID", "year"], how="outer")
+    df = df.merge(df_era5, on=["NUTS_ID", "year", "week"], how="outer")
+    # Rename the temperature column to avoid confusion
+    df.rename(columns={"temperature": "temperature_era5"}, inplace=True)
+
+    # Compute the population from the density
+    df = compute_population_from_density(df, path_geojson=path_geojson)
 
     # Use the mortality and population to calculate the mortality rate
     df["mortality_rate"] = 100000 * df["mortality"] / df["population"]

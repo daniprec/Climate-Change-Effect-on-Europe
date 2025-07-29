@@ -124,9 +124,9 @@ def plot_eurocordex_data(
 
 def cordex_tas_to_dataframe_per_region(
     path_geojson: str = "./data/regions.geojson",
-    fin: str = "../data",
+    fin: str = "./data",
     year: int = 2025,
-    week_label: str = "W-MON",  # choose "W-MON", "W-SUN"…
+    week_label: str = "W-SUN",  # choose "W-MON", "W-SUN"…
     rcp: int = 85,  # Representative Concentration Pathway (RCP) scenario
 ):
     """
@@ -143,27 +143,25 @@ def cordex_tas_to_dataframe_per_region(
     year : int
         Year to open from the CORDEX archive.
     week_label : str
-        Pandas/xarray resample code (default 'W-MON' = ISO weeks ending Monday).
+        Pandas/xarray resample code (default 'W-SUN' = ISO weeks ending Sunday).
     """
     # ------------------------------------------------------------------ #
-    # 1.  Region centroids
+    # Region centroids
     # ------------------------------------------------------------------ #
     gdf = gpd.read_file(path_geojson).set_crs(4326)
-
-    centroids = gdf.to_crs(3035).geometry.centroid.to_crs(
-        4326
-    )  # metric CRS for a trustworthy centroid
+    # metric CRS for a trustworthy centroid
+    centroids = gdf.to_crs(3035).geometry.centroid.to_crs(4326)
     gdf["lon"] = centroids.x
     gdf["lat"] = centroids.y
 
     # ------------------------------------------------------------------ #
-    # 2.  Load CORDEX tas  (monthly)  -> °C
+    # Load CORDEX tas  (monthly)  -> °C
     # ------------------------------------------------------------------ #
     cor = load_eurocordex_data(fin=fin, year=year, rcp=rcp)  # user-supplied loader
     tas = cor["tas"] - 273.15  # Kelvin -> Celsius
 
     # ------------------------------------------------------------------ #
-    # 3.  Transform lon/lat -> rotated-pole grid coords
+    # Transform lon/lat -> rotated-pole grid coords
     # ------------------------------------------------------------------ #
     tfm = Transformer.from_crs(
         CRS.from_epsg(4326),
@@ -173,7 +171,7 @@ def cordex_tas_to_dataframe_per_region(
     rlon, rlat = tfm.transform(gdf["lon"].values, gdf["lat"].values)
 
     # ------------------------------------------------------------------ #
-    # 4.  Sample tas at each centroid  (dims: point × time)
+    # Sample tas at each centroid  (dims: point × time)
     # ------------------------------------------------------------------ #
     samp = tas.interp(
         rlon=xr.DataArray(rlon, dims="point"),
@@ -182,7 +180,7 @@ def cordex_tas_to_dataframe_per_region(
     ).transpose("point", "time")
 
     # ------------------------------------------------------------------ #
-    # 5.  MONTHLY -> DAILY (linear) -> WEEKLY (mean)
+    # MONTHLY -> DAILY (linear) -> WEEKLY (mean)
     # ------------------------------------------------------------------ #
     # build a full daily index spanning the monthly series
     # We grab the first day of the first year and the last day of the last year
@@ -199,7 +197,7 @@ def cordex_tas_to_dataframe_per_region(
     samp_week = samp_daily.resample(time=week_label).mean()  # weekly mean
 
     # ------------------------------------------------------------------ #
-    # 6.  Long-format DataFrame
+    # Long-format DataFrame
     # ------------------------------------------------------------------ #
     df_long = (
         samp_week.to_dataframe(name="temperature")  # point | time | temperature

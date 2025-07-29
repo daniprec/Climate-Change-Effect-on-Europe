@@ -1,4 +1,5 @@
 *.grib
+*.idx
 *.nc
 *.pyc
 *.tif

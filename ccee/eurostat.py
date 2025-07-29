@@ -1,5 +1,6 @@
 import os
 
+import geopandas as gpd
 import pandas as pd
 import requests
 
@@ -211,3 +212,48 @@ def download_eurostat_nuts3_population(
     df_pop["year"] = df_pop["year"].astype(int)
 
     return df_pop
+
+
+def compute_population_from_density(
+    df: pd.DataFrame, path_geojson: str = "./data/regions.geojson"
+) -> pd.DataFrame:
+    """
+    Compute the population from the population density and area of each NUTS region.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame with columns "NUTS_ID", "population_density", and "population".
+    path_geojson : str
+        Path to a GeoJSON file containing NUTS regions with their geometries.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with the population computed from the density and area.
+    """
+    # Load a NUTS boundary layer
+    nuts = gpd.read_file(path_geojson)  # contains all NUTS levels
+    nuts = nuts[["NUTS_ID", "geometry"]]  # keep what we need
+
+    # Compute each region's area in km2
+    # Use an equal‑area projection for Europe (EPSG:3035 = ETRS‑LAEA).
+    nuts = nuts.to_crs(3035)
+    nuts["area_km2"] = nuts.geometry.area / 1_000_000  # m2 -> km2
+    nuts = nuts[["NUTS_ID", "area_km2"]]
+
+    # Merge the areas into our DataFrame
+    df = df.merge(nuts, on="NUTS_ID", how="left")
+
+    # Compute population
+    population = (df["population_density"] * df["area_km2"]).astype(
+        int, errors="ignore"
+    )
+
+    # Fill "population" when missing
+    df["population"].fillna(population, inplace=True)
+
+    # Drop the "area_km2" column as it's no longer needed
+    df.drop(columns=["area_km2"], inplace=True)
+
+    return df

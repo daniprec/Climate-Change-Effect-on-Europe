@@ -19,7 +19,7 @@ It is hosted on [Python Anywhere](https://ixlabs-daniprec.pythonanywhere.com/) f
 - [About](#about)
 - [Features](#features)
 - [Project Structure](#project-structure)
-- [How to Build](#how-to-build)
+- [Quick‑Start Guide](#quick-start-quide)
 - [How to Download Data](#how-to-download-data)
 - [License](#license)
 - [Contacts](#contacts)
@@ -52,21 +52,67 @@ This project provides an interactive dashboard using **Flask** and **Folium** to
 └── README.md
 ```
 
-## How to Build
+## Quick‑Start Guide
 
-Clone the repo and install dependencies:
+### 1 . Clone the repository
 
 ```bash
-pip install -r requirements.txt
+git clone https://github.com/daniprec/Climate-Change-Effect-on-Europe.git
+cd Climate-Change-Effect-on-Europe
 ```
 
-Start the Flask server:
+### 2 . Choose which dependencies to install
+
+| Scenario                                   | File to install        | Typical use           |
+| ------------------------------------------ | ---------------------- | --------------------- |
+| **Run the web app only**                   | `requirements.txt`     | PythonAnywhere / prod |
+| **Do data prep, notebooks, model fitting** | `requirements‑dev.txt` | Local dev / CI        |
+
+```bash
+# minimal runtime stack
+pip install -r requirements.txt
+
+# OR full analytics stack
+pip install -r requirements‑dev.txt
+```
+
+### 3 . Install the project package itself
+
+This makes the `ccee` library importable:
+
+```bash
+pip install .
+```
+
+*(Editable mode for active development)*
+
+```bash
+pip install -e .
+```
+
+### 4 . Launch the Flask server
 
 ```bash
 python app.py
 ```
 
-Then open your browser at [http://127.0.0.1:5000/](http://127.0.0.1:5000/) to begin exploring the map.
+Open your browser at [http://127.0.0.1:5000/](http://127.0.0.1:5000/) to explore the interactive map.
+
+---
+
+**Tips**
+
+* If you work in a virtual‑env, create and activate it **before** step 2.
+
+  ```bash
+  python -m venv .venv && source .venv/bin/activate
+  ```
+* For hot‑reload during development, set `FLASK_ENV=development` or run
+
+  ```bash
+  flask --app app run --debug
+  ```
+* On PythonAnywhere deploy only `requirements.txt` to keep the footprint small; use `requirements‑dev.txt` locally for notebooks and batch jobs.
 
 ## How to Download Data
 
@@ -115,6 +161,23 @@ Make sure you store the data inside the `data/rcp45` and `data/rcp85` directorie
 - `temperature_rcp45`: Near-surface air temperature (in Celsius) for RCP 4.5 scenario.
 - `temperature_rcp85`: Near-surface air temperature (in Celsius) for RCP 8.5 scenario.
 
+### ERA5 - Land Reanalysis Data
+
+Source: [Copernicus Climate Data Store](https://cds.climate.copernicus.eu/datasets/reanalysis-era5-land?tab=overview)
+
+[How to **authorize** the execution of the Python code on Windows?](https://cds.climate.copernicus.eu/how-to-api) (only once)
+
+- If you do not have an account, please register on the CDS registration page.
+- Log in.
+- Copy the code with your personal key into the file "USER/.cdsapirc" (in Windows environment)
+  > The file starting with a dot can be created using Notepad: File > Save as > Type: All files > File name: .cdsfapirc
+
+Once you have completed the steps above, the ERA5 data can be downloaded using the functions inside `ccee/era5.py`.
+
+**Variables**:
+
+- `temperature`: Hourly near-surface air temperature data from ERA5-Land, in degrees Celsius.
+
 ### Eurostat - Population and Mortality
 
 Source: [Eurostat](https://ec.europa.eu/eurostat/web/health/database)
@@ -123,8 +186,10 @@ The Eurostat data can be downloaded directly from the website. Use the functions
 
 **Variables:**
 
-- `population_density`: Yearly population density data. People per square kilometer.
-- `mortality_rate`: Weekly mortality rate per 100,000 inhabitants.
+- `population_density`: Yearly population density data. People per square kilometer. Eurostat ID: "demo_r_d3dens". Coverage: 2000 - today.
+- `population`: Yearly population data. Eurostat IDs: "tps00001" (country level, NUTS-2), "demo_r_pjanaggr3" (region level, NUTS-3). Coverage: 2014 - today. When not covered, we estimate it from the `population_density` and the country area.
+- `mortality`: Weekly number of total deaths by any cause. Eurostat ID: "demo_r_mwk3_t". Coverage: 2000 - today.
+- `mortality_rate`: Weekly mortality rate per 100,000 inhabitants. This value is derived from `mortality` and `population`.
 
 ### European Environment Agency (EEA)
 
