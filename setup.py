@@ -17,7 +17,7 @@ def read_requirements():
 
 setup(
     name="Climate-Change-Effect-on-Europe",
-    version="0.3.3",
+    version="0.4.0",
     author="Daniel Precioso",
     author_email="daniel.precioso@ie.edu",
     description="Interactive climate data visualization dashboard using Flask and Folium",
