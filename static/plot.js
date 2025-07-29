@@ -181,10 +181,11 @@ function renderRRCurve(json) {
   const label   = json.label;
   const units   = json.units;
 
+  const points = x_grid.map((t, i) => ({ x: t, y: rr[i] }));
   const datasets = [
     {
       label: 'Relative Risk',
-      data : rr,
+      data : points,
       borderColor: COLORS.line,
       tension: 0.25,
       pointRadius: 0,
@@ -200,14 +201,18 @@ function renderRRCurve(json) {
       maintainAspectRatio: false,
       scales: {
         x: {
+          type: 'linear',
           title: { display: true, text: `${label} (${units})`, color: COLORS.axis },
-          ticks: { autoSkip: true, maxTicksLimit: 10 }
-        },
+          ticks: {
+            stepSize: 5,
+            callback(v) { return v; }
+          }
+        },      
         y: {
           title: { display: true, text: 'Relative Risk', color: COLORS.axis },
           beginAtZero: false,
           grid: { color: 'rgba(0,0,0,.1)' }
-        }
+        }        
       },
       plugins: {
         legend: { display: false },
