@@ -193,7 +193,10 @@ function renderRRCurve(json) {
     }
   ];
 
-   currentRRCurve = new Chart(ctx, {
+  const xMin = json.x_grid[0];
+  const xMax = json.x_grid.at(-1);
+
+  currentRRCurve = new Chart(ctx, {
     type: 'line',
     data: { labels: x_grid, datasets },
     options: {
@@ -202,9 +205,12 @@ function renderRRCurve(json) {
       scales: {
         x: {
           type: 'linear',
+          min : xMin,
+          max : xMax,
           title: { display: true, text: `${label} (${units})`, color: COLORS.axis },
           ticks: {
-            callback(v) { return v; }
+            // keep integer labels only
+            callback(v) { return Number.isInteger(v) ? v : '' }
           }
         },      
         y: {
