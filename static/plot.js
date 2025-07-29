@@ -178,38 +178,14 @@ function renderRRCurve(json) {
   // Extract the values from the JSON response
   const x_grid = json.x_grid;
   const rr = json.rr;
-  const rr_low = json.rr_low;
-  const rr_high = json.rr_high;
   const label   = json.label;
   const units   = json.units;
 
-  /* We create three datasets:
-     0 = lower bound  (invisible)
-     1 = upper bound  (invisible, fills to previous to make ribbon)
-     2 = RR line
-  */
   const datasets = [
-    {
-      label: 'CI 95% lower',
-      data : rr_low,
-      borderColor: 'rgba(0,0,0,0)',
-      backgroundColor: COLORS.shade,
-      fill : '+1',      // fill to the *next* dataset (index 1)
-      pointRadius: 0
-    },
-    {
-      label: 'CI 95 % upper',
-      data : rr_high,
-      borderColor: 'rgba(0,0,0,0)',
-      backgroundColor: COLORS.shade,
-      fill : '-1',      // fill back to previous dataset (index 0)
-      pointRadius: 0
-    },
     {
       label: 'Relative Risk',
       data : rr,
       borderColor: COLORS.line,
-      backgroundColor: COLORS.line,
       tension: 0.25,
       pointRadius: 0,
       fill: false

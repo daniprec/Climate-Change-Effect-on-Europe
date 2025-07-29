@@ -358,24 +358,18 @@ def plot_rr_curve(
     )
     x_grid = dict_curve["x_grid"]
     rr = dict_curve["rr"]
-    rr_low = dict_curve["rr_low"]
-    rr_high = dict_curve["rr_high"]
     ref_value = dict_curve["ref_value"]
     label = dict_curve["label"]
     units = dict_curve["units"]
 
     fig = plt.figure(figsize=(7, 4))
     axs = fig.add_subplot(111)
-    axs.plot(x_grid, rr, color="darkred", lw=2, label="Marginal RR")
-    axs.fill_between(
-        x_grid, rr_low, rr_high, color="darkred", alpha=0.25, label="95% CI"
-    )
+    axs.plot(x_grid, rr, color="darkred", lw=2)
     axs.axhline(1.0, ls="--", color="gray")
     axs.set_xlabel(f"{label} ({units})")
     axs.set_ylabel("Relative Risk (RR)")
     axs.set_title(f"Marginal RR vs {label} (ref = {ref_value:.1f} {units})")
     axs.grid(True, ls=":", lw=0.5)
-    axs.legend()
     fig.tight_layout()
     return fig, axs
 
