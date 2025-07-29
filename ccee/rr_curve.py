@@ -234,6 +234,11 @@ def generate_rr_curve(
     """
     # Build X grid & basis
     x_grid = np.linspace(*xrange, n_grid)
+    # Round the grid to the nearest 0.1 to avoid numerical issues
+    x_grid = np.round(x_grid, 1)
+    # Remove duplicates
+    x_grid = np.unique(x_grid)
+    # Build the spline basis for the grid
     Zg = dmatrix(spline_spec["formula"], {"x": x_grid}, return_type="dataframe")
     n_x = Zg.shape[1]
 
