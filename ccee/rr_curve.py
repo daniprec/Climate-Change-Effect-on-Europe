@@ -184,7 +184,7 @@ def generate_rr_curve(
     xrange: tuple,
     max_lag: int,
     ref_value: float | None = None,
-    n_grid: int = 100,
+    precision: float = 0.1,
 ) -> dict:
     """
     Generate the overall (lag-integrated) X-risk curve derived from a
@@ -209,8 +209,8 @@ def generate_rr_curve(
     ref_value : float or None, default None
         X value at which RR = 1.  If None, the X with minimum estimated RR on
         the grid is used.
-    n_grid : int, default 100
-        Number of equally spaced X points for the plot.
+    precision : float, default 0.1
+        Step size for the X grid, by default 0.1.
 
     Returns
     -------
@@ -233,12 +233,7 @@ def generate_rr_curve(
     Medicine, 29(21), 2224-2234. https://doi.org/10.1002/sim.3940
     """
     # Build X grid & basis
-    x_grid = np.linspace(*xrange, n_grid)
-    # Round the grid to the nearest 0.1 to avoid numerical issues
-    x_grid = np.round(x_grid, 1)
-    # Remove duplicates
-    x_grid = np.unique(x_grid)
-    # Build the spline basis for the grid
+    x_grid = np.arange(xrange[0], xrange[1] + precision, precision)
     Zg = dmatrix(spline_spec["formula"], {"x": x_grid}, return_type="dataframe")
     n_x = Zg.shape[1]
 
@@ -304,7 +299,7 @@ def plot_rr_curve(
     xrange: tuple,
     max_lag: int,
     ref_value: float | None = None,
-    n_grid: int = 100,
+    precision: float = 0.1,
 ) -> Tuple[plt.Figure, plt.Axes]:
     """
     Plot the overall (lag-integrated) X-risk curve derived from a
@@ -329,8 +324,8 @@ def plot_rr_curve(
     ref_value : float or None, default None
         X value at which RR = 1.  If None, the X with minimum estimated RR on
         the grid is used.
-    n_grid : int, default 100
-        Number of equally spaced X points for the plot.
+    precision : float, default 0.1
+        Step size for the X grid, by default 0.1.
 
     Returns
     -------
@@ -359,7 +354,7 @@ def plot_rr_curve(
         xrange=xrange,
         max_lag=max_lag,
         ref_value=ref_value,
-        n_grid=n_grid,
+        precision=precision,
     )
     x_grid = dict_curve["x_grid"]
     rr = dict_curve["rr"]
