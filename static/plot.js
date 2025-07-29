@@ -204,7 +204,6 @@ function renderRRCurve(json) {
           type: 'linear',
           title: { display: true, text: `${label} (${units})`, color: COLORS.axis },
           ticks: {
-            stepSize: 5,
             callback(v) { return v; }
           }
         },      
