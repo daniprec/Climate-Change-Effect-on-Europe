@@ -180,25 +180,21 @@ def cordex_tas_to_dataframe_per_region(
     ).transpose("point", "time")
 
     # ------------------------------------------------------------------ #
-    # MONTHLY -> DAILY (linear) -> WEEKLY (mean)
+    # MONTHLY -> WEEKLY (linear interpolation)
     # ------------------------------------------------------------------ #
-    # build a full daily index spanning the monthly series
-    # We grab the first day of the first year and the last day of the last year
-    # to ensure we cover the entire range of the time series.
+    # Build a full weekly index spanning the time series
     start_year = pd.to_datetime(tas.time.values[0]).replace(day=1, month=1, hour=0)
     end_year = pd.to_datetime(tas.time.values[-1]).replace(day=31, month=12, hour=23)
-    daily_index = pd.date_range(
+    weekly_index = pd.date_range(
         start=start_year,
         end=end_year,
-        freq="1D",
+        freq=week_label,
     )
 
-    samp_daily = samp.interp(time=daily_index)  # linear time interp
-    samp_week = samp_daily.resample(time=week_label).mean()  # weekly mean
+    # Interpolate to weekly timestamps
+    samp_week = samp.interp(time=weekly_index)
 
-    # ------------------------------------------------------------------ #
     # Long-format DataFrame
-    # ------------------------------------------------------------------ #
     df_long = (
         samp_week.to_dataframe(name="temperature")  # point | time | temperature
         .reset_index()
@@ -213,4 +209,8 @@ def cordex_tas_to_dataframe_per_region(
     df_long["year"] = iso.year
     df_long["week"] = iso.week
 
-    return df_long[["NUTS_ID", "year", "week", "temperature"]]
+    # Since we have only one value per week, all percentiles are the same (use median)
+    df_long = df_long.rename(columns={"temperature": f"temp_rcp{rcp}"})
+
+    # Output wide format (one value per week)
+    return df_long[["NUTS_ID", "year", "week", f"temp_rcp{rcp}"]]

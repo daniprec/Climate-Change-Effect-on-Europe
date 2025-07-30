@@ -42,8 +42,6 @@ def main(path_data: str = "./data", path_geojson: str = "./data/regions.geojson"
     df = df_demomwk.merge(df_popdensity, on=["NUTS_ID", "year"], how="outer")
     df = df.merge(df_pop, on=["NUTS_ID", "year"], how="outer")
     df = df.merge(df_era5, on=["NUTS_ID", "year", "week"], how="outer")
-    # Rename the temperature column to avoid confusion
-    df.rename(columns={"temperature": "temperature_era5"}, inplace=True)
 
     # Compute the population from the density
     df = compute_population_from_density(df, path_geojson=path_geojson)
@@ -68,9 +66,6 @@ def main(path_data: str = "./data", path_geojson: str = "./data/regions.geojson"
         df["temperature"] = df.groupby("NUTS_ID")["temperature"].transform(
             lambda x: x.interpolate(method="linear", limit=3, limit_direction="both")
         )
-
-        # Rename "temperature" to avoid confusion
-        df.rename(columns={"temperature": f"temperature_rcp{rcp}"}, inplace=True)
 
     # Drop any year after 2100, as we only consider the 21st century
     df = df[df["year"] <= 2100].copy()
