@@ -133,7 +133,7 @@ def download_era5_single_year_month(
     era5_file = download_era5_file(
         year=year, month=month, folder=fin, data_format="grib"
     )
-    era5 = xr.open_dataset(era5_file, engine="cfgrib")
+    era5 = xr.open_dataset(era5_file, engine="cfgrib", decode_timedelta=True)
     temp = era5["t2m"]
 
     # Coordinates:
@@ -153,18 +153,28 @@ def download_era5_single_year_month(
     ).transpose("point", "time", "step")
 
     # ------------------------------------------------------------------ #
-    # HOURLY -> DAILY -> WEEKLY (mean)
+    # HOURLY -> WEEKLY (percentiles 5, 50, 95)
     # ------------------------------------------------------------------ #
-    # Average through the day (average all "step")
-    samp_day = samp.mean(dim="step", skipna=True)
-    # Resample to weekly means, using the specified week label
-    samp_week = samp_day.resample(time=week_label).mean(skipna=True)
+    # Stack "time" and "step" into a single datetime dimension
+    samp_stacked = samp.stack(datetime=("time", "step"))
 
-    # ------------------------------------------------------------------ #
-    # Long-format DataFrame
-    # ------------------------------------------------------------------ #
+    # Convert the stacked index to actual datetimes
+    new_datetime = pd.to_datetime(samp_stacked["time"].values) + pd.to_timedelta(
+        samp_stacked["step"].values, unit="h"
+    )
+    samp_stacked = samp_stacked.drop_vars(["time", "step"]).assign_coords(
+        datetime=new_datetime
+    )
+
+    # Now resample the "datetime" dimension to weekly and compute quantiles
+    samp_week = samp_stacked.resample(datetime=week_label).quantile(
+        q=[0.05, 0.5, 0.95], dim="datetime", skipna=True
+    )
+
+    # Transform to long format DataFrame
     df_long = (
-        samp_week.to_dataframe(name="temperature")  # point | time | temperature
+        samp_week.to_dataframe(name="temperature")
+        # point | datetime | quantile | temperature
         .reset_index()
         .merge(
             gdf[["NUTS_ID"]].reset_index().rename(columns={"index": "point"}),
@@ -173,14 +183,39 @@ def download_era5_single_year_month(
         )
     )
 
-    iso = df_long["time"].dt.isocalendar()  # ISO year/week/day
+    iso = df_long["datetime"].dt.isocalendar()  # ISO year/week/day
     df_long["year"] = iso.year
     df_long["week"] = iso.week
+
+    # Pivot to wide format: one column per quantile
+    df_wide = df_long.pivot_table(
+        index=["NUTS_ID", "year", "week"],
+        columns="quantile",
+        values="temperature",
+    ).reset_index()
+
+    # Rename quantile columns
+    df_wide = df_wide.rename(
+        columns={
+            0.05: "temp_era5_q05",
+            0.50: "temp_era5_q50",
+            0.95: "temp_era5_q95",
+        }
+    )
 
     # We can now close the xarray dataset to free resources
     era5.close()
 
-    return df_long[["NUTS_ID", "year", "week", "temperature"]]
+    return df_wide[
+        [
+            "NUTS_ID",
+            "year",
+            "week",
+            "temp_era5_q05",
+            "temp_era5_q50",
+            "temp_era5_q95",
+        ]
+    ]
 
 
 def download_era5_land_reanalysis(
@@ -190,7 +225,8 @@ def download_era5_land_reanalysis(
     year_max: int | None = None,
     week_label: str = "W-SUN",  # choose "W-MON", "W-SUN"…
 ) -> pd.DataFrame:
-    """Download ERA5-Land reanalysis data for multiple years and return a DataFrame. This function has to perform a for loop over each year and month,
+    """Download ERA5-Land reanalysis data for multiple years and return a DataFrame.
+    This function has to perform a for loop over each year and month,
     as the CDS API does not support downloading multiple months or years in a single request.
 
     Parameters
