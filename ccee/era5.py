@@ -215,7 +215,7 @@ def download_era5_single_year_month(
             "temp_era5_q50",
             "temp_era5_q95",
         ]
-    ]
+    ].reset_index(drop=True)
 
 
 def download_era5_land_reanalysis(
