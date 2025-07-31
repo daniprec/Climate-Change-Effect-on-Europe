@@ -10,44 +10,50 @@ application.
 
 ```mermaid
 flowchart TD
-    %% 1 ▸ Extraction %%
+
+    %% 1 ▸ Extraction scripts / API calls %%
     subgraph Extract
-        ERA5_TEMP["ERA5-Land temperature<br>(hourly, 0.25 deg)"]
-        EUROSTAT_MORT["Eurostat weekly mortality<br>(NUTS-3)"]
-        EEA_AQ["EEA air-quality<br>(PM₂.₅, NO₂, O₃)"]
-        POP_DENS["Eurostat population-density<br>(NUTS-3)"]
+        ERA5_DL["era5.py<br>downloads monthly *.nc"]
+        CORDEX_DL["wget.sh<br>(CORDEX *.nc)"]
+        EUROSTAT_API["eurostat.py<br>(direct API)"]
+        EEA_API["eea.py<br>(direct API)"]
     end
 
-    %% 2 ▸ Raw storage %%
-    subgraph DataDir
-        RAWDIR["data/star/raw files"]
+    %% 2 ▸ Raw storage on disk %%
+    subgraph Raw Data
+        ERA5_DIR["data/era5_land<br>(hourly .nc)"]
+        CORDEX_DIR["data/rcp45  /  data/rcp85<br>(monthly .nc)"]
     end
 
-    %% 3 ▸ Transform %%
+    %% 3 ▸ Transformation %%
     subgraph Transform
-        REGRID["Re-grid / aggregate<br>ERA5 → weekly q05-q50-q95"]
-        JOIN["Join with population<br>→ mortality rates"]
-        QC["Quality control<br>& completeness checks"]
+        BUILD_CSV["build_csv.py<br>+ era5.py / cordex.py / eurostat.py / eea.py"]
+        CSV_TABLES["europe.csv & austria.csv<br>(weekly q05 · q50 · q95,<br>mortality, population)"]
     end
 
     %% 4 ▸ Modelling %%
     subgraph Model
-        DLNM["Fit DLNM & derive<br>Relative-Risk curves"]
+        DLNM["DLNM fitting<br>(Relative-Risk curves)"]
         FORECAST["Scenario projections<br>(SSP2-4.5 / SSP5-8.5)"]
     end
 
     %% 5 ▸ Serving %%
     subgraph Serve
-        CACHE["data/processed/star"]
         API["Flask REST API"]
-        MAP["Interactive dashboard"]
+        DASH["Interactive dashboard"]
     end
 
-    ERA5_TEMP --> RAWDIR
-    EUROSTAT_MORT --> RAWDIR
-    EEA_AQ --> RAWDIR
-    POP_DENS --> RAWDIR
-    RAWDIR --> REGRID --> JOIN --> QC --> DLNM --> FORECAST --> CACHE --> API --> MAP
+    %% ——— Edges ——— %%
+    ERA5_DL  --> ERA5_DIR
+    CORDEX_DL --> CORDEX_DIR
+
+    ERA5_DIR  --> BUILD_CSV
+    CORDEX_DIR --> BUILD_CSV
+    EUROSTAT_API --> BUILD_CSV
+    EEA_API      --> BUILD_CSV
+
+    BUILD_CSV --> CSV_TABLES
+    CSV_TABLES --> DLNM --> FORECAST --> API --> DASH
 ```
 
 ---
@@ -94,4 +100,4 @@ flowchart TD
 
 ---
 
-### Last updated · 2025-07-31
+_Last updated · 2025-07-31_
