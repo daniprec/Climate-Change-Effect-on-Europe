@@ -32,7 +32,7 @@ This project provides an interactive dashboard using **Flask** and **Folium** to
 - **Temperature (tas)**: Monthly near-surface air temperature data.
 - Vienna supports detailed NUTS-3 level analysis.
 
-See the project structure here: [https://daniprec.github.io/Climate-Change-Effect-on-Europe/]
+See the project structure here: [http://danielprecioso.com/Climate-Change-Effect-on-Europe/]
 
 ## Features
 
