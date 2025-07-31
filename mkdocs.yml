@@ -1,0 +1,9 @@
+site_name: Climate-Change Effect on Europe
+theme: material
+plugins:
+  - search
+  - mermaid2
+nav:
+  - Overview: pipeline_overview.md
+  - Sources: sources.md
+  - Glossary: glossary.md
