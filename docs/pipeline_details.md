@@ -1,8 +1,6 @@
 # Pipeline Details
 
-This document explains (step by step) how raw external datasets are ingested,
-processed, and merged into the weekly tables (`europe.csv`, `austria.csv`)
-consumed by the modelling code and the Flask dashboard.
+This document explains (step by step) how raw external datasets are ingested, processed, and merged into the weekly tables (`europe.csv`, `austria.csv`) consumed by the modelling code and the Flask dashboard.
 
 ---
 
@@ -43,7 +41,7 @@ All scripts write inside `data/`; nothing is stored outside the repository.
 | **ERA5-Land**    | `scripts/era5.py`                                            | hourly NetCDF (`t2m`, `tp`) | 2000 - present | 0.25° grid; \~21 GB so far         |
 | **CORDEX**       | `data/rcp45/wget.sh`, `data/rcp85/wget.sh`, `ccee/cordex.py` | monthly NetCDF (`tas`)      | 1971-2100      | EUR-11 domain (0.25°)              |
 | **Eurostat API** | `ccee/eurostat.py` (called by `build_csv.py`)                | JSON - CSV                  | varies         | Population, density, weekly deaths |
-| **EEA API**      | `ccee/eea.py` (called by `build_csv.py`)                     | hourly gridded CSV          | 2013 - present | O₃, NOₓ, PM₁₀                      |
+| **EEA API**      | `ccee/eea.py` (called by `build_csv.py`)                     | hourly gridded CSV          | 2013 - present | O3, NOx, PM10                      |
 
 ### 2.1 ERA5 - Land Reanalysis Data
 
@@ -60,9 +58,9 @@ Once you have completed the steps above, the ERA5 data can be downloaded using t
 
 `ccee/era5.py` (triggered by `build_csv.py`):
 
-- converts Kelvin - °C,
+- converts Kelvin to °C,
 - samples each region centroid,
-- aggregates **hourly - weekly** and outputs three columns:
+- aggregates hourly to weekly and outputs three columns:
 
 | Column          | Definition                                            | Units |
 | --------------- | ----------------------------------------------------- | ----- |
@@ -103,14 +101,14 @@ bash ./data/wget-YYYYMMDDHHMMSS.sh -H
 
 `ccee/cordex.py` (triggered by `build_csv.py`):
 
-- converts Kelvin - °C,
+- converts Kelvin to °C,
 - samples each region centroid,
-- interpolates **monthly - weekly** and outputs two columns:
+- interpolates monthly to weekly and outputs two columns:
 
-| Column       | Definition                                    | Units |
-| ------------ | --------------------------------------------- | ----- |
-| `temp_rcp45` | Median weekly temperature for RCP4.5 scenario | °C    |
-| `temp_rcp85` | Median weekly temperature for RCP8.5 scenario | °C    |
+| Column       | Definition                                     | Units |
+| ------------ | ---------------------------------------------- | ----- |
+| `temp_rcp45` | Median weekly temperature for RCP 4.5 scenario | °C    |
+| `temp_rcp85` | Median weekly temperature for RCP 8.5 scenario | °C    |
 
 ### 2.3 Eurostat - Population and Mortality
 
@@ -124,11 +122,9 @@ The original Eurostat data is pulled via the API. The raw data is as follows:
 | `population`         | `tps00001` (country) + `demo_r_pjanaggr3` (NUTS-3) | people       | yearly    | NUTS-3 / country | 2014 - present |
 | `mortality`          | `demo_r_mwk3_t`                                    | deaths       | weekly    | NUTS-3 / country | 2000 - present |
 
-_Missing population_ (pre-2014) is imputed as
-`population_density` $\times$ `area_km2`. The area of each region is obtained from the polygons inside `regions.geojson` file, computed using the `geopandas` library.
+_Missing population_ (pre-2014) is imputed as `population_density` $\times$ `area_km2`. The area of each region is obtained from the polygons inside `regions.geojson` file, computed using the `geopandas` library.
 
-`mortality_rate` is then
-`mortality / population` $\times$ 100,000 (deaths per 100,000 people).
+`mortality_rate` is then `mortality / population` $\times$ 100,000 (deaths per 100,000 people).
 
 The output of `ccee/eurostat.py` (triggered by `build_csv.py`) adds the following columns to the weekly tables:
 
@@ -143,8 +139,7 @@ The output of `ccee/eurostat.py` (triggered by `build_csv.py`) adds the followin
 
 > Source: [European Air Quality Portal](https://aqportal.discomap.eea.europa.eu/download-data/)
 
-Hourly gridded fields are averaged over each region and then over
-each week. The spatial resolution of this data is variable, as the EEA provides data per station. Each station is associated with a region, and we average the values of all stations within a region.
+Hourly gridded fields are averaged over each region and then over each week. The spatial resolution of this data is variable, as the EEA provides data per station. Each station is associated with a region, and we average the values of all stations within a region.
 
 `ccee/eea.py` (triggered by `build_csv.py`) adds the following columns to the weekly tables:
 
@@ -167,22 +162,17 @@ flowchart LR
         EEA[EEA API]
     end
 
-    subgraph "Processing"
-        BuildCSV[build_csv.py]
-    end
-
-    subgraph "Output"
-        EuropeCSV[europe.csv]
-        AustriaCSV[austria.csv]
-    end
+    BuildCSV["build_csv.py"]
+    Europe[europe.csv]
+    Austria[austria.csv]
 
     ERA5 --> BuildCSV
     CORDEX --> BuildCSV
     Eurostat --> BuildCSV
     EEA --> BuildCSV
 
-    BuildCSV --> EuropeCSV
-    BuildCSV --> AustriaCSV
+    BuildCSV --> Europe
+    BuildCSV --> Austria
 ```
 
 1. Load centroids from `regions.geojson`.
