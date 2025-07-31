@@ -32,6 +32,8 @@ This project provides an interactive dashboard using **Flask** and **Folium** to
 - **Temperature (tas)**: Monthly near-surface air temperature data.
 - Vienna supports detailed NUTS-3 level analysis.
 
+See the project structure here: [https://daniprec.github.io/Climate-Change-Effect-on-Europe/]
+
 ## Features
 
 - Interactive map with zoom and tooltip support
@@ -84,7 +86,7 @@ This makes the `ccee` library importable:
 pip install .
 ```
 
-*(Editable mode for active development)*
+_(Editable mode for active development)_
 
 ```bash
 pip install -e .
@@ -102,17 +104,19 @@ Open your browser at [http://127.0.0.1:5000/](http://127.0.0.1:5000/) to explore
 
 **Tips**
 
-* If you work in a virtual‑env, create and activate it **before** step 2.
+- If you work in a virtual‑env, create and activate it **before** step 2.
 
   ```bash
   python -m venv .venv && source .venv/bin/activate
   ```
-* For hot‑reload during development, set `FLASK_ENV=development` or run
+
+- For hot‑reload during development, set `FLASK_ENV=development` or run
 
   ```bash
   flask --app app run --debug
   ```
-* On PythonAnywhere deploy only `requirements.txt` to keep the footprint small; use `requirements‑dev.txt` locally for notebooks and batch jobs.
+
+- On PythonAnywhere deploy only `requirements.txt` to keep the footprint small; use `requirements‑dev.txt` locally for notebooks and batch jobs.
 
 ## How to Download Data
 
