@@ -47,20 +47,18 @@ All scripts write inside `data/`; nothing is stored outside the repository.
 
 ### 2.1 ERA5 - Land Reanalysis Data
 
-Source: [Copernicus Climate Data Store](https://cds.climate.copernicus.eu/datasets/reanalysis-era5-land?tab=overview)
+> Source: [Copernicus Climate Data Store](https://cds.climate.copernicus.eu/datasets/reanalysis-era5-land?tab=overview)
 
-[How to **authorize** the execution of the Python code on Windows?](https://cds.climate.copernicus.eu/how-to-api) (only once)
+How to **authorize** the execution of the Python code on Windows? Follow <https://cds.climate.copernicus.eu/how-to-api> (only once)
 
 - If you do not have an account, please register on the CDS registration page.
 - Log in.
 - Copy the code with your personal key into the file "USER/.cdsapirc" (in Windows environment)
   > The file starting with a dot can be created using Notepad: File > Save as > Type: All files > File name: .cdsfapirc
 
-Once you have completed the steps above, the ERA5 data can be downloaded using the functions inside `ccee/era5.py`.
+Once you have completed the steps above, the ERA5 data can be downloaded using the functions inside `ccee/era5.py`. This script downloads **one NetCDF per month** into `data/era5_land/`. It is recommended that you execute this script before the first run of `build_csv.py` to ensure that all required data is available.
 
-`ccee/era5.py` downloads **one NetCDF per month** into `data/era5_land/`. It is recommended that you run this script first.
-
-`ccee/era5.py` (triggered by `build_csv.py`)
+`ccee/era5.py` (triggered by `build_csv.py`):
 
 - converts Kelvin - °C,
 - samples each region centroid,
@@ -74,11 +72,11 @@ Once you have completed the steps above, the ERA5 data can be downloaded using t
 
 ### 2.2 CORDEX - CMIP (Climate Projections)
 
-Source: [ESGF Data Browser (LiU Node)](https://esg-dn1.nsc.liu.se/search/esgf-liu/)
+> Source: [ESGF Data Browser (LiU Node)](https://esg-dn1.nsc.liu.se/search/esgf-liu/)
 
-Run the appropriate `wget.sh` in `data/rcp45/` or `data/rcp85/`.
+Before running `scripts/build_csv.py` you will need to have the CORDEX data downloaded. This is done via a WGET script that you can generate from the ESGF Data Browser.
 
-[Official tutorial link](https://cordex.org/wp-content/uploads/2023/08/How-to-download-CORDEX-data-from-the-ESGF.pdf)
+Official tutorial link: <https://cordex.org/wp-content/uploads/2023/08/How-to-download-CORDEX-data-from-the-ESGF.pdf>
 
 **Step-by-step**:
 
@@ -103,7 +101,7 @@ bash ./data/wget-YYYYMMDDHHMMSS.sh -H
 
 **Tip**: You will need a Linux-based system (e.g., Ubuntu) to execute WGET scripts.
 
-`ccee/cordex.py` (triggered by `build_csv.py`)
+`ccee/cordex.py` (triggered by `build_csv.py`):
 
 - converts Kelvin - °C,
 - samples each region centroid,
@@ -116,7 +114,7 @@ bash ./data/wget-YYYYMMDDHHMMSS.sh -H
 
 ### 2.3 Eurostat - Population and Mortality
 
-Source: [Eurostat](https://ec.europa.eu/eurostat/web/health/database)
+> Source: [Eurostat](https://ec.europa.eu/eurostat/web/health/database)
 
 The original Eurostat data is pulled via the API. The raw data is as follows:
 
@@ -144,7 +142,7 @@ with the following columns:
 
 ### 2.4 European Environment Agency (EEA)
 
-Source: [European Air Quality Portal](https://aqportal.discomap.eea.europa.eu/download-data/)
+> Source: [European Air Quality Portal](https://aqportal.discomap.eea.europa.eu/download-data/)
 
 Hourly gridded fields (0.25°) are averaged over each region and then over
 each week to produce:
