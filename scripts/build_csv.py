@@ -63,7 +63,8 @@ def main(path_data: str = "./data", path_geojson: str = "./data/regions.geojson"
         df = df.merge(df_tas, on=["NUTS_ID", "year", "week"], how="outer")
 
         # Interpolate up to 3 weeks of missing data
-        df["temperature"] = df.groupby("NUTS_ID")["temperature"].transform(
+        col = f"temp_rcp{rcp}"
+        df[col] = df.groupby("NUTS_ID")[col].transform(
             lambda x: x.interpolate(method="linear", limit=3, limit_direction="both")
         )
 
