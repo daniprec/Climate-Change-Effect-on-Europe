@@ -12,35 +12,35 @@ application.
 flowchart TD
     %% 1 ▸ Extraction %%
     subgraph Extract
-        ERA5_TEMP[ERA5-Land temperature<br>(hourly, 0.25°)]
-        EUROSTAT_MORT[Eurostat weekly mortality<br>(NUTS-3)]
-        EEA_AQ[EEA air-quality<br>(PM₂.₅ / NO₂ / O₃)]
-        POP_DENS[Eurostat population-density<br>(NUTS-3)]
+        ERA5_TEMP["ERA5-Land temperature<br>(hourly, 0.25 deg)"]
+        EUROSTAT_MORT["Eurostat weekly mortality<br>(NUTS-3)"]
+        EEA_AQ["EEA air-quality<br>(PM₂.₅, NO₂, O₃)"]
+        POP_DENS["Eurostat population-density<br>(NUTS-3)"]
     end
 
-    %% 2 ▸ Raw storage (inside repo) %%
+    %% 2 ▸ Raw storage %%
     subgraph DataDir
-        RAWDIR[(data/&ast;/raw files)]
+        RAWDIR["data/star/raw files"]
     end
 
     %% 3 ▸ Transform %%
     subgraph Transform
-        REGRID[Re-grid / aggregate<br>ERA5 → weekly q05-q50-q95]
-        JOIN[Join with population<br>→ mortality rates]
-        QC[QC & completeness<br>checks]
+        REGRID["Re-grid / aggregate<br>ERA5 → weekly q05-q50-q95"]
+        JOIN["Join with population<br>→ mortality rates"]
+        QC["Quality control<br>& completeness checks"]
     end
 
     %% 4 ▸ Modelling %%
     subgraph Model
-        DLNM[Fit DLNM & derive<br>Relative-Risk curves]
-        FORECAST[Scenario projections<br>(SSP2-4.5 / SSP5-8.5)]
+        DLNM["Fit DLNM & derive<br>Relative-Risk curves"]
+        FORECAST["Scenario projections<br>(SSP2-4.5 / SSP5-8.5)"]
     end
 
     %% 5 ▸ Serving %%
     subgraph Serve
-        CACHE[(data/processed/&ast;)]
-        API[(Flask REST API)]
-        MAP[Interactive dashboard]
+        CACHE["data/processed/star"]
+        API["Flask REST API"]
+        MAP["Interactive dashboard"]
     end
 
     ERA5_TEMP --> RAWDIR
