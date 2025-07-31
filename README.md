@@ -19,7 +19,7 @@ It is hosted on [Python Anywhere](https://ixlabs-daniprec.pythonanywhere.com/) f
 - [About](#about)
 - [Features](#features)
 - [Project Structure](#project-structure)
-- [Quick‑Start Guide](#quick-start-quide)
+- [Quick-Start Guide](#quick-start-guide)
 - [How to Download Data](#how-to-download-data)
 - [License](#license)
 - [Contacts](#contacts)
@@ -32,7 +32,7 @@ This project provides an interactive dashboard using **Flask** and **Folium** to
 - **Temperature (tas)**: Monthly near-surface air temperature data.
 - Vienna supports detailed NUTS-3 level analysis.
 
-See the project structure here: [http://danielprecioso.com/Climate-Change-Effect-on-Europe/]
+See the project structure here: <http://danielprecioso.com/Climate-Change-Effect-on-Europe/>
 
 ## Features
 
@@ -54,7 +54,7 @@ See the project structure here: [http://danielprecioso.com/Climate-Change-Effect
 └── README.md
 ```
 
-## Quick‑Start Guide
+## Quick-Start Guide
 
 ### 1 . Clone the repository
 
@@ -86,7 +86,7 @@ This makes the `ccee` library importable:
 pip install .
 ```
 
-_(Editable mode for active development)_
+Editable mode for active development:
 
 ```bash
 pip install -e .
@@ -102,7 +102,7 @@ Open your browser at [http://127.0.0.1:5000/](http://127.0.0.1:5000/) to explore
 
 ---
 
-**Tips**
+Tips:
 
 - If you work in a virtual‑env, create and activate it **before** step 2.
 
