@@ -45,11 +45,11 @@ See the project structure here: [http://danielprecioso.com/Climate-Change-Effect
 ## Project Structure
 
 ```plaintext
-├── app.py # Flask server
-├── templates/ # HTML views
-├── static/ # JS, CSS, assets
-├── scripts/ # Data processing scripts
 ├── data/ # Input and downloaded data
+├── scripts/ # Data processing scripts
+├── static/ # JS, CSS, assets
+├── templates/ # HTML views
+├── app.py # Flask server
 ├── requirements.txt
 └── README.md
 ```
@@ -129,83 +129,9 @@ python scripts/build_csv.py
 
 The only data that needs to be downloaded manually is the CORDEX CMIP data, which requires a WGET script. Below are the instructions for downloading and preparing the data.
 
-### CORDEX - CMIP (Climate Projections)
+**Pipeline overview diagram** – [`docs/pipeline_overview.md`](docs/pipeline_overview.md)
 
-Source: [ESGF Data Browser (LiU Node)](https://esg-dn1.nsc.liu.se/search/esgf-liu/)
-
-[Official tutorial link](https://cordex.org/wp-content/uploads/2023/08/How-to-download-CORDEX-data-from-the-ESGF.pdf)
-
-**Step-by-step**:
-
-1. Register to access the ESGF data.
-2. Search with the following filters:
-   - **Project**: CORDEX
-   - **Experiment**: rcp85 OR rcp45
-   - **Variable**: tas (air temperature)
-   - **Domain**: EUR-11
-   - **Time Frequency**: mon
-3. Select a dataset, e.g.:
-
-   ```plaintext
-   cordex.output.EUR-11.SMHI.MPI-M-MPI-ESM-LR.rcp85.r2i1p1.RCA4.v1.mon.tas
-   ```
-
-4. Download the WGET script and run:
-
-```bash
-bash ./data/wget-YYYYMMDDHHMMSS.sh -H
-```
-
-**Tip**: You will need a Linux-based system (e.g., Ubuntu) to execute WGET scripts.
-
-Make sure you store the data inside the `data/rcp45` and `data/rcp85` directories. The functions inside `ccee/cordex.py` will take care of the rest.
-
-**Variables**:
-
-- `temperature_rcp45`: Near-surface air temperature (in Celsius) for RCP 4.5 scenario.
-- `temperature_rcp85`: Near-surface air temperature (in Celsius) for RCP 8.5 scenario.
-
-### ERA5 - Land Reanalysis Data
-
-Source: [Copernicus Climate Data Store](https://cds.climate.copernicus.eu/datasets/reanalysis-era5-land?tab=overview)
-
-[How to **authorize** the execution of the Python code on Windows?](https://cds.climate.copernicus.eu/how-to-api) (only once)
-
-- If you do not have an account, please register on the CDS registration page.
-- Log in.
-- Copy the code with your personal key into the file "USER/.cdsapirc" (in Windows environment)
-  > The file starting with a dot can be created using Notepad: File > Save as > Type: All files > File name: .cdsfapirc
-
-Once you have completed the steps above, the ERA5 data can be downloaded using the functions inside `ccee/era5.py`.
-
-**Variables**:
-
-- `temperature`: Hourly near-surface air temperature data from ERA5-Land, in degrees Celsius.
-
-### Eurostat - Population and Mortality
-
-Source: [Eurostat](https://ec.europa.eu/eurostat/web/health/database)
-
-The Eurostat data can be downloaded directly from the website. Use the functions in `ccee/eurostat.py` to automate the process.
-
-**Variables:**
-
-- `population_density`: Yearly population density data. People per square kilometer. Eurostat ID: "demo_r_d3dens". Coverage: 2000 - today.
-- `population`: Yearly population data. Eurostat IDs: "tps00001" (country level, NUTS-2), "demo_r_pjanaggr3" (region level, NUTS-3). Coverage: 2014 - today. When not covered, we estimate it from the `population_density` and the country area.
-- `mortality`: Weekly number of total deaths by any cause. Eurostat ID: "demo_r_mwk3_t". Coverage: 2000 - today.
-- `mortality_rate`: Weekly mortality rate per 100,000 inhabitants. This value is derived from `mortality` and `population`.
-
-### European Environment Agency (EEA)
-
-Source: [European Air Quality Portal](https://aqportal.discomap.eea.europa.eu/download-data/)
-
-Air quality data can be downloaded from the EEA portal. The functions in `ccee/eea.py` call EEA's API to automate the process.
-
-**Variables:**
-
-- `O3`: Ozone (O3) concentration in the air, measured in micrograms per cubic meter (µg/m³).
-- `NOx`: Nitrogen oxides (NOx) concentration in the air, measured in micrograms per cubic meter (µg/m³).
-- `pm10`: Particulate matter (PM10) concentration in the air, measured in micrograms per cubic meter (µg/m³).
+**Step-by-step data & script details** – [`docs/pipeline_details.md`](docs/pipeline_details.md)
 
 ## License
 

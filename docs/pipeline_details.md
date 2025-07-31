@@ -118,40 +118,41 @@ bash ./data/wget-YYYYMMDDHHMMSS.sh -H
 
 The original Eurostat data is pulled via the API. The raw data is as follows:
 
-| Variable             | Eurostat ID                                        | Units        | Time step | Region level     |
-| -------------------- | -------------------------------------------------- | ------------ | --------- | ---------------- |
-| `population_density` | `demo_r_d3dens`                                    | people / km2 | yearly    | NUTS-3           |
-| `population`         | `tps00001` (country) + `demo_r_pjanaggr3` (NUTS-3) | people       | yearly    | NUTS-3 / country |
-| `mortality`          | `demo_r_mwk3_t`                                    | deaths       | weekly    | NUTS-3 / country |
+| Variable             | Eurostat ID                                        | Units        | Time step | Region level     | Coverage       |
+| -------------------- | -------------------------------------------------- | ------------ | --------- | ---------------- | -------------- |
+| `population_density` | `demo_r_d3dens`                                    | people / km2 | yearly    | NUTS-3           | 2000 - present |
+| `population`         | `tps00001` (country) + `demo_r_pjanaggr3` (NUTS-3) | people       | yearly    | NUTS-3 / country | 2014 - present |
+| `mortality`          | `demo_r_mwk3_t`                                    | deaths       | weekly    | NUTS-3 / country | 2000 - present |
 
-_Missing population_ (pre-2014 NUTS-3) is imputed as
-`population_density` $\times$ `area_km2`.
+_Missing population_ (pre-2014) is imputed as
+`population_density` $\times$ `area_km2`. The area of each region is obtained from the polygons inside `regions.geojson` file, computed using the `geopandas` library.
 
 `mortality_rate` is then
 `mortality / population` $\times$ 100,000 (deaths per 100,000 people).
 
-The output of `ccee/eurostat.py` (triggered by `build_csv.py`) is a DataFrame
-with the following columns:
+The output of `ccee/eurostat.py` (triggered by `build_csv.py`) adds the following columns to the weekly tables:
 
-| Column               | Definition                  | Units                   |
-| -------------------- | --------------------------- | ----------------------- |
-| `population`         | Total population in region  | people                  |
-| `population_density` | People per square kilometer | people / km2            |
-| `mortality`          | Total deaths in region      | deaths                  |
-| `mortality_rate`     | Deaths per 100,000 people   | deaths / 100,000 people |
+| Column               | Definition                         | Units                   |
+| -------------------- | ---------------------------------- | ----------------------- |
+| `population`         | Total population in region         | people                  |
+| `population_density` | People per square kilometer        | people / km2            |
+| `mortality`          | Total deaths in region per week    | deaths                  |
+| `mortality_rate`     | Deaths per 100,000 people per week | deaths / 100,000 people |
 
 ### 2.4 European Environment Agency (EEA)
 
 > Source: [European Air Quality Portal](https://aqportal.discomap.eea.europa.eu/download-data/)
 
-Hourly gridded fields (0.25°) are averaged over each region and then over
-each week to produce:
+Hourly gridded fields are averaged over each region and then over
+each week. The spatial resolution of this data is variable, as the EEA provides data per station. Each station is associated with a region, and we average the values of all stations within a region.
 
-| Column | Definition            | Units                  |
-| ------ | --------------------- | ---------------------- |
-| `O3`   | Ozone                 | $\mu \text{g}\ m^{-3}$ |
-| `NOx`  | Nitrogen oxides       | $\mu \text{g}\ m^{-3}$ |
-| `pm10` | Particulate matter 10 | $\mu \text{g}\ m^{-3}$ |
+`ccee/eea.py` (triggered by `build_csv.py`) adds the following columns to the weekly tables:
+
+| Column | Definition                                  | Units                  |
+| ------ | ------------------------------------------- | ---------------------- |
+| `O3`   | Ozone concentration in the air              | $\mu \text{g}\ m^{-3}$ |
+| `NOx`  | Nitrogen oxides concentration in the air    | $\mu \text{g}\ m^{-3}$ |
+| `pm10` | Particulate matter concentration in the air | $\mu \text{g}\ m^{-3}$ |
 
 ---
 
