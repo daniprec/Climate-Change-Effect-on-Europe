@@ -1,3 +1,5 @@
+# Glossary
+
 | Term                   | Definition                                                                            | Units / CRS                                                           |
 | ---------------------- | ------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
 | **ERA5-Land**          | ECMWF reanalysis product providing hourly terrestrial variables on a 0.1°/0.25° grid. | Native = EPSG 4326; re-projected to EPSG 3035 for area-preserving ops |
