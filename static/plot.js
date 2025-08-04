@@ -23,9 +23,8 @@ function renderTimeSeriesChart(labels, data1, data2, m1, m2, regionName, activeR
     data    : data1,
     yAxisID : 'yLeft',
     borderColor: '#6dc201',
-    backgroundColor: '#6dc2014d',
-    fill  : true,
     tension: 0.25,
+    fill: false,
     pointRadius: 0,
     pointHitRadius: 20
   }];
@@ -37,6 +36,8 @@ function renderTimeSeriesChart(labels, data1, data2, m1, m2, regionName, activeR
       yAxisID : 'yRight',
       borderColor: '#000066',
       fill: false,
+      pointRadius: 0,
+      pointHitRadius: 20,
       // prevent grid lines from cluttering
       grid: { drawOnChartArea: false }
     });
