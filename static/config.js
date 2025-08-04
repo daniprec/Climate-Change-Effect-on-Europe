@@ -93,9 +93,9 @@ export const METRIC_CFG = {
         colorbarMax: "500"
     },
 
-    temperature_era5: {
+    temp_era5_q50: {
         label : 'Temperature (°C)',
-        value : p => p.temperature_era5 ?? -99,
+        value : p => p.temp_era5_q50 ?? -99,
         colour: tempColour,
         range : [2000, 2025],
         description: [
@@ -110,9 +110,9 @@ export const METRIC_CFG = {
         colorbarMax: "40"
     },
 
-    temperature_rcp45: {
+    temp_rcp45: {
         label : 'Temperature (°C)',
-        value : p => p.temperature_rcp45 ?? -99,
+        value : p => p.temp_rcp45 ?? -99,
         colour: tempColour, 
         range : [2006, 2100],
         description: [
@@ -127,9 +127,9 @@ export const METRIC_CFG = {
         colorbarMax: "40"
     },
 
-    temperature_rcp85: {
+    temp_rcp85: {
         label : 'Temperature (°C)',
-        value : p => p.temperature_rcp85 ?? -99,
+        value : p => p.temp_rcp85 ?? -99,
         colour: tempColour,
         range : [2006, 2100],
         description: [

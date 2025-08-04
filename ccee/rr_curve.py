@@ -10,7 +10,7 @@ from patsy import dmatrix
 from scipy.stats import percentileofscore
 from statsmodels.genmod.generalized_linear_model import GLMResults
 
-DICT_LABELS = {"temperature_era5": ("Temperature", "ºC")}
+DICT_LABELS = {"temp_era5_q50": ("Temperature", "ºC")}
 
 
 def compute_percentiles(
@@ -377,7 +377,7 @@ def plot_rr_curve(
 def main(
     file: str = "./data/europe.csv",
     code: str = "AT",
-    x: str = "temperature_era5",
+    x: str = "temp_era5_q50",
     y: str = "mortality_rate",
     fout: str = "output",
 ):

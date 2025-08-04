@@ -159,9 +159,9 @@ function writeRegionProperties(feature) {
   popupLines.push(`<span style="font-size: smaller;">${p.year} ${weekStartEnd}<br></span>`);
   if (p.mortality_rate   != null) popupLines.push(`Mortality: ${p.mortality_rate} per 100 k`);
   if (p.population_density != null) popupLines.push(`Population Density: ${p.population_density} per km²`);
-  if (p.temperature_era5 != null) popupLines.push(`Temperature (ERA5): ${p.temperature_era5} °C`);
-  if (p.temperature_rcp45 != null) popupLines.push(`Temperature (RCP 4.5): ${p.temperature_rcp45} °C`);
-  if (p.temperature_rcp85 != null) popupLines.push(`Temperature (RCP 8.5): ${p.temperature_rcp85} °C`);
+  if (p.temp_era5_q50 != null) popupLines.push(`Temperature (ERA5): ${p.temp_era5_q50} °C`);
+  if (p.temp_rcp45 != null) popupLines.push(`Temperature (RCP 4.5): ${p.temp_rcp45} °C`);
+  if (p.temp_rcp85 != null) popupLines.push(`Temperature (RCP 8.5): ${p.temp_rcp85} °C`);
   if (p.NOx != null) popupLines.push(`Nitrogen Oxides (NOx): ${p.NOx} µg/m³`);
   if (p.O3 != null) popupLines.push(`Ozone (O3): ${p.O3} µg/m³`);
   if (p.pm10 != null) popupLines.push(`Particle Matters (pm10): ${p.pm10} µg/m³`);
