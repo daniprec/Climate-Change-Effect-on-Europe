@@ -16,17 +16,17 @@ def read_requirements():
 
 
 setup(
-    name="flask-demo",
-    version="1.0.0",
+    name="Climate-Change-Effect-on-Europe",
+    version="0.4.0",
     author="Daniel Precioso",
     author_email="daniel.precioso@ie.edu",
     description="Interactive climate data visualization dashboard using Flask and Folium",
     long_description=read_readme(),
     long_description_content_type="text/markdown",
-    url="https://github.com/daniprec/flask-demo",
+    url="https://github.com/daniprec/Climate-Change-Effect-on-Europe",
     project_urls={
-        "Bug Reports": "https://github.com/daniprec/flask-demo/issues",
-        "Source": "https://github.com/daniprec/flask-demo",
+        "Bug Reports": "https://github.com/daniprec/Climate-Change-Effect-on-Europe/issues",
+        "Source": "https://github.com/daniprec/Climate-Change-Effect-on-Europe",
     },
     classifiers=[
         "Development Status :: 4 - Beta",

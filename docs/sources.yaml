@@ -1,0 +1,35 @@
+- id: era5_land_temp
+  provider: ECMWF / Copernicus
+  product: ERA5-Land (temperature)
+  variables: [t2m] # 2-m air temperature
+  resolution:
+    spatial: 0.25°
+    temporal: 1h
+  coverage: 2000-01-01 to present
+  licence: CCBY-4.0
+  access: https://cds.climate.copernicus.eu
+  refresh: daily
+
+- id: eurostat_mortality
+  provider: Eurostat
+  dataset: demo_r_mwk_ts
+  variables: [weekly_deaths]
+  resolution:
+    spatial: NUTS-3
+    temporal: 1 week
+  coverage: 2000-01-03 to present
+  lag: 2 weeks
+  licence: Eurostat re-use
+  access: https://ec.europa.eu/eurostat/api
+  refresh: weekly
+
+- id: eea_air_quality
+  provider: European Environment Agency
+  dataset: AirBase v14
+  variables: [pm25, no2, o3]
+  resolution:
+    spatial: Station to interpolated to NUTS-3
+    temporal: daily
+  coverage: 2013-01-01 to present
+  licence: EEA standard
+  refresh: daily

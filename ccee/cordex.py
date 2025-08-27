@@ -124,9 +124,9 @@ def plot_eurocordex_data(
 
 def cordex_tas_to_dataframe_per_region(
     path_geojson: str = "./data/regions.geojson",
-    fin: str = "../data",
+    fin: str = "./data",
     year: int = 2025,
-    week_label: str = "W-MON",  # choose "W-MON", "W-SUN"…
+    week_label: str = "W-SUN",  # choose "W-MON", "W-SUN"…
     rcp: int = 85,  # Representative Concentration Pathway (RCP) scenario
 ):
     """
@@ -143,27 +143,25 @@ def cordex_tas_to_dataframe_per_region(
     year : int
         Year to open from the CORDEX archive.
     week_label : str
-        Pandas/xarray resample code (default 'W-MON' = ISO weeks ending Monday).
+        Pandas/xarray resample code (default 'W-SUN' = ISO weeks ending Sunday).
     """
     # ------------------------------------------------------------------ #
-    # 1.  Region centroids
+    # Region centroids
     # ------------------------------------------------------------------ #
     gdf = gpd.read_file(path_geojson).set_crs(4326)
-
-    centroids = gdf.to_crs(3035).geometry.centroid.to_crs(
-        4326
-    )  # metric CRS for a trustworthy centroid
+    # metric CRS for a trustworthy centroid
+    centroids = gdf.to_crs(3035).geometry.centroid.to_crs(4326)
     gdf["lon"] = centroids.x
     gdf["lat"] = centroids.y
 
     # ------------------------------------------------------------------ #
-    # 2.  Load CORDEX tas  (monthly)  -> °C
+    # Load CORDEX tas  (monthly)  -> °C
     # ------------------------------------------------------------------ #
     cor = load_eurocordex_data(fin=fin, year=year, rcp=rcp)  # user-supplied loader
     tas = cor["tas"] - 273.15  # Kelvin -> Celsius
 
     # ------------------------------------------------------------------ #
-    # 3.  Transform lon/lat -> rotated-pole grid coords
+    # Transform lon/lat -> rotated-pole grid coords
     # ------------------------------------------------------------------ #
     tfm = Transformer.from_crs(
         CRS.from_epsg(4326),
@@ -173,7 +171,7 @@ def cordex_tas_to_dataframe_per_region(
     rlon, rlat = tfm.transform(gdf["lon"].values, gdf["lat"].values)
 
     # ------------------------------------------------------------------ #
-    # 4.  Sample tas at each centroid  (dims: point × time)
+    # Sample tas at each centroid  (dims: point × time)
     # ------------------------------------------------------------------ #
     samp = tas.interp(
         rlon=xr.DataArray(rlon, dims="point"),
@@ -182,25 +180,21 @@ def cordex_tas_to_dataframe_per_region(
     ).transpose("point", "time")
 
     # ------------------------------------------------------------------ #
-    # 5.  MONTHLY -> DAILY (linear) -> WEEKLY (mean)
+    # MONTHLY -> WEEKLY (linear interpolation)
     # ------------------------------------------------------------------ #
-    # build a full daily index spanning the monthly series
-    # We grab the first day of the first year and the last day of the last year
-    # to ensure we cover the entire range of the time series.
+    # Build a full weekly index spanning the time series
     start_year = pd.to_datetime(tas.time.values[0]).replace(day=1, month=1, hour=0)
     end_year = pd.to_datetime(tas.time.values[-1]).replace(day=31, month=12, hour=23)
-    daily_index = pd.date_range(
+    weekly_index = pd.date_range(
         start=start_year,
         end=end_year,
-        freq="1D",
+        freq=week_label,
     )
 
-    samp_daily = samp.interp(time=daily_index)  # linear time interp
-    samp_week = samp_daily.resample(time=week_label).mean()  # weekly mean
+    # Interpolate to weekly timestamps
+    samp_week = samp.interp(time=weekly_index)
 
-    # ------------------------------------------------------------------ #
-    # 6.  Long-format DataFrame
-    # ------------------------------------------------------------------ #
+    # Long-format DataFrame
     df_long = (
         samp_week.to_dataframe(name="temperature")  # point | time | temperature
         .reset_index()
@@ -215,4 +209,8 @@ def cordex_tas_to_dataframe_per_region(
     df_long["year"] = iso.year
     df_long["week"] = iso.week
 
-    return df_long[["NUTS_ID", "year", "week", "temperature"]]
+    # Since we have only one value per week, all percentiles are the same (use median)
+    df_long = df_long.rename(columns={"temperature": f"temp_rcp{rcp}"})
+
+    # Output wide format (one value per week)
+    return df_long[["NUTS_ID", "year", "week", f"temp_rcp{rcp}"]]

@@ -4,6 +4,8 @@ import geopandas as gpd
 import pandas as pd
 from flask import Flask, Response, jsonify, render_template, request
 
+from ccee.rr_curve import fit_dlnm_weekly, generate_rr_curve
+
 app = Flask(__name__)
 
 # Construct the absolute path to the GeoJSON file
@@ -101,6 +103,9 @@ def api_bbox():
 def app_data_time_series():
     map_id = request.args.get("map_id", "EU").upper()
     metric = request.args.get("metric", "mortality_rate")
+    metric2 = request.args.get("metric2", None)
+    # "null" means no second metric
+    metric2 = metric2 if metric2 != "null" else None
     nuts_id = request.args.get("nuts_id", "AT")
 
     # Check if the requested map_id is valid
@@ -116,12 +121,20 @@ def app_data_time_series():
     # Validate metric
     if metric not in df.columns:
         return jsonify({"error": f"No data available for metric '{metric}'"}), 400
+    elif metric2 and metric2 not in df.columns:
+        return jsonify({"error": f"No data available for metric '{metric2}'"}), 400
+
+    columns = ["year", "week", metric]
+    rename = {metric: "value"}
+    if metric2:
+        columns.append(metric2)
+        rename[metric2] = "value2"
 
     # Prepare structured JSON
     time_series_data = (
-        df[["year", "week", metric]]
+        df[columns]
         .sort_values(["year", "week"])
-        .rename(columns={metric: "value"})
+        .rename(columns=rename)
         .dropna()
         .to_dict(orient="records")
     )
@@ -173,6 +186,53 @@ def download_data():
         f'attachment; filename="{nuts_id}_data.csv"'
     )
     return response
+
+
+@app.route("/api/data/rr_curve")
+def rr_curve():
+    """
+    Generate a JSON response for the relative risk curve.
+    This is a placeholder function that returns static data.
+    """
+    map_id = request.args.get("map_id", "EU").upper()
+    nuts_id = request.args.get("nuts_id", None).upper()
+    metric1 = request.args.get("metric", "mortality_rate")
+    metric2 = request.args.get("metric2", None)
+
+    # Load the DataFrame for the specified map_id
+    if map_id not in CSV_MAP:
+        return jsonify({"error": "Invalid map_id specified"}), 400
+    df = pd.read_csv(CSV_MAP[map_id])
+
+    # Choose a code
+    df = df[df["NUTS_ID"] == nuts_id]
+
+    # Drop rows with NaNs in x or y columns
+    df.dropna(subset=[metric2, metric1], inplace=True)
+
+    # Create column "date" from "year" and "week"
+    df["date"] = pd.to_datetime(
+        df["year"].astype(str) + df["week"].astype(str) + "0", format="%Y%W%w"
+    )
+
+    # Set date as index
+    df.set_index("date", inplace=True)
+
+    # Fit the DLNM model
+    model, spline_df, spline_spec = fit_dlnm_weekly(df, metric2, metric1)
+
+    # Plot the relative risk curve
+    dict_curve = generate_rr_curve(model, spline_spec, max_lag=5)
+
+    # Return the relative risk curve as JSON
+    return jsonify(
+        {
+            "nuts_id": nuts_id,
+            "metric1": metric1,
+            "metric2": metric2,
+            **dict_curve,
+        }
+    )
 
 
 if __name__ == "__main__":
