@@ -83,6 +83,6 @@ flowchart TD
 
 ---
 
-For more details on each stage, see the following document: [Pipeline Details](docs/pipeline_details.md).
+For more details on each stage, see the following document: [Pipeline Details](pipeline_details.md).
 
 ---
