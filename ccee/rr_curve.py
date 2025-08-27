@@ -1,3 +1,4 @@
+from math import ceil, floor
 from pathlib import Path
 from typing import Dict, Tuple
 
@@ -174,6 +175,9 @@ def fit_dlnm_weekly(
         "max_lag": max_lag,
         "x_col": x_col,
         "y_col": y_col,
+        # Preserve exposure range at fit time to build safe grids later
+        "x_min": float(df[x_col].min()),
+        "x_max": float(df[x_col].max()),
     }
     return model, crossbasis_df, spec
 
@@ -181,8 +185,8 @@ def fit_dlnm_weekly(
 def generate_rr_curve(
     model: GLMResults,
     spline_spec: dict,
-    xrange: tuple,
-    max_lag: int,
+    xrange: tuple | None = None,
+    max_lag: int = 3,
     ref_value: float | None = None,
     precision: float = 0.1,
 ) -> dict:
@@ -203,9 +207,9 @@ def generate_rr_curve(
         Output crossbasis_spec from fit_dlnm_weekly.
     xrange : tuple
         Lower and upper bounds of the X grid in the same units as
-        x_col.
+        x_col. If None, the range is inferred from the data.
     max_lag : int
-        Maximum lag (must match the value used at fitting time).
+        Maximum lag (must match the value used at fitting time), by default 3.
     ref_value : float or None, default None
         X value at which RR = 1.  If None, the X with minimum estimated RR on
         the grid is used.
@@ -232,12 +236,25 @@ def generate_rr_curve(
     Gasparrini, A. (2010). Distributed lag non-linear models. Statistics in
     Medicine, 29(21), 2224-2234. https://doi.org/10.1002/sim.3940
     """
+    # Determine X grid bounds. Default to exposure range captured at fit time
+    if xrange is None:
+        xmin = floor(spline_spec.get("x_min", 0.0) - 1)
+        xmax = ceil(spline_spec.get("x_max", 0.0) + 1)
+    else:
+        xmin, xmax = xrange
+
+    # Ensure grid covers the internal knot locations to satisfy bs() bounds
+    knots = np.array(spline_spec.get("knots", []), dtype=float)
+    if knots.size:
+        xmin = min(xmin, floor(float(knots.min())))
+        xmax = max(xmax, ceil(float(knots.max())))
+
     # Build X grid & basis
-    x_grid = np.arange(xrange[0], xrange[1] + precision, precision)
+    x_grid = np.arange(xmin, xmax + precision, precision)
     Zg = dmatrix(spline_spec["formula"], {"x": x_grid}, return_type="dataframe")
     n_x = Zg.shape[1]
 
-    # Lag-basis rows & their sum (∑_lag c_k(ℓ))
+    # Lag-basis rows & their sum (sum_lag c_k())
     C = dmatrix(
         spline_spec["lag_formula"],
         {"lag": np.arange(max_lag + 1)},

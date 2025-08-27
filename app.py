@@ -222,7 +222,7 @@ def rr_curve():
     model, spline_df, spline_spec = fit_dlnm_weekly(df, metric2, metric1)
 
     # Plot the relative risk curve
-    dict_curve = generate_rr_curve(model, spline_spec, xrange=(-20, 40), max_lag=5)
+    dict_curve = generate_rr_curve(model, spline_spec, max_lag=5)
 
     # Return the relative risk curve as JSON
     return jsonify(
