@@ -8,6 +8,7 @@ from ccee.cordex import cordex_tas_to_dataframe_per_region
 from ccee.eea import download_and_process_eea_air_quality
 from ccee.era5 import download_era5_land_reanalysis
 from ccee.eurostat import (
+    compute_mortality_rate,
     compute_population_from_density,
     download_eurostat_mortality,
     download_eurostat_nuts2_population,
@@ -47,7 +48,7 @@ def main(path_data: str = "./data", path_geojson: str = "./data/regions.geojson"
     df = compute_population_from_density(df, path_geojson=path_geojson)
 
     # Use the mortality and population to calculate the mortality rate
-    df["mortality_rate"] = 100000 * df["mortality"] / df["population"]
+    df = compute_mortality_rate(df)
 
     # Include CORDEX temperature data
     for rcp in [45, 85]:

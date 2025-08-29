@@ -301,3 +301,29 @@ def compute_population_from_density(
     df.drop(columns=["area_km2"], inplace=True)
 
     return df
+
+
+def compute_mortality_rate(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Compute the mortality rate per 100,000 inhabitants.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame with columns "mortality" and "population".
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with an additional column "mortality_rate".
+    """
+    # Find all columns starting with "mortality"
+    mortality_cols = [col for col in df.columns if col.startswith("mortality")]
+    # Make the same list with "population"
+    population_cols = [col.replace("mortality", "population") for col in mortality_cols]
+    # For each mortality column, compute the mortality rate
+    for mort_col, pop_col in zip(mortality_cols, population_cols):
+        if pop_col in df.columns:
+            rate_col = mort_col.replace("mortality", "mortality_rate")
+            df[rate_col] = 100000 * df[mort_col] / df[pop_col]
+    return df
