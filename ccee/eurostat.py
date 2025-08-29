@@ -83,13 +83,24 @@ def download_eurostat_data(dataset: str) -> pd.DataFrame:
 
 def download_eurostat_mortality(ls_ids: list[str] | None = None) -> pd.DataFrame:
     """
+    Deaths by week, sex and 20-year age group.
+
+    URL: https://ec.europa.eu/eurostat/databrowser/view/demo_r_mwk_20/default/table?lang=en&category=demo.demomwk
+
+    Parameters
+    ----------
     ls_ids : list[str]
         List of NUTS-3 IDs to filter the Eurostat mortality data.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with columns "NUTS_ID", "year", "week", "mortality"
     """
     print("[INFO] Reading Eurostat mortality data into Pandas...")
 
     # Mortality data
-    df_demomwk = download_eurostat_data(dataset="demo_r_mwk3_t")
+    df_demomwk = download_eurostat_data(dataset="demo_r_mwk_20")
     df_demomwk.rename(columns={"geo": "NUTS_ID"}, inplace=True)
 
     # Match the NUTS_ID with the GeoDataFrame
@@ -103,13 +114,31 @@ def download_eurostat_mortality(ls_ids: list[str] | None = None) -> pd.DataFrame
         print("The following IDs were not found in Eurostat data:")
         print(", ".join(ls_out2))
 
+    # Drop UNK age groups
+    df_demomwk = df_demomwk[df_demomwk["age"] != "UNK"].copy()
+    # Map age groups to codes
+    dict_age = {
+        "TOTAL": "T",
+        "Y_LT20": "00",
+        "Y20-39": "20",
+        "Y40-59": "40",
+        "Y60-79": "60",
+        "Y_GE80": "80",
+    }
+    df_demomwk["age"] = df_demomwk["age"].map(dict_age)
+
+    # Drop UNK sex
+    df_demomwk = df_demomwk[df_demomwk["sex"] != "UNK"].copy()
+    dict_sex = {"T": "T", "F": "F", "M": "M"}
+    df_demomwk["sex"] = df_demomwk["sex"].map(dict_sex)
+
     # The column names are like "2015-W01"
     # We will turn the dataframe into a long format:
     # Columns will be "NUTS_ID", "year", "week", "mortality"
     # Drop columns "freq" and "unit" first
     df_demomwk.drop(columns=["freq", "unit"], inplace=True)
     df_demomwk = df_demomwk.melt(
-        id_vars=["NUTS_ID"],
+        id_vars=["NUTS_ID", "age", "sex"],
         var_name="year_week",
         value_name="mortality",
     )
@@ -120,8 +149,17 @@ def download_eurostat_mortality(ls_ids: list[str] | None = None) -> pd.DataFrame
     df_demomwk.drop(columns=["year_week"], inplace=True)
     # Drop NaNs in "mortality"
     df_demomwk.dropna(subset=["mortality"], inplace=True)
-    # Sort column order: NUTS_ID, year, week, mortality
-    df_demomwk = df_demomwk[["NUTS_ID", "year", "week", "mortality"]]
+
+    # We want a single row per NUTS_ID, year, week
+    # In order to do this, we will pivot the dataframe:
+    # the new columns will be "mortality_<sex>_<age>"
+    df_demomwk = df_demomwk.pivot(
+        index=["NUTS_ID", "year", "week"], columns=["sex", "age"], values="mortality"
+    )
+
+    df_demomwk.columns = df_demomwk.columns.map(
+        lambda x: "mortality_{}_{}".format(x[0], x[1]) if isinstance(x, tuple) else x
+    )
 
     return df_demomwk
 
