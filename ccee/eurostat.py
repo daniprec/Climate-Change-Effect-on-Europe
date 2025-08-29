@@ -156,10 +156,16 @@ def download_eurostat_mortality(ls_ids: list[str] | None = None) -> pd.DataFrame
     df_demomwk = df_demomwk.pivot(
         index=["NUTS_ID", "year", "week"], columns=["sex", "age"], values="mortality"
     )
-
     df_demomwk.columns = df_demomwk.columns.map(
         lambda x: "mortality_{}_{}".format(x[0], x[1]) if isinstance(x, tuple) else x
     )
+
+    # For consistency, "mortality_T_T" is renamed to "mortality"
+    dict_rename = {"mortality_T_T": "mortality"}
+    df_demomwk.rename(columns=dict_rename, inplace=True)
+
+    # Reset index to turn the index into columns
+    df_demomwk.reset_index(inplace=True)
 
     return df_demomwk
 
