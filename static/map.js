@@ -25,7 +25,7 @@ window.addEventListener("resize", checkWindowSize);
 
 // If the window is resized, reload the GeoJSON data
 window.addEventListener("resize", () => {
-  loadGeoJSON(FLASK_CTX.mapID, yearSlider.value, weekSlider.value);
+  loadGeoJSON(FLASK_CTX.mapID, yearSlider.value, weekSlider.value, sexSelect.value, ageSelect.value);
 });
 
 /* ======================= MAP ======================= */
@@ -79,6 +79,8 @@ function onEachFeature(feature, layer) {
           p.name,
           mainMetric,
           compareMetric,
+          sexSelect.value,
+          ageSelect.value,
           FLASK_CTX,
           activeRange
         );
@@ -125,8 +127,10 @@ function onEachFeature(feature, layer) {
 }
 
 /* --- Load the initial GeoJSON data for the default region --- */
-function loadGeoJSON(map_id, year, week) {
-  return fetch(`/api/data?map_id=${map_id}&year=${year}&week=${week}&metric=${mainMetric}`)
+function loadGeoJSON(map_id, year, week, sex, age) {
+  return fetch(
+    `/api/data?map_id=${map_id}&year=${year}&week=${week}&metric=${mainMetric}`
+    +`&sex=${sex}&age=${age}`)
     .then(r => r.json())
     .then(data => {
       if (geoJsonLayer) map.removeLayer(geoJsonLayer);
@@ -261,7 +265,7 @@ function changeRegion(mapID, name) {
   // Update the breadcrumb
   pushView(mapID, name);
   // Load the new region shapes
-  loadGeoJSON(FLASK_CTX.mapID, yearSlider.value, weekSlider.value);
+  loadGeoJSON(FLASK_CTX.mapID, yearSlider.value, weekSlider.value, sexSelect.value, ageSelect.value);
 }
 
 /* ==================== SPLITTER DRAGGING =================== */
@@ -305,6 +309,8 @@ const compareSelect = document.getElementById('compareSelect');
 const yearValue = document.getElementById('yearValue');
 const weekValue = document.getElementById('weekValue');
 const rangeButtons  = document.getElementById('rangeButtons').querySelectorAll('button');
+const sexSelect = document.getElementById('sexSelect');
+const ageSelect = document.getElementById('ageSelect');
 
 let debounce;
 
@@ -327,12 +333,16 @@ yearSlider.oninput = () => {
   yearValue.textContent = yearSlider.value;
   updateWeekLabel();
   clearTimeout(debounce);
-  debounce = setTimeout(() => loadGeoJSON(FLASK_CTX.mapID, yearSlider.value, weekSlider.value), 250);
+  debounce = setTimeout(() => loadGeoJSON(
+    FLASK_CTX.mapID, yearSlider.value, weekSlider.value, sexSelect.value, ageSelect.value),
+    250);
   drawTimeSeries(
     holdRegionProperties.NUTS_ID,
     holdRegionProperties.name,
     mainMetric,
     compareMetric,
+    sexSelect.value,
+    ageSelect.value,
     FLASK_CTX,
     activeRange
   );  // redraw TS for the new year
@@ -378,14 +388,17 @@ function updateWeekLabel() {
 weekSlider.oninput = () => {
   updateWeekLabel();
   clearTimeout(debounce);
-  debounce = setTimeout(() => loadGeoJSON(FLASK_CTX.mapID, yearSlider.value, weekSlider.value), 250);
+  debounce = setTimeout(() => loadGeoJSON(
+    FLASK_CTX.mapID, yearSlider.value, weekSlider.value, sexSelect.value, ageSelect.value),
+    250);
 };
 
-metricSelect.onchange = () => {
+function metricSelectOnChange() {
   mainMetric = metricSelect.value;
+  compareMetric = compareSelect.value || null;
   applyYearRange(METRIC_CFG[mainMetric].range);
   updateWeekLabel();
-  loadGeoJSON(FLASK_CTX.mapID, yearSlider.value, weekSlider.value);
+  loadGeoJSON(FLASK_CTX.mapID, yearSlider.value, weekSlider.value, sexSelect.value, ageSelect.value);
   updateMetricInfo(mainMetric);
   updateColorbar(mainMetric);
   drawTimeSeries(
@@ -393,24 +406,18 @@ metricSelect.onchange = () => {
     holdRegionProperties.name,
     mainMetric,
     compareMetric,
+    sex,
+    age,
     FLASK_CTX,
     activeRange
   ); // redraw TS for the new metric
   hideRRCurve();
-};
+}
 
-compareSelect.onchange = () => {
-  compareMetric = compareSelect.value || null;
-  drawTimeSeries(
-    holdRegionProperties.NUTS_ID,
-    holdRegionProperties.name,
-    mainMetric,
-    compareMetric,
-    FLASK_CTX,
-    activeRange
-  );
-  hideRRCurve();
-};
+metricSelect.onchange = metricSelectOnChange;
+sexSelect.onchange = metricSelectOnChange;
+ageSelect.onchange = metricSelectOnChange;
+compareSelect.onchange = metricSelectOnChange;
 
 /* ----------Information panel ---------- */
 function updateMetricInfo(metric) {
@@ -451,6 +458,8 @@ rangeButtons.forEach(btn => {
       holdRegionProperties.name,
       mainMetric,
       compareMetric,
+      sexSelect.value,
+      ageSelect.value,
       FLASK_CTX,
       activeRange
     );  // redraw TS for the new range
@@ -462,7 +471,10 @@ document.getElementById('downloadData').addEventListener('click', () => {
   const metric1 = mainMetric;
   const metric2 = compareMetric || 'none';  // if no comparison, use 'none'
   const nutsID = holdRegionProperties.NUTS_ID || 'none';  // use selected region or 'EU' if none
-  const url = `/api/data/download?map_id=${FLASK_CTX.mapID}&nuts_id=${nutsID}&metric=${metric1}&metric2=${metric2}`;
+  const sex = sexSelect.value;
+  const age = ageSelect.value;
+  const url = `/api/data/download?map_id=${FLASK_CTX.mapID}&nuts_id=${nutsID}`
+    +`&metric=${metric1}&metric2=${metric2}&sex=${sex}&age=${age}`;
   window.open(url, '_blank');
 });
 
@@ -480,8 +492,7 @@ document.getElementById('generateRR').addEventListener('click', () => {
     alert('Cannot generate RR curve. Please select a secondary metric different than the main metric.');
     return;
   }  
-  /* plot.js export expects (nutsId, metric, maxLag, FLASK_CTX) */
-  drawRRCurve(nutsID, metric1, metric2, FLASK_CTX);
+  drawRRCurve(nutsID, metric1, metric2, sexSelect.value, ageSelect.value, FLASK_CTX);
   /* Show the graph */
   document.getElementById('RRCurve').style.display = 'block';
 });

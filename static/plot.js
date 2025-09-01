@@ -134,6 +134,8 @@ export function drawTimeSeries(
   regionName,
   mainMetric,
   compareMetric,
+  sex,
+  age,
   FLASK_CTX,
   activeRange) {
   // if the region is not selected, do nothing
@@ -144,7 +146,7 @@ export function drawTimeSeries(
 
   // build fetch
   const url = `/api/data/ts?map_id=${FLASK_CTX.mapID}&nuts_id=${nutsId}`
-    +`&metric=${mainMetric}&metric2=${compareMetric}`;
+    +`&metric=${mainMetric}&metric2=${compareMetric}&sex=${sex}&age=${age}`;
   fetch(url)
   .then(r=>r.json())
   .then((res) => {
@@ -230,9 +232,9 @@ function renderRRCurve(json) {
 
 /* -------------------- PUBLIC API --------------- */
 
-export function drawRRCurve(nutsId, metric, metric2, FLASK_CTX) {
+export function drawRRCurve(nutsId, metric, metric2, sex, age, FLASK_CTX) {
   const url = `/api/data/rr_curve?map_id=${FLASK_CTX.mapID}&nuts_id=${nutsId}` +
-              `&metric=${metric}&metric2=${metric2}`;
+              `&metric=${metric}&metric2=${metric2}&sex=${sex}&age=${age}`;
 
   fetch(url)
     .then(resp => resp.json())

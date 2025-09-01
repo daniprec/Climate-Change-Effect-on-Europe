@@ -66,18 +66,35 @@ def api_data():
     year = request.args.get("year", "2023")
     week = request.args.get("week", "1")
     metric = request.args.get("metric", "mortality_rate")
+    sex = request.args.get("sex", "T")
+    age = request.args.get("age", "T")
 
     # Check if the requested map_id is valid
     if map_id not in CSV_MAP:
         return jsonify({"error": "Invalid map_id specified"}), 400
 
+    # Define the column name we are calling
+    if (sex == "T") and (age == "T"):
+        metric_full = metric
+    else:
+        metric_full = f"{metric}_{sex}_{age}"
+
+    print(metric_full)
+
+    # Check if the metric exists in the CSV
+    df_check = pd.read_csv(CSV_MAP[map_id], nrows=0)
+    if metric_full not in df_check.columns:
+        metric_full = metric
+    elif metric not in df_check.columns:
+        return jsonify({"error": f"Metric '{metric}' not found in data"}), 400
+
     # Extract the DataFrame for the specified region, week and year
-    usecols = ["NUTS_ID", "year", "week", metric]
+    usecols = ["NUTS_ID", "year", "week", metric_full]
     df = pd.read_csv(CSV_MAP[map_id], usecols=usecols).round(1)
     df = df[(df["year"] == int(year)) & (df["week"] == int(week))]
 
     # Check if the requested information exists in the DataFrame
-    if (metric not in df.columns) or (df.empty):
+    if df.empty:
         return jsonify({"error": f"No data available for {year}-W{week}"}), 400
 
     # Match the NUTS_ID with the GeoDataFrame
@@ -108,31 +125,46 @@ def app_data_time_series():
     # "null" means no second metric
     metric2 = metric2 if metric2 != "null" else None
     nuts_id = request.args.get("nuts_id", "AT")
+    sex = request.args.get("sex", "T")
+    age = request.args.get("age", "T")
 
     # Check if the requested map_id is valid
     if map_id not in CSV_MAP:
         return jsonify({"error": "Invalid map_id specified"}), 400
 
+    # Define the column name we are calling
+    if (sex == "T") and (age == "T"):
+        metric_full = metric
+        metric2_full = metric2
+    else:
+        metric_full = f"{metric}_{sex}_{age}"
+        metric2_full = f"{metric2}_{sex}_{age}" if metric2 else None
+
+    # Check if the metric exists in the CSV
+    df_check = pd.read_csv(CSV_MAP[map_id], nrows=0)
+    if metric_full not in df_check.columns:
+        metric_full = metric
+    elif metric not in df_check.columns:
+        return jsonify({"error": f"Metric '{metric}' not found in data"}), 400
+    if metric2_full and (metric2_full not in df_check.columns):
+        metric2_full = metric2
+    elif metric2 and (metric2 not in df_check.columns):
+        return jsonify({"error": f"Metric '{metric2}' not found in data"}), 400
+
     # Load the DataFrame for the specified region
-    usecols = ["NUTS_ID", "year", "week", metric]
-    if metric2:
-        usecols.append(metric2)
+    usecols = ["NUTS_ID", "year", "week", metric_full]
+    if metric2_full:
+        usecols.append(metric2_full)
     df = pd.read_csv(CSV_MAP[map_id], usecols=usecols).round(1)
 
     # Filter by NUTS_ID
     df = df[df["NUTS_ID"] == nuts_id]
 
-    # Validate metric
-    if metric not in df.columns:
-        return jsonify({"error": f"No data available for metric '{metric}'"}), 400
-    elif metric2 and metric2 not in df.columns:
-        return jsonify({"error": f"No data available for metric '{metric2}'"}), 400
-
-    columns = ["year", "week", metric]
-    rename = {metric: "value"}
+    columns = ["year", "week", metric_full]
+    rename = {metric_full: "value"}
     if metric2:
-        columns.append(metric2)
-        rename[metric2] = "value2"
+        columns.append(metric2_full)
+        rename[metric2_full] = "value2"
 
     # Prepare structured JSON
     time_series_data = (
@@ -156,24 +188,39 @@ def download_data():
     nuts_id = request.args.get("nuts_id", None).upper()
     metric1 = request.args.get("metric", "mortality_rate")
     metric2 = request.args.get("metric2", None)
+    sex = request.args.get("sex", "T")
+    age = request.args.get("age", "T")
 
     # Load the DataFrame for the specified map_id
     if map_id not in CSV_MAP:
         return jsonify({"error": "Invalid map_id specified"}), 400
-    usecols = ["NUTS_ID", "year", "week", metric1]
+
+    # Define the column name we are calling
+    if (sex == "T") and (age == "T"):
+        metric1_full = metric1
+        metric2_full = metric2
+    else:
+        metric1_full = f"{metric1}_{sex}_{age}"
+        metric2_full = f"{metric2}_{sex}_{age}" if metric2 else None
+
+    # Check if the metric exists in the CSV
+    df_check = pd.read_csv(CSV_MAP[map_id], nrows=0)
+    if metric1_full not in df_check.columns:
+        metric1_full = metric1
+    elif metric1 not in df_check.columns:
+        return jsonify({"error": f"Metric '{metric1}' not found in data"}), 400
+    if metric2_full and (metric2_full not in df_check.columns):
+        metric2_full = metric2
+    elif metric2 and (metric2 not in df_check.columns):
+        return jsonify({"error": f"Metric '{metric2}' not found in data"}), 400
+
+    usecols = ["NUTS_ID", "year", "week", metric1_full]
     if metric2:
         usecols.append(metric2)
     df = pd.read_csv(CSV_MAP[map_id], usecols=usecols).round(1)
 
     # Validate metrics
-    if metric1 not in df.columns:
-        return jsonify({"error": f"No data available for metric '{metric1}'"}), 400
-    else:
-        metrics = [metric1]
-    if metric2 not in df.columns:
-        metric2 = None
-    else:
-        metrics.append(metric2)
+    metrics = [metric1_full, metric2_full] if metric2_full else [metric1_full]
 
     # Prepare the DataFrame for download
     df = df[["NUTS_ID", "year", "week"] + metrics]
@@ -205,20 +252,42 @@ def rr_curve():
     nuts_id = request.args.get("nuts_id", None).upper()
     metric1 = request.args.get("metric", "mortality_rate")
     metric2 = request.args.get("metric2", None)
+    sex = request.args.get("sex", "T")
+    age = request.args.get("age", "T")
 
     # Load the DataFrame for the specified map_id
     if map_id not in CSV_MAP:
         return jsonify({"error": "Invalid map_id specified"}), 400
-    usecols = ["NUTS_ID", "year", "week", metric1]
-    if metric2:
-        usecols.append(metric2)
+
+    # Define the column name we are calling
+    if (sex == "T") and (age == "T"):
+        metric1_full = metric1
+        metric2_full = metric2
+    else:
+        metric1_full = f"{metric1}_{sex}_{age}"
+        metric2_full = f"{metric2}_{sex}_{age}" if metric2 else None
+
+    # Check if the metric exists in the CSV
+    df_check = pd.read_csv(CSV_MAP[map_id], nrows=0)
+    if metric1_full not in df_check.columns:
+        metric1_full = metric1
+    elif metric1 not in df_check.columns:
+        return jsonify({"error": f"Metric '{metric1}' not found in data"}), 400
+    if metric2_full and (metric2_full not in df_check.columns):
+        metric2_full = metric2
+    elif metric2 and (metric2 not in df_check.columns):
+        return jsonify({"error": f"Metric '{metric2}' not found in data"}), 400
+
+    usecols = ["NUTS_ID", "year", "week", metric1_full]
+    if metric2_full:
+        usecols.append(metric2_full)
     df = pd.read_csv(CSV_MAP[map_id], usecols=usecols).round(1)
 
     # Choose a code
     df = df[df["NUTS_ID"] == nuts_id]
 
     # Drop rows with NaNs in x or y columns
-    df.dropna(subset=[metric2, metric1], inplace=True)
+    df.dropna(subset=[metric2_full, metric1_full], inplace=True)
 
     # Create column "date" from "year" and "week"
     df["date"] = pd.to_datetime(
@@ -229,7 +298,7 @@ def rr_curve():
     df.set_index("date", inplace=True)
 
     # Fit the DLNM model
-    model, spline_df, spline_spec = fit_dlnm_weekly(df, metric2, metric1)
+    model, spline_df, spline_spec = fit_dlnm_weekly(df, metric2_full, metric1_full)
 
     # Plot the relative risk curve
     dict_curve = generate_rr_curve(model, spline_spec, max_lag=5)
@@ -238,8 +307,8 @@ def rr_curve():
     return jsonify(
         {
             "nuts_id": nuts_id,
-            "metric1": metric1,
-            "metric2": metric2,
+            "metric1": metric1_full,
+            "metric2": metric2_full,
             **dict_curve,
         }
     )
