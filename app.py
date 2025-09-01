@@ -72,7 +72,8 @@ def api_data():
         return jsonify({"error": "Invalid map_id specified"}), 400
 
     # Extract the DataFrame for the specified region, week and year
-    df = pd.read_csv(CSV_MAP[map_id]).round(1)
+    usecols = ["NUTS_ID", "year", "week", metric]
+    df = pd.read_csv(CSV_MAP[map_id], usecols=usecols).round(1)
     df = df[(df["year"] == int(year)) & (df["week"] == int(week))]
 
     # Check if the requested information exists in the DataFrame
@@ -113,7 +114,10 @@ def app_data_time_series():
         return jsonify({"error": "Invalid map_id specified"}), 400
 
     # Load the DataFrame for the specified region
-    df = pd.read_csv(CSV_MAP[map_id]).round(1)
+    usecols = ["NUTS_ID", "year", "week", metric]
+    if metric2:
+        usecols.append(metric2)
+    df = pd.read_csv(CSV_MAP[map_id], usecols=usecols).round(1)
 
     # Filter by NUTS_ID
     df = df[df["NUTS_ID"] == nuts_id]
@@ -156,7 +160,10 @@ def download_data():
     # Load the DataFrame for the specified map_id
     if map_id not in CSV_MAP:
         return jsonify({"error": "Invalid map_id specified"}), 400
-    df = pd.read_csv(CSV_MAP[map_id])
+    usecols = ["NUTS_ID", "year", "week", metric1]
+    if metric2:
+        usecols.append(metric2)
+    df = pd.read_csv(CSV_MAP[map_id], usecols=usecols).round(1)
 
     # Validate metrics
     if metric1 not in df.columns:
@@ -202,7 +209,10 @@ def rr_curve():
     # Load the DataFrame for the specified map_id
     if map_id not in CSV_MAP:
         return jsonify({"error": "Invalid map_id specified"}), 400
-    df = pd.read_csv(CSV_MAP[map_id])
+    usecols = ["NUTS_ID", "year", "week", metric1]
+    if metric2:
+        usecols.append(metric2)
+    df = pd.read_csv(CSV_MAP[map_id], usecols=usecols).round(1)
 
     # Choose a code
     df = df[df["NUTS_ID"] == nuts_id]
