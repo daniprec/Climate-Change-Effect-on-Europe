@@ -34,14 +34,23 @@ def main(
         print("[INFO] No update flags set. Exiting.")
         return
 
+    # This is needed to avoid unnecessary memory copies
+    pd.set_option("mode.copy_on_write", True)
+
     # If processed data already exists, we first load it and only update the requested datasets
     if os.path.exists(os.path.join(path_data, "europe.csv")) and os.path.exists(
         os.path.join(path_data, "austria.csv")
     ):
-        df_europe = pd.read_csv(os.path.join(path_data, "europe.csv"))
-        df_at = pd.read_csv(os.path.join(path_data, "austria.csv"))
+        df_europe = pd.read_csv(
+            os.path.join(path_data, "europe.csv"), dtype_backend="pyarrow"
+        )
+        df_at = pd.read_csv(
+            os.path.join(path_data, "austria.csv"), dtype_backend="pyarrow"
+        )
         df_original = pd.concat([df_europe, df_at], ignore_index=True)
         del df_europe, df_at
+        # Attempt to infer better dtypes for object columns
+        df_original = df_original.infer_objects(copy=False)
 
     # Load the geojson file
     try:
@@ -159,6 +168,9 @@ def main(
     # Reset the index after all merges
     df.reset_index(drop=True, inplace=True)
 
+    # Attempt to infer better dtypes for object columns
+    df = df.infer_objects(copy=False)
+
     # ------------------------------------------------------
     # Compute additional columns
     # ------------------------------------------------------
@@ -196,6 +208,9 @@ def main(
     # Remove duplicates in case of multiple entries
     df.drop_duplicates(subset=["NUTS_ID", "year", "week"], inplace=True)
     df.reset_index(drop=True, inplace=True)
+
+    # Attempt to infer better dtypes for object columns
+    df = df.infer_objects(copy=False)
 
     # ------------------------------------------------------
     # Store the dataframe

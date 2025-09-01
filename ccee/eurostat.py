@@ -42,6 +42,7 @@ def download_eurostat_data(dataset: str) -> pd.DataFrame:
         sep=",|\t",
         na_values=":",
         engine="python",
+        dtype_backend="pyarrow",
     )
 
     # If a column name has "\", drop all after the first "\" in that column name
@@ -78,7 +79,8 @@ def download_eurostat_data(dataset: str) -> pd.DataFrame:
         end_year = date_columns.max()
         print(f"[INFO] Eurostat - Date range: {start_year} - {end_year}")
 
-    return df
+    # Attempt to infer better dtypes for object columns
+    return df.infer_objects(copy=False)
 
 
 def download_eurostat_mortality(ls_ids: list[str] | None = None) -> pd.DataFrame:
@@ -167,7 +169,8 @@ def download_eurostat_mortality(ls_ids: list[str] | None = None) -> pd.DataFrame
     # Reset index to turn the index into columns
     df_demomwk.reset_index(inplace=True)
 
-    return df_demomwk
+    # Attempt to infer better dtypes for object columns
+    return df_demomwk.infer_objects(copy=False)
 
 
 def download_eurostat_population_density(
@@ -193,7 +196,8 @@ def download_eurostat_population_density(
     # Sort column order: NUTS_ID, year, population_density
     df_popdensity = df_popdensity[["NUTS_ID", "year", "population_density"]]
 
-    return df_popdensity
+    # Attempt to infer better dtypes for object columns
+    return df_popdensity.infer_objects(copy=False)
 
 
 def download_eurostat_nuts2_population(
@@ -222,7 +226,8 @@ def download_eurostat_nuts2_population(
     # Convert "year" to integer
     df_pop["year"] = df_pop["year"].astype(int)
 
-    return df_pop
+    # Attempt to infer better dtypes for object columns
+    return df_pop.infer_objects(copy=False)
 
 
 def download_eurostat_nuts3_population(
@@ -302,7 +307,8 @@ def download_eurostat_nuts3_population(
     if "population_T_T" in df_pop.columns:
         df_pop.rename(columns={"population_T_T": "population"}, inplace=True)
 
-    return df_pop
+    # Attempt to infer better dtypes for object columns
+    return df_pop.infer_objects(copy=False)
 
 
 def compute_population_from_density(
@@ -347,7 +353,8 @@ def compute_population_from_density(
     # Drop the "area_km2" column as it's no longer needed
     df.drop(columns=["area_km2"], inplace=True)
 
-    return df
+    # Attempt to infer better dtypes for object columns
+    return df.infer_objects(copy=False)
 
 
 def compute_mortality_rate(df: pd.DataFrame) -> pd.DataFrame:
@@ -373,4 +380,6 @@ def compute_mortality_rate(df: pd.DataFrame) -> pd.DataFrame:
         if pop_col in df.columns:
             rate_col = mort_col.replace("mortality", "mortality_rate")
             df[rate_col] = 100000 * df[mort_col] / df[pop_col]
-    return df
+
+    # Attempt to infer better dtypes for object columns
+    return df.infer_objects(copy=False)
