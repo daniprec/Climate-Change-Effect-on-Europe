@@ -89,13 +89,19 @@ def api_data():
         return jsonify({"error": f"Metric '{metric}' not found in data"}), 400
 
     # Extract the DataFrame for the specified region, week and year
-    usecols = ["NUTS_ID", "year", "week", metric_full]
-    df = pd.read_csv(CSV_MAP[map_id], usecols=usecols).round(1)
+    df = pd.read_csv(CSV_MAP[map_id]).round(1)
     df = df[(df["year"] == int(year)) & (df["week"] == int(week))]
 
     # Check if the requested information exists in the DataFrame
     if df.empty:
         return jsonify({"error": f"No data available for {year}-W{week}"}), 400
+
+    # If the metric_full is not the same as metric, rename the column
+    # We do this because the map takes the column name from the "metric" parameter
+    if metric != metric_full:
+        df[metric] = df[metric_full]
+        df = df.drop(columns=[metric_full])
+    # TODO: Do the same for all other metrics in the future
 
     # Match the NUTS_ID with the GeoDataFrame
     gdf_region = gdf[gdf["NUTS_ID"].isin(df["NUTS_ID"])].copy()
