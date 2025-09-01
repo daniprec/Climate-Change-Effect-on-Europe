@@ -69,8 +69,8 @@ def main(
 
     if update_population:
         df_popdensity = download_eurostat_population_density(ls_ids=ls_ids)
-        df_pop3 = download_eurostat_nuts3_population()
-        df_pop2 = download_eurostat_nuts2_population()
+        df_pop3 = download_eurostat_nuts3_population(ls_ids=ls_ids)
+        df_pop2 = download_eurostat_nuts2_population(ls_ids=ls_ids)
         # First we stack both population dataframes, so we have one for NUTS-3 and one for NUTS-2
         df_pop = pd.concat([df_pop2, df_pop3], ignore_index=True)
         # In case of duplicated (NUTS_ID, year), we prioritize the NUTS-2 population data
