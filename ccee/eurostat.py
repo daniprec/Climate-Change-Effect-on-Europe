@@ -83,9 +83,9 @@ def download_eurostat_data(dataset: str) -> pd.DataFrame:
 
 def download_eurostat_mortality(ls_ids: list[str] | None = None) -> pd.DataFrame:
     """
-    Deaths by week, sex and 20-year age group.
+    Deaths by week, sex, 20-year age group and NUTS 3 region.
 
-    URL: https://ec.europa.eu/eurostat/databrowser/view/demo_r_mwk_20/default/table?lang=en&category=demo.demomwk
+    URL: https://ec.europa.eu/eurostat/databrowser/view/demo_r_mwk3_20/default/table?lang=en&category=demo.demomwk
 
     Parameters
     ----------
@@ -100,7 +100,7 @@ def download_eurostat_mortality(ls_ids: list[str] | None = None) -> pd.DataFrame
     print("[INFO] Reading Eurostat mortality data into Pandas...")
 
     # Mortality data
-    df_demomwk = download_eurostat_data(dataset="demo_r_mwk_20")
+    df_demomwk = download_eurostat_data(dataset="demo_r_mwk3_20")
     df_demomwk.rename(columns={"geo": "NUTS_ID"}, inplace=True)
 
     # Match the NUTS_ID with the GeoDataFrame
