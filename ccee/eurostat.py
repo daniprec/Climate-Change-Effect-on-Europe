@@ -131,8 +131,6 @@ def download_eurostat_mortality(ls_ids: list[str] | None = None) -> pd.DataFrame
 
     # Drop UNK sex
     df_demomwk = df_demomwk[df_demomwk["sex"] != "UNK"].copy()
-    dict_sex = {"T": "T", "F": "F", "M": "M"}
-    df_demomwk["sex"] = df_demomwk["sex"].map(dict_sex)
 
     # The column names are like "2015-W01"
     # We will turn the dataframe into a long format:
