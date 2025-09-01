@@ -219,12 +219,16 @@ def main(
     # Split Austria's NUTS-3 regions into their own CSV file
     mask_at = df["NUTS_ID"].str.startswith("AT") & (df["NUTS_ID"] != "AT")
     df_at = df[mask_at].copy()
-    df_europe = df[~mask_at].copy()
 
     # Store the Austria DataFrame
     output_csv_at = os.path.join(path_data, "austria.csv")
     df_at.to_csv(output_csv_at, index=False, float_format="%.1f")
     print(f"[INFO] Successfully wrote {len(df_at)} records to {output_csv_at}!")
+
+    # Keep only country-level NUTS codes (exactly 2 letters) for Europe
+    # Filter out regional codes (2 letters + numbers) like AT111, IS001, etc.
+    mask_country_level = df["NUTS_ID"].str.match(r"^[A-Z]{2}$")
+    df_europe = df[mask_country_level].copy()
 
     # Store the Europe DataFrame
     output_csv_europe = os.path.join(path_data, "europe.csv")
