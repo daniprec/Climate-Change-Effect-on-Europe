@@ -73,7 +73,7 @@ export const METRIC_CFG = {
         url: 'https://doi.org/10.2908/DEMO_R_MWK3_TS',
         colorbarStops: [[0, "#ffffcc"], [0.5, "#fd8d3c"], [1, "#800026"]],
         colorbarMin: "0",
-        colorbarMax: "1500"
+        colorbarMax: "30"
     },
 
     population_density: {
