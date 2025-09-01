@@ -78,7 +78,14 @@ def main(
     if len(ls_df) > 0:
         df = ls_df[0]
         for df_other in ls_df[1:]:
-            df = df.merge(df_other, on=["NUTS_ID", "year", "week"], how="outer")
+            # Not all datasets have a week column
+            if ("week" in df_other.columns) and ("week" in df.columns):
+                cols_on = ["NUTS_ID", "year", "week"]
+            # When no week is present, we merge on year only
+            # This will replicate the same data for each week of the year
+            else:
+                cols_on = ["NUTS_ID", "year"]
+            df = df.merge(df_other, on=cols_on, how="outer")
 
     # Include CORDEX temperature data
     if update_tas:
@@ -125,9 +132,13 @@ def main(
 
     # Finally, if we have an original DataFrame, we add to "df" any data that was not updated
     if "df_original" in locals():
+        if ("week" in df_original.columns) and ("week" in df.columns):
+            cols_on = ["NUTS_ID", "year", "week"]
+        else:
+            cols_on = ["NUTS_ID", "year"]
         df = df_original.merge(
             df,
-            on=["NUTS_ID", "year", "week"],
+            on=cols_on,
             how="outer",
             suffixes=("_orig", ""),
         )

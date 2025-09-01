@@ -228,32 +228,79 @@ def download_eurostat_nuts2_population(
 def download_eurostat_nuts3_population(
     ls_ids: list[str] | None = None,
 ) -> pd.DataFrame:
+    """
+    Population on 1 January by age group, sex and NUTS 3 region
+    https://ec.europa.eu/eurostat/databrowser/view/demo_r_pjangrp3/default/table?lang=en
+    Valid from 2015 onwards
+    """
     print("[INFO] Reading Eurostat population data into Pandas...")
     # Population data
-    df_pop = download_eurostat_data(dataset="demo_r_pjanaggr3")
-    # Filter for total sex and age class
-    mask_sex = df_pop["sex"] == "Total"
-    mask_age = df_pop["age"] == "Total"
-    df_pop = df_pop[mask_sex & mask_age].copy()
+    df_pop = download_eurostat_data(dataset="demo_r_pjangrp3")
     df_pop.rename(columns={"geo": "NUTS_ID"}, inplace=True)
-    df_pop.drop(columns=["freq", "unit", "sex", "age"], inplace=True)
+    df_pop.drop(columns=["freq", "unit"], inplace=True)
 
     # If ls_ids is provided, filter for NUTS-3 regions
     if ls_ids is not None:
         # Filter for NUTS-3 regions
         df_pop = df_pop[df_pop["NUTS_ID"].isin(ls_ids)].copy()
 
+    # Drop UNK age groups
+    df_pop = df_pop[df_pop["age"] != "UNK"].copy()
+    # Group age classes to match the mortality data
+    dict_age = {
+        "TOTAL": "T",
+        "Y_LT5": "00",
+        "Y5-9": "00",
+        "Y10-14": "00",
+        "Y15-19": "00",
+        "Y20-24": "20",
+        "Y25-29": "20",
+        "Y30-34": "20",
+        "Y35-39": "20",
+        "Y40-44": "40",
+        "Y45-49": "40",
+        "Y50-54": "40",
+        "Y55-59": "40",
+        "Y60-64": "60",
+        "Y65-69": "60",
+        "Y70-74": "60",
+        "Y75-79": "60",
+        "Y80-84": "80",
+        "Y85-89": "80",
+        "Y_GE85": "80",
+        "Y_GE90": "80",
+    }
+    df_pop["age"] = df_pop["age"].map(dict_age)
+
     # The column names are like "2020"
     # We will turn the dataframe into a long format:
-    # Columns will be "name", "year", "population"
+    # Columns will be "NUTS_ID", "sex", "age", "year", "population"
+    year_cols = df_pop.columns[df_pop.columns.str.match(r"^\d{4}$")]
+    df_pop = df_pop[["NUTS_ID", "sex", "age"] + year_cols.tolist()]
     df_pop = df_pop.melt(
-        id_vars=["NUTS_ID"],
+        id_vars=["NUTS_ID", "sex", "age"],
         var_name="year",
         value_name="population",
     )
+    df_pop.dropna(subset=["population"], inplace=True)
 
     # Convert "year" to integer
     df_pop["year"] = df_pop["year"].astype(int)
+
+    # Sum the population by age group and sex
+    cols_group = ["NUTS_ID", "year", "sex", "age"]
+    df_pop = df_pop.groupby(cols_group, as_index=False)["population"].sum()
+
+    # We want a single row per NUTS_ID, year with columns population_<sex>_<age>
+    df_pop = df_pop.pivot(
+        index=["NUTS_ID", "year"], columns=["sex", "age"], values="population"
+    )
+    df_pop.columns = [f"population_{s}_{a}" for (s, a) in df_pop.columns]
+    df_pop = df_pop.reset_index()
+
+    # For consistency, "population_T_T" is renamed to "population"
+    if "population_T_T" in df_pop.columns:
+        df_pop.rename(columns={"population_T_T": "population"}, inplace=True)
 
     return df_pop
 
@@ -295,7 +342,7 @@ def compute_population_from_density(
     )
 
     # Fill "population" when missing
-    df["population"].fillna(population, inplace=True)
+    df["population"] = df["population"].fillna(population)
 
     # Drop the "area_km2" column as it's no longer needed
     df.drop(columns=["area_km2"], inplace=True)
