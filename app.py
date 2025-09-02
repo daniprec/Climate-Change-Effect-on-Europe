@@ -38,6 +38,21 @@ df = pd.read_csv(CSV_MAP["EU"]).round(1)
 min_year = df["year"].min()
 max_year = df["year"].max()
 
+# Identify which columns are aggregated by sex and age
+LS_COLUMNS: list[str] = []
+LS_COLUMNS_AGG: list[str] = []
+
+for col in df.columns:
+    # Ends with "<letter>_<two digits>"
+    # We use regex
+    if pd.Series(col).str.contains(r"_[MFT]_\d{2}$").any():
+        LS_COLUMNS_AGG.append(col[:-5])
+    else:
+        LS_COLUMNS.append(col)
+
+LS_COLUMNS_AGG = sorted(list(set(LS_COLUMNS_AGG)))
+LS_COLUMNS = sorted(set(LS_COLUMNS) - set(LS_COLUMNS_AGG))
+
 
 @app.route("/")
 def map():
@@ -65,9 +80,11 @@ def api_data():
     map_id = request.args.get("map_id", "EU").upper()
     year = request.args.get("year", "2023")
     week = request.args.get("week", "1")
-    metric = request.args.get("metric", "mortality_rate")
     sex = request.args.get("sex", "T")
     age = request.args.get("age", "T")
+    # Any argument "undefined" is treated as not provided
+    sex = sex if sex != "undefined" else "T"
+    age = age if age != "undefined" else "T"
 
     # Check if the requested map_id is valid
     if map_id not in CSV_MAP:
@@ -75,33 +92,24 @@ def api_data():
 
     # Define the column name we are calling
     if (sex == "T") and (age == "T"):
-        metric_full = metric
+        suffix = ""
     else:
-        metric_full = f"{metric}_{sex}_{age}"
+        suffix = f"_{sex}_{age}"
 
-    print(metric_full)
-
-    # Check if the metric exists in the CSV
-    df_check = pd.read_csv(CSV_MAP[map_id], nrows=0)
-    if metric_full not in df_check.columns:
-        metric_full = metric
-    elif metric not in df_check.columns:
-        return jsonify({"error": f"Metric '{metric}' not found in data"}), 400
+    # Define the columns to load
+    ls_columns = LS_COLUMNS + [col + suffix for col in LS_COLUMNS_AGG]
 
     # Extract the DataFrame for the specified region, week and year
-    df = pd.read_csv(CSV_MAP[map_id]).round(1)
+    df = pd.read_csv(CSV_MAP[map_id], usecols=ls_columns).round(1)
     df = df[(df["year"] == int(year)) & (df["week"] == int(week))]
 
     # Check if the requested information exists in the DataFrame
     if df.empty:
         return jsonify({"error": f"No data available for {year}-W{week}"}), 400
 
-    # If the metric_full is not the same as metric, rename the column
-    # We do this because the map takes the column name from the "metric" parameter
-    if metric != metric_full:
-        df[metric] = df[metric_full]
-        df = df.drop(columns=[metric_full])
-    # TODO: Do the same for all other metrics in the future
+    # Rename the aggregated metrics to their pure names
+    for col in LS_COLUMNS_AGG:
+        df.rename(columns={col + suffix: col}, inplace=True)
 
     # Match the NUTS_ID with the GeoDataFrame
     gdf_region = gdf[gdf["NUTS_ID"].isin(df["NUTS_ID"])].copy()
