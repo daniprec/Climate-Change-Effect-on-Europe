@@ -54,7 +54,22 @@
 
           <label for="metricSelect">Display on map: </label>
           <select id="metricSelect" class="select">
-            <option value="mortality_rate">Mortality</option>
+            <option value="mortality_rate">Mortality (aggregated)</option>
+            <option value="mortality_rate_T_00">Mortality (both, 0-19 yo)</option>
+            <option value="mortality_rate_M_00">Mortality (men, 0-19 yo)</option>
+            <option value="mortality_rate_F_00">Mortality (women, 0-19 yo)</option>
+            <option value="mortality_rate_T_20">Mortality (both, 20-39 yo)</option>
+            <option value="mortality_rate_M_20">Mortality (men, 20-39 yo)</option>
+            <option value="mortality_rate_F_20">Mortality (women, 20-39 yo)</option>
+            <option value="mortality_rate_T_40">Mortality (both, 40-59 yo)</option>
+            <option value="mortality_rate_M_40">Mortality (men, 40-59 yo)</option>
+            <option value="mortality_rate_F_40">Mortality (women, 40-59 yo)</option>
+            <option value="mortality_rate_T_60">Mortality (both, 60-79 yo)</option>
+            <option value="mortality_rate_M_60">Mortality (men, 60-79 yo)</option>
+            <option value="mortality_rate_F_60">Mortality (women, 60-79 yo)</option>
+            <option value="mortality_rate_T_80">Mortality (both, 80+ yo)</option>
+            <option value="mortality_rate_M_80">Mortality (men, 80+ yo)</option>
+            <option value="mortality_rate_F_80">Mortality (women, 80+ yo)</option>
             <option value="population_density">Population Density</option>
             <option value="temp_era5_q50">Temperature (ERA5)</option>
             <option value="temp_rcp45">Temperature (RCP 4.5)</option>
@@ -62,23 +77,6 @@
             <option value="NOx">Nitrogen Dioxide</option>
             <option value="O3">Ozone</option>
             <option value="pm10">Particule Matter</option>
-          </select>
-
-          <label for="sexSelect">Sex: </label>
-          <select id="sexSelect" class="select">
-            <option value="T">Both</option>
-            <option value="M">Male</option>
-            <option value="F">Female</option>
-          </select>
-
-          <label for="ageSelect">Age Group: </label>
-          <select id="ageSelect" class="select">
-            <option value="T">All ages</option>
-            <option value="00">0-19</option>
-            <option value="20">20-39</option>
-            <option value="40">40-59</option>
-            <option value="60">60-79</option>
-            <option value="80">80+</option>
           </select>
         </div>   
 
@@ -88,7 +86,22 @@
           <div class="dropdown-content">
           <select id="compareSelect" class="select">
             <option value="">— none —</option>
-            <option value="mortality_rate">Mortality</option>
+            <option value="mortality_rate">Mortality (aggregated)</option>
+            <option value="mortality_rate_T_00">Mortality (both, 0-19 yo)</option>
+            <option value="mortality_rate_M_00">Mortality (men, 0-19 yo)</option>
+            <option value="mortality_rate_F_00">Mortality (women, 0-19 yo)</option>
+            <option value="mortality_rate_T_20">Mortality (both, 20-39 yo)</option>
+            <option value="mortality_rate_M_20">Mortality (men, 20-39 yo)</option>
+            <option value="mortality_rate_F_20">Mortality (women, 20-39 yo)</option>
+            <option value="mortality_rate_T_40">Mortality (both, 40-59 yo)</option>
+            <option value="mortality_rate_M_40">Mortality (men, 40-59 yo)</option>
+            <option value="mortality_rate_F_40">Mortality (women, 40-59 yo)</option>
+            <option value="mortality_rate_T_60">Mortality (both, 60-79 yo)</option>
+            <option value="mortality_rate_M_60">Mortality (men, 60-79 yo)</option>
+            <option value="mortality_rate_F_60">Mortality (women, 60-79 yo)</option>
+            <option value="mortality_rate_T_80">Mortality (both, 80+ yo)</option>
+            <option value="mortality_rate_M_80">Mortality (men, 80+ yo)</option>
+            <option value="mortality_rate_F_80">Mortality (women, 80+ yo)</option>
             <option value="population_density">Population Density</option>
             <option value="temp_era5_q50">Temperature (ERA5)</option>
             <option value="temp_rcp45">Temperature (RCP 4.5)</option>

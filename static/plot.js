@@ -109,6 +109,24 @@ function renderTimeSeriesChart(labels, data1, data2, m1, m2, regionName, activeR
             position:'right',
             title:{ display:true, text: METRIC_CFG[m2].label }
           }
+        }),
+        // if both metrics have the same units, set the same scale
+        ...(m2 && (METRIC_CFG[m1].units === METRIC_CFG[m2].units) && {
+          yLeft: {
+            beginAtZero:true,
+            type:'linear',
+            position:'left',
+            title:{ display:true, text: METRIC_CFG[m1].label },
+            min: Math.min(...data1, ...data2),
+            max: Math.max(...data1, ...data2),
+          },
+          yRight: {
+            beginAtZero:true,
+            type:'linear',
+            position:'right',
+            min: Math.min(...data1, ...data2),
+            max: Math.max(...data1, ...data2),
+          }
         })
       },
       plugins: {
@@ -134,8 +152,6 @@ export function drawTimeSeries(
   regionName,
   mainMetric,
   compareMetric,
-  sex,
-  age,
   FLASK_CTX,
   activeRange) {
   // if the region is not selected, do nothing
@@ -146,7 +162,7 @@ export function drawTimeSeries(
 
   // build fetch
   const url = `/api/data/ts?map_id=${FLASK_CTX.mapID}&nuts_id=${nutsId}`
-    +`&metric=${mainMetric}&metric2=${compareMetric}&sex=${sex}&age=${age}`;
+    +`&metric=${mainMetric}&metric2=${compareMetric}`;
   fetch(url)
   .then(r=>r.json())
   .then((res) => {
@@ -232,9 +248,9 @@ function renderRRCurve(json) {
 
 /* -------------------- PUBLIC API --------------- */
 
-export function drawRRCurve(nutsId, metric, metric2, sex, age, FLASK_CTX) {
+export function drawRRCurve(nutsId, metric, metric2, FLASK_CTX) {
   const url = `/api/data/rr_curve?map_id=${FLASK_CTX.mapID}&nuts_id=${nutsId}` +
-              `&metric=${metric}&metric2=${metric2}&sex=${sex}&age=${age}`;
+              `&metric=${metric}&metric2=${metric2}`;
 
   fetch(url)
     .then(resp => resp.json())

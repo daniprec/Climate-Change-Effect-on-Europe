@@ -38,21 +38,6 @@ df = pd.read_csv(CSV_MAP["EU"]).round(1)
 min_year = df["year"].min()
 max_year = df["year"].max()
 
-# Identify which columns are aggregated by sex and age
-LS_COLUMNS: list[str] = []
-LS_COLUMNS_AGG: list[str] = []
-
-for col in df.columns:
-    # Ends with "<letter>_<two digits>"
-    # We use regex
-    if pd.Series(col).str.contains(r"_[MFT]_\d{2}$").any():
-        LS_COLUMNS_AGG.append(col[:-5])
-    else:
-        LS_COLUMNS.append(col)
-
-LS_COLUMNS_AGG = sorted(list(set(LS_COLUMNS_AGG)))
-LS_COLUMNS = sorted(set(LS_COLUMNS) - set(LS_COLUMNS_AGG))
-
 
 @app.route("/")
 def map():
@@ -80,36 +65,19 @@ def api_data():
     map_id = request.args.get("map_id", "EU").upper()
     year = request.args.get("year", "2023")
     week = request.args.get("week", "1")
-    sex = request.args.get("sex", "T")
-    age = request.args.get("age", "T")
-    # Any argument "undefined" is treated as not provided
-    sex = sex if sex != "undefined" else "T"
-    age = age if age != "undefined" else "T"
+    metric = request.args.get("metric", "mortality_rate")
 
     # Check if the requested map_id is valid
     if map_id not in CSV_MAP:
         return jsonify({"error": "Invalid map_id specified"}), 400
 
-    # Define the column name we are calling
-    if (sex == "T") and (age == "T"):
-        suffix = ""
-    else:
-        suffix = f"_{sex}_{age}"
-
-    # Define the columns to load
-    ls_columns = LS_COLUMNS + [col + suffix for col in LS_COLUMNS_AGG]
-
     # Extract the DataFrame for the specified region, week and year
-    df = pd.read_csv(CSV_MAP[map_id], usecols=ls_columns).round(1)
+    df = pd.read_csv(CSV_MAP[map_id]).round(1)
     df = df[(df["year"] == int(year)) & (df["week"] == int(week))]
 
     # Check if the requested information exists in the DataFrame
-    if df.empty:
+    if (metric not in df.columns) or (df.empty):
         return jsonify({"error": f"No data available for {year}-W{week}"}), 400
-
-    # Rename the aggregated metrics to their pure names
-    for col in LS_COLUMNS_AGG:
-        df.rename(columns={col + suffix: col}, inplace=True)
 
     # Match the NUTS_ID with the GeoDataFrame
     gdf_region = gdf[gdf["NUTS_ID"].isin(df["NUTS_ID"])].copy()
@@ -139,46 +107,28 @@ def app_data_time_series():
     # "null" means no second metric
     metric2 = metric2 if metric2 != "null" else None
     nuts_id = request.args.get("nuts_id", "AT")
-    sex = request.args.get("sex", "T")
-    age = request.args.get("age", "T")
 
     # Check if the requested map_id is valid
     if map_id not in CSV_MAP:
         return jsonify({"error": "Invalid map_id specified"}), 400
 
-    # Define the column name we are calling
-    if (sex == "T") and (age == "T"):
-        metric_full = metric
-        metric2_full = metric2
-    else:
-        metric_full = f"{metric}_{sex}_{age}"
-        metric2_full = f"{metric2}_{sex}_{age}" if metric2 else None
-
-    # Check if the metric exists in the CSV
-    df_check = pd.read_csv(CSV_MAP[map_id], nrows=0)
-    if metric_full not in df_check.columns:
-        metric_full = metric
-    elif metric not in df_check.columns:
-        return jsonify({"error": f"Metric '{metric}' not found in data"}), 400
-    if metric2_full and (metric2_full not in df_check.columns):
-        metric2_full = metric2
-    elif metric2 and (metric2 not in df_check.columns):
-        return jsonify({"error": f"Metric '{metric2}' not found in data"}), 400
-
     # Load the DataFrame for the specified region
-    usecols = ["NUTS_ID", "year", "week", metric_full]
-    if metric2_full:
-        usecols.append(metric2_full)
-    df = pd.read_csv(CSV_MAP[map_id], usecols=usecols).round(1)
+    df = pd.read_csv(CSV_MAP[map_id]).round(1)
 
     # Filter by NUTS_ID
     df = df[df["NUTS_ID"] == nuts_id]
 
-    columns = ["year", "week", metric_full]
-    rename = {metric_full: "value"}
+    # Validate metric
+    if metric not in df.columns:
+        return jsonify({"error": f"No data available for metric '{metric}'"}), 400
+    elif metric2 and metric2 not in df.columns:
+        return jsonify({"error": f"No data available for metric '{metric2}'"}), 400
+
+    columns = ["year", "week", metric]
+    rename = {metric: "value"}
     if metric2:
-        columns.append(metric2_full)
-        rename[metric2_full] = "value2"
+        columns.append(metric2)
+        rename[metric2] = "value2"
 
     # Prepare structured JSON
     time_series_data = (
@@ -202,39 +152,21 @@ def download_data():
     nuts_id = request.args.get("nuts_id", None).upper()
     metric1 = request.args.get("metric", "mortality_rate")
     metric2 = request.args.get("metric2", None)
-    sex = request.args.get("sex", "T")
-    age = request.args.get("age", "T")
 
     # Load the DataFrame for the specified map_id
     if map_id not in CSV_MAP:
         return jsonify({"error": "Invalid map_id specified"}), 400
-
-    # Define the column name we are calling
-    if (sex == "T") and (age == "T"):
-        metric1_full = metric1
-        metric2_full = metric2
-    else:
-        metric1_full = f"{metric1}_{sex}_{age}"
-        metric2_full = f"{metric2}_{sex}_{age}" if metric2 else None
-
-    # Check if the metric exists in the CSV
-    df_check = pd.read_csv(CSV_MAP[map_id], nrows=0)
-    if metric1_full not in df_check.columns:
-        metric1_full = metric1
-    elif metric1 not in df_check.columns:
-        return jsonify({"error": f"Metric '{metric1}' not found in data"}), 400
-    if metric2_full and (metric2_full not in df_check.columns):
-        metric2_full = metric2
-    elif metric2 and (metric2 not in df_check.columns):
-        return jsonify({"error": f"Metric '{metric2}' not found in data"}), 400
-
-    usecols = ["NUTS_ID", "year", "week", metric1_full]
-    if metric2:
-        usecols.append(metric2)
-    df = pd.read_csv(CSV_MAP[map_id], usecols=usecols).round(1)
+    df = pd.read_csv(CSV_MAP[map_id])
 
     # Validate metrics
-    metrics = [metric1_full, metric2_full] if metric2_full else [metric1_full]
+    if metric1 not in df.columns:
+        return jsonify({"error": f"No data available for metric '{metric1}'"}), 400
+    else:
+        metrics = [metric1]
+    if metric2 not in df.columns:
+        metric2 = None
+    else:
+        metrics.append(metric2)
 
     # Prepare the DataFrame for download
     df = df[["NUTS_ID", "year", "week"] + metrics]
@@ -266,42 +198,17 @@ def rr_curve():
     nuts_id = request.args.get("nuts_id", None).upper()
     metric1 = request.args.get("metric", "mortality_rate")
     metric2 = request.args.get("metric2", None)
-    sex = request.args.get("sex", "T")
-    age = request.args.get("age", "T")
 
     # Load the DataFrame for the specified map_id
     if map_id not in CSV_MAP:
         return jsonify({"error": "Invalid map_id specified"}), 400
-
-    # Define the column name we are calling
-    if (sex == "T") and (age == "T"):
-        metric1_full = metric1
-        metric2_full = metric2
-    else:
-        metric1_full = f"{metric1}_{sex}_{age}"
-        metric2_full = f"{metric2}_{sex}_{age}" if metric2 else None
-
-    # Check if the metric exists in the CSV
-    df_check = pd.read_csv(CSV_MAP[map_id], nrows=0)
-    if metric1_full not in df_check.columns:
-        metric1_full = metric1
-    elif metric1 not in df_check.columns:
-        return jsonify({"error": f"Metric '{metric1}' not found in data"}), 400
-    if metric2_full and (metric2_full not in df_check.columns):
-        metric2_full = metric2
-    elif metric2 and (metric2 not in df_check.columns):
-        return jsonify({"error": f"Metric '{metric2}' not found in data"}), 400
-
-    usecols = ["NUTS_ID", "year", "week", metric1_full]
-    if metric2_full:
-        usecols.append(metric2_full)
-    df = pd.read_csv(CSV_MAP[map_id], usecols=usecols).round(1)
+    df = pd.read_csv(CSV_MAP[map_id])
 
     # Choose a code
     df = df[df["NUTS_ID"] == nuts_id]
 
     # Drop rows with NaNs in x or y columns
-    df.dropna(subset=[metric2_full, metric1_full], inplace=True)
+    df.dropna(subset=[metric2, metric1], inplace=True)
 
     # Create column "date" from "year" and "week"
     df["date"] = pd.to_datetime(
@@ -312,7 +219,7 @@ def rr_curve():
     df.set_index("date", inplace=True)
 
     # Fit the DLNM model
-    model, spline_df, spline_spec = fit_dlnm_weekly(df, metric2_full, metric1_full)
+    model, spline_df, spline_spec = fit_dlnm_weekly(df, metric2, metric1)
 
     # Plot the relative risk curve
     dict_curve = generate_rr_curve(model, spline_spec, max_lag=5)
@@ -321,8 +228,8 @@ def rr_curve():
     return jsonify(
         {
             "nuts_id": nuts_id,
-            "metric1": metric1_full,
-            "metric2": metric2_full,
+            "metric1": metric1,
+            "metric2": metric2,
             **dict_curve,
         }
     )
