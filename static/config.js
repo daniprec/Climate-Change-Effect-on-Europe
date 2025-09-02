@@ -1,10 +1,10 @@
 const mortalityColour = v => {
     if (v < 0)   return '#000000';   // black
-    if (v < 5)   return '#66c2a5';   // light blue
-    if (v < 10)  return '#abdda4';   // teal
-    if (v < 15)  return '#e6f598';   // light green
-    if (v < 20)  return '#fee08b';   // yellow
-    if (v < 25)  return '#fdae61';   // orange
+    if (v < 40)   return '#66c2a5';   // light blue
+    if (v < 80)  return '#abdda4';   // teal
+    if (v < 120)  return '#e6f598';   // light green
+    if (v < 160)  return '#fee08b';   // yellow
+    if (v < 200)  return '#fdae61';   // orange
     return '#d7191c';                // red
 };
 
@@ -58,23 +58,41 @@ const pm10Colour = v => {
     return '#800026';  // purple (Dangerous)
 }
 
+const mortality_rate = {
+    label : 'Mortality (per 100 k)',
+    value : p => p.mortality_rate ?? -99,
+    colour: mortalityColour,
+    range : [2000, 2024],
+    description: [
+    '• WEEKLY all-cause deaths per 100 000 inhabitants. This value is derived by dividing the number of deaths in a week by the population of the region, and multiplying by 100 000 (grouping by sex and age when necessary).',
+    '• Source: Eurostat - "demo_r_mwk3_20".',
+    '• Spatial resolution: NUTS-3 (district).',
+    '• Coverage: 2000 - 2024 (weekly).'
+    ],
+    url: 'https://doi.org/10.2908/DEMO_R_MWK3_20',
+    colorbarStops: [[0, "#ffffcc"], [0.5, "#fd8d3c"], [1, "#800026"]],
+    colorbarMin: "0",
+    colorbarMax: "200",
+    units: 'deaths per 100,000'
+}
+
 export const METRIC_CFG = {
-    mortality_rate: {
-        label : 'Mortality (per 100 k)',
-        value : p => p.mortality_rate ?? -99,
-        colour: mortalityColour,
-        range : [2000, 2024],
-        description: [
-        '• WEEKLY all-cause deaths per 100 000 inhabitants. This value is derived by dividing the number of deaths in a week by the population of the region, and multiplying by 100 000.',
-        '• Source: Eurostat - "demo_r_mwk3_ts".',
-        '• Spatial resolution: NUTS-3 (district).',
-        '• Coverage: 2000 - 2024 (weekly).'
-        ],
-        url: 'https://doi.org/10.2908/DEMO_R_MWK3_TS',
-        colorbarStops: [[0, "#ffffcc"], [0.5, "#fd8d3c"], [1, "#800026"]],
-        colorbarMin: "0",
-        colorbarMax: "1500"
-    },
+    mortality_rate: mortality_rate,
+    mortality_rate_T_00: { ...mortality_rate, value: p => p.mortality_rate_T_00 ?? -99 },
+    mortality_rate_M_00: { ...mortality_rate, value: p => p.mortality_rate_M_00 ?? -99 },
+    mortality_rate_F_00: { ...mortality_rate, value: p => p.mortality_rate_F_00 ?? -99 },
+    mortality_rate_T_20: { ...mortality_rate, value: p => p.mortality_rate_T_20 ?? -99 },
+    mortality_rate_M_20: { ...mortality_rate, value: p => p.mortality_rate_M_20 ?? -99 },
+    mortality_rate_F_20: { ...mortality_rate, value: p => p.mortality_rate_F_20 ?? -99 },
+    mortality_rate_T_40: { ...mortality_rate, value: p => p.mortality_rate_T_40 ?? -99 },
+    mortality_rate_M_40: { ...mortality_rate, value: p => p.mortality_rate_M_40 ?? -99 },
+    mortality_rate_F_40: { ...mortality_rate, value: p => p.mortality_rate_F_40 ?? -99 },
+    mortality_rate_T_60: { ...mortality_rate, value: p => p.mortality_rate_T_60 ?? -99 },
+    mortality_rate_M_60: { ...mortality_rate, value: p => p.mortality_rate_M_60 ?? -99 },
+    mortality_rate_F_60: { ...mortality_rate, value: p => p.mortality_rate_F_60 ?? -99 },
+    mortality_rate_T_80: { ...mortality_rate, value: p => p.mortality_rate_T_80 ?? -99 },
+    mortality_rate_M_80: { ...mortality_rate, value: p => p.mortality_rate_M_80 ?? -99 },
+    mortality_rate_F_80: { ...mortality_rate, value: p => p.mortality_rate_F_80 ?? -99 },
 
     population_density: {
         label : 'Population Density (km²)',
@@ -90,7 +108,8 @@ export const METRIC_CFG = {
         url: 'https://doi.org/10.2908/DEMO_R_D3DENS',
         colorbarStops: [[0, "#000066"], [0.33, "#47bfff"], [0.66, "#e6f598"], [1, "#6dc201"]],
         colorbarMin: "0",
-        colorbarMax: "500"
+        colorbarMax: "500",
+        units: 'people per km2'
     },
 
     temp_era5_q50: {
@@ -107,7 +126,8 @@ export const METRIC_CFG = {
         url: 'https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-land?tab=form',
         colorbarStops: [[0, "#4575b4"], [0.5, "#fee090"], [1, "#d73027"]],
         colorbarMin: "-5",
-        colorbarMax: "40"
+        colorbarMax: "40",
+        units: '°C'
     },
 
     temp_rcp45: {
@@ -124,7 +144,8 @@ export const METRIC_CFG = {
         url: 'https://cordex.org/data-access/cordex-cmip5-data/cordex-cmip5-esgf/',
         colorbarStops: [[0, "#4575b4"], [0.5, "#fee090"], [1, "#d73027"]],
         colorbarMin: "-5",
-        colorbarMax: "40"
+        colorbarMax: "40",
+        units: '°C'
     },
 
     temp_rcp85: {
@@ -141,7 +162,8 @@ export const METRIC_CFG = {
         url: 'https://cordex.org/data-access/cordex-cmip5-data/cordex-cmip5-esgf/',
         colorbarStops: [[0, "#4575b4"], [0.5, "#fee090"], [1, "#d73027"]],
         colorbarMin: "-5",
-        colorbarMax: "40"
+        colorbarMax: "40",
+        units: '°C'
     },
 
     NOx: {
@@ -159,6 +181,7 @@ export const METRIC_CFG = {
         colorbarStops: [[0, "#6dc201"], [0.25, "#47bfff"], [0.5, "#fee08b"], [0.75, "#d7191c"], [1, "#800026"]],
         colorbarMin: "0",
         colorbarMax: "50",
+        units: 'µg/m3'
     },
 
     O3: {
@@ -176,6 +199,7 @@ export const METRIC_CFG = {
         colorbarStops: [[0, "#6dc201"], [0.25, "#47bfff"], [0.5, "#fee08b"], [0.75, "#d7191c"], [1, "#800026"]],
         colorbarMin: "0",
         colorbarMax: "200",
+        units: 'µg/m3'
     },
 
     pm10: {
@@ -193,5 +217,6 @@ export const METRIC_CFG = {
         colorbarStops: [[0, "#6dc201"], [0.25, "#47bfff"], [0.5, "#fee08b"], [0.75, "#d7191c"], [1, "#800026"]],
         colorbarMin: "0",
         colorbarMax: "100",
+        units: 'µg/m3'
     }
 };
