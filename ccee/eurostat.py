@@ -87,7 +87,7 @@ def download_eurostat_mortality(ls_ids: list[str] | None = None) -> pd.DataFrame
     """
     Deaths by week, sex, 20-year age group and NUTS 3 region.
 
-    URL: https://ec.europa.eu/eurostat/databrowser/view/demo_r_mwk3_20/default/table?lang=en&category=demo.demomwk
+    URL: https://doi.org/10.2908/DEMO_R_MWK3_20
 
     Parameters
     ----------
