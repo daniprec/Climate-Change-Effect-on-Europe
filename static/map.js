@@ -155,9 +155,19 @@ function writeRegionProperties(feature) {
 
   // Build the list only with fields that exist
   const popupLines = [`<b>${p.name}</b>`];
-  
+
   popupLines.push(`<span style="font-size: smaller;">${p.year} ${weekStartEnd}<br></span>`);
-  if (p.mortality_rate   != null) popupLines.push(`Mortality: ${p.mortality_rate} per 100 k`);
+
+  if (mainMetric.startsWith('mortality_')) {
+    const cfg = METRIC_CFG[mainMetric];
+    const val = cfg.value(p);
+    if (val != null && val >= 0) {
+      popupLines.push(`Mortality: ${val.toFixed(1)} per 100 k`);
+    }
+  } else if (p.mortality_rate != null) {
+    popupLines.push(`Mortality (agg): ${p.mortality_rate} per 100 k`);
+  }
+  
   if (p.population_density != null) popupLines.push(`Population Density: ${p.population_density} per km²`);
   if (p.temp_era5_q50 != null) popupLines.push(`Temperature (ERA5): ${p.temp_era5_q50} °C`);
   if (p.temp_rcp45 != null) popupLines.push(`Temperature (RCP 4.5): ${p.temp_rcp45} °C`);
