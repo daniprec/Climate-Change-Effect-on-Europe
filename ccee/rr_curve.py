@@ -13,6 +13,12 @@ from statsmodels.genmod.generalized_linear_model import GLMResults
 
 DICT_LABELS = {"temp_era5_q50": ("Temperature", "ºC")}
 
+# The following list defines the columns that are likely to be used as
+# exposure variables in a DLNM. If x_col starts with any of these strings
+# and y_col does not, they are swapped to ensure that the exposure is
+# continuous and the outcome is a count or rate.
+LS_TARGET = ["mortality", "population"]
+
 
 def compute_percentiles(
     df: pd.DataFrame, col: str, groupby: str = "NUTS_ID"
@@ -104,6 +110,14 @@ def fit_dlnm_weekly(
     Gasparrini, A. (2010). Distributed lag non-linear models. Statistics in
     Medicine, 29(21), 2224-2234. https://doi.org/10.1002/sim.3940
     """
+    # If "xcol" starts with a TARGET but "ycol" does not, swap them
+    if any(x_col.startswith(ls) for ls in LS_TARGET) and not any(
+        y_col.startswith(ls) for ls in LS_TARGET
+    ):
+        x_col, y_col = y_col, x_col
+        if verbose:
+            print(f"[INFO] Swapped x_col and y_col: now x_col={x_col}, y_col={y_col}")
+
     df = df[[x_col, y_col]].copy().dropna()
 
     # X spline basis specification
