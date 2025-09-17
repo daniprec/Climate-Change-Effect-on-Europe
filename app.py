@@ -1,4 +1,5 @@
 import os
+from functools import lru_cache
 
 import geopandas as gpd
 import pandas as pd
@@ -19,17 +20,14 @@ CSV_MAP = {
     "AT": os.path.join(BASE_DIR, "data", "austria.csv"),
 }
 
-# Simple in-memory cache for CSVs to avoid re-reading on each request
-CSV_CACHE: dict[str, pd.DataFrame] = {}
 
-
+@lru_cache(maxsize=4)
 def _get_df(map_id: str) -> pd.DataFrame:
-    """Return cached DataFrame for a map_id, loading from disk if needed."""
+    """Return cached DataFrame for a map_id, loading from disk if needed.
+    Use an LRU cache for CSVs to avoid unbounded memory usage"""
     map_id = map_id.upper()
     path = CSV_MAP[map_id]
-    if map_id not in CSV_CACHE:
-        CSV_CACHE[map_id] = pd.read_csv(path).round(1)
-    return CSV_CACHE[map_id]
+    return pd.read_csv(path).round(1)
 
 
 META_MAP = {
