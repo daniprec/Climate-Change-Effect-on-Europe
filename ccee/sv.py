@@ -61,6 +61,7 @@ def parse_listing(html: str):
         if month is None:
             # Some pages might use non-breaking spaces / variant spellings
             # Try a very loose fallback (first word after "Monatsbericht")
+            # \xa0 is the Unicode non-breaking space character; replace it with a regular space
             month = MONTHS_DE.get(month_name.replace("\xa0", " "), None)
         href = a.get("href")
         if not href or "cdscontent/load" not in href:
