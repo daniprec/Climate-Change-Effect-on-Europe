@@ -10,3 +10,5 @@ cache/
 notebooks/
 output/*
 *.egg-info/
+
+data/monatsberichte/*

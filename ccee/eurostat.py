@@ -42,6 +42,7 @@ def download_eurostat_data(dataset: str) -> pd.DataFrame:
         sep=",|\t",
         na_values=":",
         engine="python",
+        dtype_backend="pyarrow",
     )
 
     # If a column name has "\", drop all after the first "\" in that column name
@@ -78,18 +79,30 @@ def download_eurostat_data(dataset: str) -> pd.DataFrame:
         end_year = date_columns.max()
         print(f"[INFO] Eurostat - Date range: {start_year} - {end_year}")
 
-    return df
+    # Attempt to infer better dtypes for object columns
+    return df.infer_objects(copy=False)
 
 
 def download_eurostat_mortality(ls_ids: list[str] | None = None) -> pd.DataFrame:
     """
+    Deaths by week, sex, 20-year age group and NUTS 3 region.
+
+    URL: https://doi.org/10.2908/DEMO_R_MWK3_20
+
+    Parameters
+    ----------
     ls_ids : list[str]
         List of NUTS-3 IDs to filter the Eurostat mortality data.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with columns "NUTS_ID", "year", "week", "mortality"
     """
     print("[INFO] Reading Eurostat mortality data into Pandas...")
 
     # Mortality data
-    df_demomwk = download_eurostat_data(dataset="demo_r_mwk3_t")
+    df_demomwk = download_eurostat_data(dataset="demo_r_mwk3_20")
     df_demomwk.rename(columns={"geo": "NUTS_ID"}, inplace=True)
 
     # Match the NUTS_ID with the GeoDataFrame
@@ -103,13 +116,29 @@ def download_eurostat_mortality(ls_ids: list[str] | None = None) -> pd.DataFrame
         print("The following IDs were not found in Eurostat data:")
         print(", ".join(ls_out2))
 
+    # Drop UNK age groups
+    df_demomwk = df_demomwk[df_demomwk["age"] != "UNK"].copy()
+    # Map age groups to codes
+    dict_age = {
+        "TOTAL": "T",
+        "Y_LT20": "00",
+        "Y20-39": "20",
+        "Y40-59": "40",
+        "Y60-79": "60",
+        "Y_GE80": "80",
+    }
+    df_demomwk["age"] = df_demomwk["age"].map(dict_age)
+
+    # Drop UNK sex
+    df_demomwk = df_demomwk[df_demomwk["sex"] != "UNK"].copy()
+
     # The column names are like "2015-W01"
     # We will turn the dataframe into a long format:
     # Columns will be "NUTS_ID", "year", "week", "mortality"
     # Drop columns "freq" and "unit" first
     df_demomwk.drop(columns=["freq", "unit"], inplace=True)
     df_demomwk = df_demomwk.melt(
-        id_vars=["NUTS_ID"],
+        id_vars=["NUTS_ID", "age", "sex"],
         var_name="year_week",
         value_name="mortality",
     )
@@ -120,10 +149,26 @@ def download_eurostat_mortality(ls_ids: list[str] | None = None) -> pd.DataFrame
     df_demomwk.drop(columns=["year_week"], inplace=True)
     # Drop NaNs in "mortality"
     df_demomwk.dropna(subset=["mortality"], inplace=True)
-    # Sort column order: NUTS_ID, year, week, mortality
-    df_demomwk = df_demomwk[["NUTS_ID", "year", "week", "mortality"]]
 
-    return df_demomwk
+    # We want a single row per NUTS_ID, year, week
+    # In order to do this, we will pivot the dataframe:
+    # the new columns will be "mortality_<sex>_<age>"
+    df_demomwk = df_demomwk.pivot(
+        index=["NUTS_ID", "year", "week"], columns=["sex", "age"], values="mortality"
+    )
+    df_demomwk.columns = df_demomwk.columns.map(
+        lambda x: "mortality_{}_{}".format(x[0], x[1]) if isinstance(x, tuple) else x
+    )
+
+    # For consistency, "mortality_T_T" is renamed to "mortality"
+    dict_rename = {"mortality_T_T": "mortality"}
+    df_demomwk.rename(columns=dict_rename, inplace=True)
+
+    # Reset index to turn the index into columns
+    df_demomwk.reset_index(inplace=True)
+
+    # Attempt to infer better dtypes for object columns
+    return df_demomwk.infer_objects(copy=False)
 
 
 def download_eurostat_population_density(
@@ -149,7 +194,8 @@ def download_eurostat_population_density(
     # Sort column order: NUTS_ID, year, population_density
     df_popdensity = df_popdensity[["NUTS_ID", "year", "population_density"]]
 
-    return df_popdensity
+    # Attempt to infer better dtypes for object columns
+    return df_popdensity.infer_objects(copy=False)
 
 
 def download_eurostat_nuts2_population(
@@ -178,40 +224,89 @@ def download_eurostat_nuts2_population(
     # Convert "year" to integer
     df_pop["year"] = df_pop["year"].astype(int)
 
-    return df_pop
+    # Attempt to infer better dtypes for object columns
+    return df_pop.infer_objects(copy=False)
 
 
 def download_eurostat_nuts3_population(
     ls_ids: list[str] | None = None,
 ) -> pd.DataFrame:
+    """
+    Population on 1 January by age group, sex and NUTS 3 region
+    https://ec.europa.eu/eurostat/databrowser/view/demo_r_pjangrp3/default/table?lang=en
+    Valid from 2015 onwards
+    """
     print("[INFO] Reading Eurostat population data into Pandas...")
     # Population data
-    df_pop = download_eurostat_data(dataset="demo_r_pjanaggr3")
-    # Filter for total sex and age class
-    mask_sex = df_pop["sex"] == "Total"
-    mask_age = df_pop["age"] == "Total"
-    df_pop = df_pop[mask_sex & mask_age].copy()
+    df_pop = download_eurostat_data(dataset="demo_r_pjangrp3")
     df_pop.rename(columns={"geo": "NUTS_ID"}, inplace=True)
-    df_pop.drop(columns=["freq", "unit", "sex", "age"], inplace=True)
+    df_pop.drop(columns=["freq", "unit"], inplace=True)
 
     # If ls_ids is provided, filter for NUTS-3 regions
     if ls_ids is not None:
         # Filter for NUTS-3 regions
         df_pop = df_pop[df_pop["NUTS_ID"].isin(ls_ids)].copy()
 
+    # Drop UNK age groups
+    df_pop = df_pop[df_pop["age"] != "UNK"].copy()
+    # Group age classes to match the mortality data
+    dict_age = {
+        "TOTAL": "T",
+        "Y_LT5": "00",
+        "Y5-9": "00",
+        "Y10-14": "00",
+        "Y15-19": "00",
+        "Y20-24": "20",
+        "Y25-29": "20",
+        "Y30-34": "20",
+        "Y35-39": "20",
+        "Y40-44": "40",
+        "Y45-49": "40",
+        "Y50-54": "40",
+        "Y55-59": "40",
+        "Y60-64": "60",
+        "Y65-69": "60",
+        "Y70-74": "60",
+        "Y75-79": "60",
+        "Y80-84": "80",
+        "Y85-89": "80",
+        "Y_GE85": "80",
+        "Y_GE90": "80",
+    }
+    df_pop["age"] = df_pop["age"].map(dict_age)
+
     # The column names are like "2020"
     # We will turn the dataframe into a long format:
-    # Columns will be "name", "year", "population"
+    # Columns will be "NUTS_ID", "sex", "age", "year", "population"
+    year_cols = df_pop.columns[df_pop.columns.str.match(r"^\d{4}$")]
+    df_pop = df_pop[["NUTS_ID", "sex", "age"] + year_cols.tolist()]
     df_pop = df_pop.melt(
-        id_vars=["NUTS_ID"],
+        id_vars=["NUTS_ID", "sex", "age"],
         var_name="year",
         value_name="population",
     )
+    df_pop.dropna(subset=["population"], inplace=True)
 
     # Convert "year" to integer
     df_pop["year"] = df_pop["year"].astype(int)
 
-    return df_pop
+    # Sum the population by age group and sex
+    cols_group = ["NUTS_ID", "year", "sex", "age"]
+    df_pop = df_pop.groupby(cols_group, as_index=False)["population"].sum()
+
+    # We want a single row per NUTS_ID, year with columns population_<sex>_<age>
+    df_pop = df_pop.pivot(
+        index=["NUTS_ID", "year"], columns=["sex", "age"], values="population"
+    )
+    df_pop.columns = [f"population_{s}_{a}" for (s, a) in df_pop.columns]
+    df_pop = df_pop.reset_index()
+
+    # For consistency, "population_T_T" is renamed to "population"
+    if "population_T_T" in df_pop.columns:
+        df_pop.rename(columns={"population_T_T": "population"}, inplace=True)
+
+    # Attempt to infer better dtypes for object columns
+    return df_pop.infer_objects(copy=False)
 
 
 def compute_population_from_density(
@@ -251,9 +346,38 @@ def compute_population_from_density(
     )
 
     # Fill "population" when missing
-    df["population"].fillna(population, inplace=True)
+    df["population"] = df["population"].fillna(population)
 
     # Drop the "area_km2" column as it's no longer needed
     df.drop(columns=["area_km2"], inplace=True)
 
-    return df
+    # Attempt to infer better dtypes for object columns
+    return df.infer_objects(copy=False)
+
+
+def compute_mortality_rate(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Compute the mortality rate per 100,000 inhabitants.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame with columns "mortality" and "population".
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with an additional column "mortality_rate".
+    """
+    # Find all columns starting with "mortality"
+    mortality_cols = [col for col in df.columns if col.startswith("mortality")]
+    # Make the same list with "population"
+    population_cols = [col.replace("mortality", "population") for col in mortality_cols]
+    # For each mortality column, compute the mortality rate
+    for mort_col, pop_col in zip(mortality_cols, population_cols):
+        if pop_col in df.columns:
+            rate_col = mort_col.replace("mortality", "mortality_rate")
+            df[rate_col] = 100000 * df[mort_col] / df[pop_col]
+
+    # Attempt to infer better dtypes for object columns
+    return df.infer_objects(copy=False)

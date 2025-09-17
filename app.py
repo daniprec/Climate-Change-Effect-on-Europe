@@ -1,4 +1,5 @@
 import os
+from functools import lru_cache
 
 import geopandas as gpd
 import pandas as pd
@@ -19,6 +20,16 @@ CSV_MAP = {
     "AT": os.path.join(BASE_DIR, "data", "austria.csv"),
 }
 
+
+@lru_cache(maxsize=4)
+def _get_df(map_id: str) -> pd.DataFrame:
+    """Return cached DataFrame for a map_id, loading from disk if needed.
+    Use an LRU cache for CSVs to avoid unbounded memory usage"""
+    map_id = map_id.upper()
+    path = CSV_MAP[map_id]
+    return pd.read_csv(path).round(1)
+
+
 META_MAP = {
     "EU": {  # Europe layer
         "bbox": [[34, -25], [71, 45]],
@@ -34,7 +45,7 @@ META_MAP = {
 
 
 # Get minimum and maximum year
-df = pd.read_csv(CSV_MAP["EU"]).round(1)
+df = _get_df("EU")
 min_year = df["year"].min()
 max_year = df["year"].max()
 
@@ -63,17 +74,24 @@ def questions():
 @app.get("/api/data")
 def api_data():
     map_id = request.args.get("map_id", "EU").upper()
-    year = request.args.get("year", "2023")
-    week = request.args.get("week", "1")
+    year_s = request.args.get("year", "2023")
+    week_s = request.args.get("week", "1")
     metric = request.args.get("metric", "mortality_rate")
 
     # Check if the requested map_id is valid
     if map_id not in CSV_MAP:
         return jsonify({"error": "Invalid map_id specified"}), 400
 
+    # Validate numeric params
+    try:
+        year = int(year_s)
+        week = int(week_s)
+    except ValueError:
+        return jsonify({"error": "Invalid year/week"}), 400
+
     # Extract the DataFrame for the specified region, week and year
-    df = pd.read_csv(CSV_MAP[map_id]).round(1)
-    df = df[(df["year"] == int(year)) & (df["week"] == int(week))]
+    df = _get_df(map_id)
+    df = df[(df["year"] == year) & (df["week"] == week)]
 
     # Check if the requested information exists in the DataFrame
     if (metric not in df.columns) or (df.empty):
@@ -84,8 +102,8 @@ def api_data():
     # Merge the DataFrame with the GeoDataFrame
     gdf_region = gdf_region.merge(df, on="NUTS_ID", how="left")
 
-    # Return the processed GeoJSON.
-    return gdf_region.to_json()
+    # Return the processed GeoJSON with correct content type
+    return Response(gdf_region.to_json(), mimetype="application/json")
 
 
 @app.get("/api/bbox")
@@ -113,7 +131,7 @@ def app_data_time_series():
         return jsonify({"error": "Invalid map_id specified"}), 400
 
     # Load the DataFrame for the specified region
-    df = pd.read_csv(CSV_MAP[map_id]).round(1)
+    df = _get_df(map_id)
 
     # Filter by NUTS_ID
     df = df[df["NUTS_ID"] == nuts_id]
@@ -149,24 +167,26 @@ def app_data_time_series():
 @app.route("/api/data/download")
 def download_data():
     map_id = request.args.get("map_id", "EU").upper()
-    nuts_id = request.args.get("nuts_id", None).upper()
+    nuts_id = request.args.get("nuts_id", None)
+    if nuts_id is not None:
+        nuts_id = nuts_id.upper()
     metric1 = request.args.get("metric", "mortality_rate")
     metric2 = request.args.get("metric2", None)
 
     # Load the DataFrame for the specified map_id
     if map_id not in CSV_MAP:
         return jsonify({"error": "Invalid map_id specified"}), 400
-    df = pd.read_csv(CSV_MAP[map_id])
+    df = _get_df(map_id)
 
     # Validate metrics
     if metric1 not in df.columns:
         return jsonify({"error": f"No data available for metric '{metric1}'"}), 400
     else:
         metrics = [metric1]
-    if metric2 not in df.columns:
-        metric2 = None
-    else:
+    if metric2 is not None and metric2 in df.columns:
         metrics.append(metric2)
+    else:
+        metric2 = None
 
     # Prepare the DataFrame for download
     df = df[["NUTS_ID", "year", "week"] + metrics]
@@ -195,17 +215,25 @@ def rr_curve():
     This is a placeholder function that returns static data.
     """
     map_id = request.args.get("map_id", "EU").upper()
-    nuts_id = request.args.get("nuts_id", None).upper()
+    nuts_id = request.args.get("nuts_id", None)
+    if nuts_id is not None:
+        nuts_id = nuts_id.upper()
     metric1 = request.args.get("metric", "mortality_rate")
     metric2 = request.args.get("metric2", None)
 
     # Load the DataFrame for the specified map_id
     if map_id not in CSV_MAP:
         return jsonify({"error": "Invalid map_id specified"}), 400
-    df = pd.read_csv(CSV_MAP[map_id])
+    df = _get_df(map_id)
 
     # Choose a code
     df = df[df["NUTS_ID"] == nuts_id]
+
+    # Validate metrics existence
+    if metric1 not in df.columns:
+        return jsonify({"error": f"No data available for metric '{metric1}'"}), 400
+    if not metric2 or metric2 not in df.columns:
+        return jsonify({"error": f"No data available for metric '{metric2}'"}), 400
 
     # Drop rows with NaNs in x or y columns
     df.dropna(subset=[metric2, metric1], inplace=True)
@@ -235,5 +263,10 @@ def rr_curve():
     )
 
 
-if __name__ == "__main__":
+def main():
+    """Console entry-point to run the dev server."""
     app.run(debug=True)
+
+
+if __name__ == "__main__":
+    main()
