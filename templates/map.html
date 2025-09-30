@@ -54,29 +54,7 @@
 
           <label for="metricSelect">Display on map: </label>
           <select id="metricSelect" class="select">
-            <option value="mortality_rate">Mortality (aggregated)</option>
-            <option value="mortality_rate_T_00">Mortality (both, 0-19 yo)</option>
-            <option value="mortality_rate_M_00">Mortality (men, 0-19 yo)</option>
-            <option value="mortality_rate_F_00">Mortality (women, 0-19 yo)</option>
-            <option value="mortality_rate_T_20">Mortality (both, 20-39 yo)</option>
-            <option value="mortality_rate_M_20">Mortality (men, 20-39 yo)</option>
-            <option value="mortality_rate_F_20">Mortality (women, 20-39 yo)</option>
-            <option value="mortality_rate_T_40">Mortality (both, 40-59 yo)</option>
-            <option value="mortality_rate_M_40">Mortality (men, 40-59 yo)</option>
-            <option value="mortality_rate_F_40">Mortality (women, 40-59 yo)</option>
-            <option value="mortality_rate_T_60">Mortality (both, 60-79 yo)</option>
-            <option value="mortality_rate_M_60">Mortality (men, 60-79 yo)</option>
-            <option value="mortality_rate_F_60">Mortality (women, 60-79 yo)</option>
-            <option value="mortality_rate_T_80">Mortality (both, 80+ yo)</option>
-            <option value="mortality_rate_M_80">Mortality (men, 80+ yo)</option>
-            <option value="mortality_rate_F_80">Mortality (women, 80+ yo)</option>
-            <option value="population_density">Population Density</option>
-            <option value="temp_era5_q50">Temperature (ERA5)</option>
-            <option value="temp_rcp45">Temperature (RCP 4.5)</option>
-            <option value="temp_rcp85">Temperature (RCP 8.5)</option>
-            <option value="NOx">Nitrogen Dioxide</option>
-            <option value="O3">Ozone</option>
-            <option value="pm10">Particule Matter</option>
+            <!-- Options will be populated dynamically from the catalog -->
           </select>
         </div>   
 
@@ -86,29 +64,7 @@
           <div class="dropdown-content">
           <select id="compareSelect" class="select">
             <option value="">— none —</option>
-            <option value="mortality_rate">Mortality (aggregated)</option>
-            <option value="mortality_rate_T_00">Mortality (both, 0-19 yo)</option>
-            <option value="mortality_rate_M_00">Mortality (men, 0-19 yo)</option>
-            <option value="mortality_rate_F_00">Mortality (women, 0-19 yo)</option>
-            <option value="mortality_rate_T_20">Mortality (both, 20-39 yo)</option>
-            <option value="mortality_rate_M_20">Mortality (men, 20-39 yo)</option>
-            <option value="mortality_rate_F_20">Mortality (women, 20-39 yo)</option>
-            <option value="mortality_rate_T_40">Mortality (both, 40-59 yo)</option>
-            <option value="mortality_rate_M_40">Mortality (men, 40-59 yo)</option>
-            <option value="mortality_rate_F_40">Mortality (women, 40-59 yo)</option>
-            <option value="mortality_rate_T_60">Mortality (both, 60-79 yo)</option>
-            <option value="mortality_rate_M_60">Mortality (men, 60-79 yo)</option>
-            <option value="mortality_rate_F_60">Mortality (women, 60-79 yo)</option>
-            <option value="mortality_rate_T_80">Mortality (both, 80+ yo)</option>
-            <option value="mortality_rate_M_80">Mortality (men, 80+ yo)</option>
-            <option value="mortality_rate_F_80">Mortality (women, 80+ yo)</option>
-            <option value="population_density">Population Density</option>
-            <option value="temp_era5_q50">Temperature (ERA5)</option>
-            <option value="temp_rcp45">Temperature (RCP 4.5)</option>
-            <option value="temp_rcp85">Temperature (RCP 8.5)</option>
-            <option value="NOx">Nitrogen Dioxide</option>
-            <option value="O3">Ozone</option>
-            <option value="pm10">Particule Matter</option>
+            <!-- Populated dynamically -->
           </select>
           </div>
 
@@ -176,6 +132,36 @@
       class="overlay logo"
     />
   </div>
+
+  <script>
+    // Dynamically populate metricSelect and compareSelect from the backend catalog
+    document.addEventListener('DOMContentLoaded', async function() {
+      const metricSelect = document.getElementById('metricSelect');
+      const compareSelect = document.getElementById('compareSelect');
+      try {
+        const resp = await fetch('/api/catalog');
+        const catalog = await resp.json();
+        const metrics = catalog.datasets;
+        // Clear existing options
+        metricSelect.innerHTML = '';
+        compareSelect.innerHTML = '<option value="">— none —</option>';
+        metrics.forEach(ds => {
+          const opt1 = document.createElement('option');
+          opt1.value = ds.variable;
+          opt1.textContent = ds.display?.label || ds.variable;
+          metricSelect.appendChild(opt1);
+          // Also add to compareSelect
+          const opt2 = document.createElement('option');
+          opt2.value = ds.variable;
+          opt2.textContent = ds.display?.label || ds.variable;
+          compareSelect.appendChild(opt2);
+        });
+      } catch (e) {
+        metricSelect.innerHTML = '<option disabled>Error loading metrics</option>';
+        compareSelect.innerHTML = '<option disabled>Error loading metrics</option>';
+      }
+    });
+  </script>
 
   <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>

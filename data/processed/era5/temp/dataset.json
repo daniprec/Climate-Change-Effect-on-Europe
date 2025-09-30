@@ -1,0 +1,53 @@
+{
+  "dataset_id": "era5-temp-weekly",
+  "source": "ERA5-Land",
+  "producer_script": "scripts/era5.py",
+  "variable": "temp",
+  "stats": [
+    "q05",
+    "q50",
+    "q95"
+  ],
+  "levels": [
+    "AT",
+    "EU"
+  ],
+  "frequency": "weekly",
+  "units": "degC",
+  "time_coverage": {
+    "start": "2024-12-30",
+    "end": ""
+  },
+  "partitions": [
+    "stat",
+    "level",
+    "year"
+  ],
+  "path_glob": "data/processed/era5/temp/parquet/**.parquet",
+  "schema": {
+    "fields": [
+      "NUTS_ID",
+      "date",
+      "year",
+      "week",
+      "stat",
+      "level",
+      "value"
+    ],
+    "types": [
+      "string",
+      "date",
+      "int16",
+      "int8",
+      "string",
+      "string",
+      "float32"
+    ]
+  },
+  "display": {
+    "label": "Temperature",
+    "unit_symbol": "°C"
+  },
+  "created_at": "2025-09-18T12:11:44Z",
+  "version": "1.0.0"
+}

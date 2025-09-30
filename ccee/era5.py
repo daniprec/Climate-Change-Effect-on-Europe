@@ -7,6 +7,8 @@ import pandas as pd
 import requests
 import xarray as xr
 
+from ccee._io_utils import write_dataset_json, write_partitioned_parquet
+
 DICT_FILE_TERMINATION = {
     "grib": ".grib",
     "netcdf": ".nc",
@@ -88,9 +90,9 @@ def download_era5_file(
     return fout
 
 
-def download_era5_single_year_month(
+def download_era5_target_year_target_month(
     path_geojson: str = "./data/regions.geojson",
-    fin: str = "./data/era5-land",
+    path_data_raw: str = "./data/era5-land",
     year: int = 2025,
     month: int = 1,
     week_label: str = "W-SUN",  # choose "W-MON", "W-SUN"…
@@ -104,7 +106,7 @@ def download_era5_single_year_month(
     ----------
     path_geojson : str
         GeoJSON with polygons and a `NUTS_ID` column.
-    fin : str
+    path_data_raw : str
         Folder or file pattern understood by `download_era5_file`.
     year : int
         Year to open from the ERA5-Land reanalysis data (default 2025).
@@ -131,10 +133,13 @@ def download_era5_single_year_month(
     # Load ERA5 2m-temp  (daily)  -> °C
     # ------------------------------------------------------------------ #
     era5_file = download_era5_file(
-        year=year, month=month, folder=fin, data_format="grib"
+        year=year, month=month, folder=path_data_raw, data_format="grib"
     )
     era5 = xr.open_dataset(era5_file, engine="cfgrib", decode_timedelta=True)
     temp = era5["t2m"]
+
+    # We can now close the xarray dataset to free resources
+    era5.close()
 
     # Coordinates:
     # time: day
@@ -182,45 +187,95 @@ def download_era5_single_year_month(
             how="left",
         )
     )
+    # Quantile as "qXX"
+    df_long["stat"] = df_long["quantile"].apply(lambda x: f"q{x * 100:02.0f}")
 
     iso = df_long["datetime"].dt.isocalendar()  # ISO year/week/day
     df_long["year"] = iso.year
     df_long["week"] = iso.week
 
-    # Pivot to wide format: one column per quantile
-    df_wide = df_long.pivot_table(
-        index=["NUTS_ID", "year", "week"],
-        columns="quantile",
-        values="temperature",
-    ).reset_index()
+    # Turn datetime into date (week starting date)
+    df_long["date"] = df_long["datetime"].dt.to_period(week_label).dt.start_time
 
-    # Rename quantile columns
-    df_wide = df_wide.rename(
-        columns={
-            0.05: "temp_era5_q05",
-            0.50: "temp_era5_q50",
-            0.95: "temp_era5_q95",
-        }
+    # Assign level: EU for NUTS-ID with 2 letters, else country code
+    df_long["level"] = df_long["NUTS_ID"].apply(
+        lambda x: "EU" if len(x) == 2 else x[:2]
     )
 
-    # We can now close the xarray dataset to free resources
-    era5.close()
+    # Rename columns
+    df_long = df_long.rename(columns={"temperature": "value"})
 
-    return df_wide[
+    return df_long[
         [
             "NUTS_ID",
+            "date",
             "year",
             "week",
-            "temp_era5_q05",
-            "temp_era5_q50",
-            "temp_era5_q95",
+            "stat",
+            "level",
+            "value",
         ]
     ].reset_index(drop=True)
 
 
+def download_era5_target_year_all_months(
+    path_geojson: str = "./data/regions.geojson",
+    path_data_raw: str = "./data/era5-land",
+    year: int = 2025,
+    week_label: str = "W-SUN",
+) -> pd.DataFrame:
+    """Download ERA5-Land reanalysis data for a specific year and return a DataFrame.
+    This function has to perform a for loop over each month,
+    as the CDS API does not support downloading multiple months or years in a single request.
+
+    Parameters
+    ----------
+    path_geojson : str
+        GeoJSON with polygons and a `NUTS_ID` column.
+    path_data_raw : str
+        Folder or file pattern understood by `download_era5_file`.
+    year : int
+        Year to open from the ERA5-Land reanalysis data (default 2025).
+    week_label : str
+        Pandas/xarray resample code (default 'W-SUN' = ISO weeks ending Sunday).
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame containing weekly mean 2m temperature for each region in the
+        provided GeoJSON file, sampled from ERA5-Land reanalysis data.
+    """
+    # Initialize an empty list to store DataFrames for each month
+    ls_df: list[pd.DataFrame] = []
+    # Iterate over each month in the specified year
+    for month in range(1, 13):
+        # If this date is in the future, skip it
+        if dt.datetime(year, month, 1) > dt.datetime.now():
+            continue
+        # Else, we download and process the data
+        try:
+            # Download and process each month
+            df = download_era5_target_year_target_month(
+                path_geojson=path_geojson,
+                path_data_raw=path_data_raw,
+                year=year,
+                month=month,
+                week_label=week_label,
+            )
+        except requests.exceptions.HTTPError as e:
+            print(
+                f"Error downloading data for {year}-{month:02d}: {e}. Skipping this month."
+            )
+            continue
+        ls_df.append(df)
+        print(f"[INFO] Downloaded and processed data for {year}-{month:02d}")
+    df_all = pd.concat(ls_df, ignore_index=True)
+    return df_all
+
+
 def download_era5_land_reanalysis(
     path_geojson: str = "./data/regions.geojson",
-    fin: str = "./data/era5-land",
+    path_data_raw: str = "./data/era5-land",
     year_min: int = 2000,
     year_max: int | None = None,
     week_label: str = "W-SUN",  # choose "W-MON", "W-SUN"…
@@ -233,7 +288,7 @@ def download_era5_land_reanalysis(
     ----------
     path_geojson : str
         GeoJSON with polygons and a `NUTS_ID` column.
-    fin : str
+    path_data_raw : str
         Folder or file pattern understood by `download_era5_file`.
     year_min : int
         Minimum year to open from the ERA5-Land reanalysis data (default 1980).
@@ -254,37 +309,108 @@ def download_era5_land_reanalysis(
     ls_df: list[pd.DataFrame] = []
     # Iterate over each year and month in the specified range
     for year in range(year_min, year_max + 1):
-        for month in range(1, 13):
-            try:
-                # Download and process each month
-                df = download_era5_single_year_month(
-                    path_geojson=path_geojson,
-                    fin=fin,
-                    year=year,
-                    month=month,
-                    week_label=week_label,
-                )
-            except requests.exceptions.HTTPError as e:
-                print(
-                    f"Error downloading data for {year}-{month:02d}: {e}. Skipping this month."
-                )
-                continue
-            ls_df.append(df)
+        try:
+            # Download and process each month
+            df = download_era5_target_year_all_months(
+                path_geojson=path_geojson,
+                path_data_raw=path_data_raw,
+                year=year,
+                week_label=week_label,
+            )
+        except requests.exceptions.HTTPError as e:
+            print(f"Error downloading data for {year}: {e}. Skipping this year.")
+            continue
+        ls_df.append(df)
+        print(f"[INFO] Downloaded and processed data for {year}")
     df_all = pd.concat(ls_df, ignore_index=True)
     return df_all
 
 
-def main(start: int = 2000):
+def era5_land_reanalysis_to_parquet(
+    path_geojson: str = "data/regions.geojson",
+    path_data_raw: str = "data/era5-land",
+    path_processed: str = "data/processed/era5/temp/parquet",
+    path_json: str = "data/processed/era5/temp/dataset.json",
+):
     """
     Main function to execute the ERA5 reanalysis to DataFrame conversion.
     """
-    # End year is current year (use date)
-    current_year = dt.datetime.now().year
-    # Download all files first
-    for year in range(start, current_year + 1):
-        for month in range(1, 13):
-            download_era5_file(year=year, month=month)
+    year_min = 1980
+    year_max = dt.datetime.now().year
+
+    # Initialize variables to avoid unbound errors
+    stats = []
+    levels = []
+    date_min = ""
+    date_max = ""
+
+    # Iterate over each year and month in the specified range
+    for year in range(year_min, year_max + 1):
+        # Download and process each month
+        df_long = download_era5_target_year_all_months(
+            path_geojson=path_geojson,
+            path_data_raw=path_data_raw,
+            year=year,
+        )
+
+        write_partitioned_parquet(
+            df_long.sort_values(["NUTS_ID", "date"]),
+            base_dir=path_processed,
+            partition_cols=["stat", "level", "year"],
+        )
+        print(f"[INFO] Downloaded and processed data for {year}")
+
+        if year == year_min:
+            # Keep the metadata from the first year only
+            date_min: str = df_long["date"].min().date().isoformat()
+            stats: list[str] = sorted(df_long["stat"].unique().tolist())
+            levels: list[str] = sorted(df_long["level"].unique().tolist())
+
+        # Update date_max each year
+        date_max: str = df_long["date"].max().date().isoformat()
+
+    meta = {
+        "dataset_id": "era5-temp-weekly",
+        "source": "ERA5-Land",
+        "producer_script": "scripts/era5.py",
+        "variable": "temp",
+        "stats": stats,
+        "levels": levels,
+        "frequency": "weekly",
+        "units": "degC",
+        "time_coverage": {
+            "start": date_min,
+            "end": date_max,
+        },
+        "partitions": ["stat", "level", "year"],
+        "path_glob": "data/processed/era5/temp/parquet/**.parquet",
+        "schema": {
+            "fields": [
+                "NUTS_ID",
+                "date",
+                "year",
+                "week",
+                "stat",
+                "level",
+                "value",
+            ],
+            "types": [
+                "string",
+                "date",
+                "int16",
+                "int8",
+                "string",
+                "string",
+                "float32",
+            ],
+        },
+        "display": {"label": "Temperature", "unit_symbol": "°C"},
+        "created_at": dt.datetime.today().isoformat(timespec="seconds") + "Z",
+        "version": "1.0.0",
+    }
+
+    write_dataset_json(meta, path_json)
 
 
 if __name__ == "__main__":
-    main()
+    era5_land_reanalysis_to_parquet()
