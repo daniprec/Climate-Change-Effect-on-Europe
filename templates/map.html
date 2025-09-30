@@ -134,34 +134,34 @@
   </div>
 
   <script>
-  // Dynamically populate metricSelect and compareSelect from the backend catalog
-  document.addEventListener('DOMContentLoaded', async function() {
-    const metricSelect = document.getElementById('metricSelect');
-    const compareSelect = document.getElementById('compareSelect');
-    try {
-      const resp = await fetch('/api/catalog');
-      const catalog = await resp.json();
-      const metrics = catalog.datasets;
-      // Clear existing options
-      metricSelect.innerHTML = '';
-      compareSelect.innerHTML = '<option value="">— none —</option>';
-      metrics.forEach(ds => {
-        const opt1 = document.createElement('option');
-        opt1.value = ds.variable;
-        opt1.textContent = ds.display?.label || ds.variable;
-        metricSelect.appendChild(opt1);
-        // Also add to compareSelect
-        const opt2 = document.createElement('option');
-        opt2.value = ds.variable;
-        opt2.textContent = ds.display?.label || ds.variable;
-        compareSelect.appendChild(opt2);
-      });
-    } catch (e) {
-      metricSelect.innerHTML = '<option disabled>Error loading metrics</option>';
-      compareSelect.innerHTML = '<option disabled>Error loading metrics</option>';
-    }
-  });
-</script>
+    // Dynamically populate metricSelect and compareSelect from the backend catalog
+    document.addEventListener('DOMContentLoaded', async function() {
+      const metricSelect = document.getElementById('metricSelect');
+      const compareSelect = document.getElementById('compareSelect');
+      try {
+        const resp = await fetch('/api/catalog');
+        const catalog = await resp.json();
+        const metrics = catalog.datasets;
+        // Clear existing options
+        metricSelect.innerHTML = '';
+        compareSelect.innerHTML = '<option value="">— none —</option>';
+        metrics.forEach(ds => {
+          const opt1 = document.createElement('option');
+          opt1.value = ds.variable;
+          opt1.textContent = ds.display?.label || ds.variable;
+          metricSelect.appendChild(opt1);
+          // Also add to compareSelect
+          const opt2 = document.createElement('option');
+          opt2.value = ds.variable;
+          opt2.textContent = ds.display?.label || ds.variable;
+          compareSelect.appendChild(opt2);
+        });
+      } catch (e) {
+        metricSelect.innerHTML = '<option disabled>Error loading metrics</option>';
+        compareSelect.innerHTML = '<option disabled>Error loading metrics</option>';
+      }
+    });
+  </script>
 
   <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
