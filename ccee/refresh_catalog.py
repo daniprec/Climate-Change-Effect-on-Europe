@@ -2,12 +2,12 @@ import json
 from pathlib import Path
 
 
-def collect(root: Path):
-    entries = []
+def collect(root: Path) -> dict[str, list[dict]]:
+    entries: list[dict] = []
     for p in root.glob("**/dataset.json"):
         with open(p, "r", encoding="utf-8") as f:
-            meta = json.load(f)
-        # Optional: validate required keys here…
+            meta: dict = json.load(f)
+        # Optional: validate required keys here
         entries.append(meta)
     return {"datasets": entries}
 
