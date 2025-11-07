@@ -115,7 +115,7 @@ def load_reanalysis_temperature_data(
     return np.concatenate([t.values.flatten() for t in ls_temps])
 
 
-def plot_rr_curve(temps: np.ndarray, urau_code: str = "AT001C"):
+def plot_rr_curve(urau_code: str = "AT001C"):
     coefs_df = pd.read_csv("../EUcityProj/data/coefs.csv")
     # 5 age groups x 5 coefficients
     coefs = coefs_df[coefs_df["URAU_CODE"] == urau_code].iloc[:, 2:]
@@ -144,14 +144,6 @@ def plot_rr_curve(temps: np.ndarray, urau_code: str = "AT001C"):
     # bvar_at_mmt[a, j] = bvar[mmt_inrange_ix[a], j] = bvar[i_a, j] = B_j(T_{MMT,a})
     bvar_at_mmt = bvar[mmt_inrange_ix, :]
 
-    # Extend the temperature range for plotting
-    bvar = bs(
-        temps,
-        knots=tmeanper[["10.0%", "75.0%", "90.0%"]].values[0],
-        degree=2,
-        include_intercept=False,
-    )
-
     # Vectorized without newaxis (using einsum)
     # Compute for all temperatures and ages at once
     log_rr = np.einsum("ij,aj->ia", bvar, coefs.values) - np.einsum(
@@ -160,7 +152,7 @@ def plot_rr_curve(temps: np.ndarray, urau_code: str = "AT001C"):
 
     rr = np.exp(log_rr)
 
-    return rr
+    return rr, tmeanper.values[0]
 
 
 def main(year_cordex: int = 2050, year_era5: int = 2020):
@@ -210,8 +202,7 @@ def main(year_cordex: int = 2050, year_era5: int = 2020):
     lines, labels = plt.gca().get_legend_handles_labels()
 
     # RR curve
-    temps_rr = np.arange(-10, 36, 0.02)
-    rr = plot_rr_curve(temps_rr, urau_code="AT001C")
+    rr, temps_rr = plot_rr_curve(urau_code="AT001C")
     # Get age group
     rr = rr[:, 3]
 
