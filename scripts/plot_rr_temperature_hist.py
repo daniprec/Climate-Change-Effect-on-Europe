@@ -210,15 +210,15 @@ def main(year_cordex: int = 2050, year_era5: int = 2020):
     lines, labels = plt.gca().get_legend_handles_labels()
 
     # RR curve
-    temps = np.arange(-10, 36, 0.02)
-    rr = plot_rr_curve(temps, urau_code="AT001C")
+    temps_rr = np.arange(-10, 36, 0.02)
+    rr = plot_rr_curve(temps_rr, urau_code="AT001C")
     # Get age group
     rr = rr[:, 3]
 
     # Create a right y-axis for RR
     ax2 = plt.gca().twinx()
     ax2.plot(
-        temps,
+        temps_rr,
         rr,
         color="black",
         label="Relative Risk (Age 65-74)",
@@ -237,7 +237,7 @@ def main(year_cordex: int = 2050, year_era5: int = 2020):
     # Compute Attributable Fraction (AF) for both datasets
     af = rr - 1 / rr
     # AF has currently x100 more points than histogram bins
-    af = af[::50]  # Downsample to match histogram bins
+    af = af[100::100]  # Downsample to match histogram bins
     # Get the bin heights for both histograms
     counts_cordex, _ = np.histogram(t_cordex, bins=temps.tolist())
     counts_era5, _ = np.histogram(t_era5, bins=temps.tolist())
