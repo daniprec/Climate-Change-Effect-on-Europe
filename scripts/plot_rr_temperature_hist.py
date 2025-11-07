@@ -71,39 +71,80 @@ def load_projected_temperature_data(
     )
     rlon, rlat = tfm.transform(lon, lat)
 
-    # Get nearest grid point +/- size
-    size = 0.2
-    ds_vienna = ds.sel(
-        rlon=slice(rlon - size, rlon + size), rlat=slice(rlat - size, rlat + size)
+    # Sample at nearest grid point
+    ds_slice = ds.sel(
+        rlon=rlon,
+        rlat=rlat,
+        method="nearest",
     )
-    # Compute mean over the area
-    ds_vienna_mean = ds_vienna.mean(dim=["rlon", "rlat"])
 
     # Select year 2050
-    ds_vienna_mean = ds_vienna_mean.sel(time=slice(f"{year}-01-01", f"{year}-12-31"))
+    ds_slice_mean = ds_slice.sel(time=slice(f"{year}-01-01", f"{year}-12-31"))
 
-    tas = ds_vienna_mean.tas - 273.15  # Convert from K to °C
+    tas = ds_slice_mean.tas - 273.15  # Convert from K to °C
 
     return tas.values.flatten()
 
 
+def load_reanalysis_temperature_data(
+    lat: float = 48.2085, lon: float = 16.3721, year: int = 2024
+) -> np.ndarray:
+    ls_temps = []
+    for month in range(1, 13):
+        era5_file = f"./data/era5-land/ERA5-Land-{year}-{month:02d}.grib"
+        era5 = xr.open_dataset(era5_file, engine="cfgrib", decode_timedelta=True)
+        temp = era5["t2m"]
+        # Coordinates:
+        # time: day
+        # step: hour (0, 1, ..., 23)
+
+        # Temperature is in Kelvin, convert to Celsius
+        temp = temp - 273.15  # Convert from Kelvin to Celsius
+
+        # Sample nearest grid point to Vienna
+        temp_slice = temp.sel(latitude=lat, longitude=lon, method="nearest")
+
+        # Average over hours to get daily mean
+        temp_slice = temp_slice.mean(dim="step")
+
+        ls_temps.append(temp_slice)
+
+    # Return a single numpy array with all daily temperatures
+    return np.concatenate([t.values.flatten() for t in ls_temps])
+
+
 def main():
-    t50 = load_projected_temperature_data()
+    t_cordex = load_projected_temperature_data()
+    t_era5 = load_reanalysis_temperature_data()
 
     # Plot histogram of daily temperatures
     # Use bins of 1ºC from -10ºC to 36ºC
     plt.figure(figsize=(10, 6))
 
-    plt.hist(t50, bins=range(-10, 36, 2), edgecolor="black")
-    plt.title("Histogram of Daily Temperatures in Vienna (2050)")
+    plt.hist(
+        t_cordex, bins=range(-10, 36, 2), alpha=0.7, label="CORDEX 2050", color="orange"
+    )
+    plt.hist(t_era5, bins=range(-10, 36, 2), alpha=0.7, label="ERA5 2024", color="blue")
+    plt.title("Histogram of Daily Temperatures in Vienna")
     plt.xlabel("Temperature (°C)")
     plt.ylabel("Frequency")
 
-    # Mark the mean temperature as a red vertical line
-    mean_temp = t50.mean()
-    plt.axvline(mean_temp, color="red", linestyle="dashed", linewidth=1)
+    # Mark the mean temperature as a vertical line
+    mean_temp_cordex = t_cordex.mean()
+    plt.axvline(mean_temp_cordex, color="red", linestyle="dashed", linewidth=1)
     plt.text(
-        mean_temp + 0.5, plt.ylim()[1] * 0.9, f"Mean: {mean_temp:.2f} °C", color="red"
+        mean_temp_cordex + 0.5,
+        plt.ylim()[1] * 0.9,
+        f"Mean: {mean_temp_cordex:.2f} °C",
+        color="red",
+    )
+    mean_temp_era5 = t_era5.mean()
+    plt.axvline(mean_temp_era5, color="green", linestyle="dashed", linewidth=1)
+    plt.text(
+        mean_temp_era5 + 0.5,
+        plt.ylim()[1] * 0.8,
+        f"Mean: {mean_temp_era5:.2f} °C",
+        color="green",
     )
 
     plt.tight_layout()
