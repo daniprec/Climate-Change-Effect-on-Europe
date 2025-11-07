@@ -2,7 +2,9 @@ import os
 import zipfile
 
 import cdsapi
+import matplotlib.pyplot as plt
 import xarray as xr
+from pyproj import CRS, Transformer
 
 
 def download_cordex_data():
@@ -42,7 +44,40 @@ def main():
     # Open the nc file in the extracted folder
     ds = xr.open_dataset(file_nc)
 
-    print(ds)
+    # Location of Vienna
+    vienna_lat = 48.2082
+    vienna_lon = 16.3738
+
+    # Transform lon/lat -> rotated-pole grid coords
+    tfm = Transformer.from_crs(
+        CRS.from_epsg(4326),
+        CRS.from_cf(ds.rotated_latitude_longitude.attrs),
+        always_xy=True,
+    )
+    rlon, rlat = tfm.transform(vienna_lon, vienna_lat)
+
+    # Get nearest grid point +/- size of Vienna
+    size = 0.2
+    ds_vienna = ds.sel(
+        rlon=slice(rlon - size, rlon + size), rlat=slice(rlat - size, rlat + size)
+    )
+    # Compute mean over the area
+    ds_vienna_mean = ds_vienna.mean(dim=["rlon", "rlat"])
+
+    # Select year 2050
+    ds_vienna_mean = ds_vienna_mean.sel(time=slice("2050-01-01", "2050-12-31"))
+
+    # Plot histogram of daily temperatures
+    # Use bins of 1ºC from -10ºC to 40ºC
+    plt.figure(figsize=(10, 6))
+    tas = ds_vienna_mean.tas - 273.15  # Convert from K to °C
+    plt.hist(tas.values.flatten(), bins=range(-10, 41), edgecolor="black")
+    plt.title("Histogram of Daily Temperatures in Vienna (2050)")
+    plt.xlabel("Temperature (°C)")
+    plt.ylabel("Frequency")
+    plt.tight_layout()
+    plt.savefig("output/vienna_temperature_histogram.png")
+    plt.close()
 
 
 if __name__ == "__main__":
