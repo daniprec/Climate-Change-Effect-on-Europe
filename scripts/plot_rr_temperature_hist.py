@@ -115,7 +115,7 @@ def load_reanalysis_temperature_data(
     return np.concatenate([t.values.flatten() for t in ls_temps])
 
 
-def plot_rr_curve(urau_code: str = "AT001C"):
+def plot_rr_curve(temps: np.ndarray, urau_code: str = "AT001C"):
     coefs_df = pd.read_csv("../EUcityProj/data/coefs.csv")
     # 5 age groups x 5 coefficients
     coefs = coefs_df[coefs_df["URAU_CODE"] == urau_code].iloc[:, 2:]
@@ -144,6 +144,14 @@ def plot_rr_curve(urau_code: str = "AT001C"):
     # bvar_at_mmt[a, j] = bvar[mmt_inrange_ix[a], j] = bvar[i_a, j] = B_j(T_{MMT,a})
     bvar_at_mmt = bvar[mmt_inrange_ix, :]
 
+    # Extend the temperature range for plotting
+    bvar = bs(
+        temps,
+        knots=tmeanper[["10.0%", "75.0%", "90.0%"]].values[0],
+        degree=2,
+        include_intercept=False,
+    )
+
     # Vectorized without newaxis (using einsum)
     # Compute for all temperatures and ages at once
     log_rr = np.einsum("ij,aj->ia", bvar, coefs.values) - np.einsum(
@@ -152,12 +160,13 @@ def plot_rr_curve(urau_code: str = "AT001C"):
 
     rr = np.exp(log_rr)
 
-    return rr, tmeanper.values[0]
+    return rr
 
 
 def main(year_cordex: int = 2050, year_era5: int = 2020):
     t_cordex = load_projected_temperature_data(year=year_cordex)
     t_era5 = load_reanalysis_temperature_data(year=year_era5)
+    temps = np.arange(-10, 36, 2)
 
     # Plot histogram of daily temperatures
     # Use bins of 1ºC from -10ºC to 36ºC
@@ -165,14 +174,14 @@ def main(year_cordex: int = 2050, year_era5: int = 2020):
 
     plt.hist(
         t_cordex,
-        bins=range(-10, 36, 2),
+        bins=temps.tolist(),
         alpha=0.7,
         label=f"CORDEX {year_cordex}",
         color="orange",
     )
     plt.hist(
         t_era5,
-        bins=range(-10, 36, 2),
+        bins=temps.tolist(),
         alpha=0.7,
         label=f"ERA5 {year_era5}",
         color="blue",
@@ -198,16 +207,18 @@ def main(year_cordex: int = 2050, year_era5: int = 2020):
         f"Mean: {mean_temp_era5:.2f} °C",
         color="blue",
     )
+    lines, labels = plt.gca().get_legend_handles_labels()
 
     # RR curve
-    rr, tmean = plot_rr_curve(urau_code="AT001C")
+    temps = np.arange(-10, 36, 0.02)
+    rr = plot_rr_curve(temps, urau_code="AT001C")
     # Get age group
     rr = rr[:, 3]
 
     # Create a right y-axis for RR
     ax2 = plt.gca().twinx()
     ax2.plot(
-        tmean,
+        temps,
         rr,
         color="black",
         label="Relative Risk (Age 65-74)",
@@ -216,10 +227,29 @@ def main(year_cordex: int = 2050, year_era5: int = 2020):
     ax2.set_ylabel("Relative Risk", color="black")
     ax2.tick_params(axis="y", labelcolor="black")
 
-    plt.legend()
+    # Use legend for both axes
+    lines2, labels2 = ax2.get_legend_handles_labels()
+    plt.legend(lines + lines2, labels + labels2, loc="upper left")
     plt.tight_layout()
     plt.savefig("output/vienna_temperature_histogram.png")
     plt.close()
+
+    # Compute Attributable Fraction (AF) for both datasets
+    af = rr - 1 / rr
+    # AF has currently x100 more points than histogram bins
+    af = af[::50]  # Downsample to match histogram bins
+    # Get the bin heights for both histograms
+    counts_cordex, _ = np.histogram(t_cordex, bins=temps.tolist())
+    counts_era5, _ = np.histogram(t_era5, bins=temps.tolist())
+    # Compute weighted AF
+    weighted_af_cordex = np.sum(af * counts_cordex) / np.sum(counts_cordex)
+    weighted_af_era5 = np.sum(af * counts_era5) / np.sum(counts_era5)
+    print(
+        f"Weighted Attributable Fraction (AF) for CORDEX {year_cordex}: {weighted_af_cordex:.4f}"
+    )
+    print(
+        f"Weighted Attributable Fraction (AF) for ERA5 {year_era5}: {weighted_af_era5:.4f}"
+    )
 
 
 if __name__ == "__main__":
