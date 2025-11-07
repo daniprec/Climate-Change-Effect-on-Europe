@@ -229,13 +229,15 @@ def main(year_cordex: int = 2050, year_era5: int = 2020):
     plt.savefig("output/vienna_temperature_histogram.png")
     plt.close()
 
-    # Compute Attributable Fraction (AF) for both datasets
-    af = rr - 1 / rr
-    # AF has currently x100 more points than histogram bins
-    af = af[100::100]  # Downsample to match histogram bins
     # Get the bin heights for both histograms
     counts_cordex, _ = np.histogram(t_cordex, bins=temps.tolist())
     counts_era5, _ = np.histogram(t_era5, bins=temps.tolist())
+    # For each temperature bin, gets the closure temperature (center)
+    temps_bin_centers = (temps[:-1] + temps[1:]) / 2
+    rr_interp = np.interp(temps_bin_centers, temps_rr, rr)
+    # Compute Attributable Fraction (AF) for both datasets
+    af = rr_interp - 1 / rr_interp
+
     # Compute weighted AF
     weighted_af_cordex = af * counts_cordex
     weighted_af_era5 = af * counts_era5
