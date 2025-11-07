@@ -4,7 +4,9 @@ import zipfile
 import cdsapi
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import xarray as xr
+from patsy import bs  # b-spline basis
 from pyproj import CRS, Transformer
 
 
@@ -113,18 +115,68 @@ def load_reanalysis_temperature_data(
     return np.concatenate([t.values.flatten() for t in ls_temps])
 
 
-def main():
-    t_cordex = load_projected_temperature_data()
-    t_era5 = load_reanalysis_temperature_data()
+def plot_rr_curve(urau_code: str = "AT001C"):
+    coefs_df = pd.read_csv("../EUcityProj/data/coefs.csv")
+    # 5 age groups x 5 coefficients
+    coefs = coefs_df[coefs_df["URAU_CODE"] == urau_code].iloc[:, 2:]
+    tmeanper_df = pd.read_csv("../EUcityProj/data/tmean_distribution.csv")
+
+    # 117 points: 0.1% to 1.0% (10 points) 2% to 98% (97 points) 99% to 99.9% (10 points)
+    tmeanper = tmeanper_df[tmeanper_df["URAU_CODE"] == urau_code].iloc[:, 2:-1]
+
+    # B-spline basis for the temperature percentiles
+    bvar = bs(
+        tmeanper.values[0],
+        knots=tmeanper[["10.0%", "75.0%", "90.0%"]].values[0],
+        degree=2,
+        include_intercept=False,
+    )
+    firstpred = bvar @ coefs.values.T  # 117 points x 5 age groups
+    # indices of minimum mortality temperature for each age group
+
+    # restrict to 25th to 99th percentiles
+    mmt_inrange_ix = np.argmin(firstpred[33:108, :], axis=0) + 33
+
+    # minimum mortality temperatures for each age group
+    mmt = tmeanper.iloc[:, mmt_inrange_ix]
+    # b-spline coefficients at MMT for each age group
+
+    # bvar_at_mmt[a, j] = bvar[mmt_inrange_ix[a], j] = bvar[i_a, j] = B_j(T_{MMT,a})
+    bvar_at_mmt = bvar[mmt_inrange_ix, :]
+
+    # Vectorized without newaxis (using einsum)
+    # Compute for all temperatures and ages at once
+    log_rr = np.einsum("ij,aj->ia", bvar, coefs.values) - np.einsum(
+        "aj,aj->a", bvar_at_mmt, coefs.values
+    )
+
+    rr = np.exp(log_rr)
+
+    return rr, tmeanper.values[0]
+
+
+def main(year_cordex: int = 2050, year_era5: int = 2020):
+    t_cordex = load_projected_temperature_data(year=year_cordex)
+    t_era5 = load_reanalysis_temperature_data(year=year_era5)
 
     # Plot histogram of daily temperatures
     # Use bins of 1ºC from -10ºC to 36ºC
     plt.figure(figsize=(10, 6))
 
     plt.hist(
-        t_cordex, bins=range(-10, 36, 2), alpha=0.7, label="CORDEX 2050", color="orange"
+        t_cordex,
+        bins=range(-10, 36, 2),
+        alpha=0.7,
+        label=f"CORDEX {year_cordex}",
+        color="orange",
     )
-    plt.hist(t_era5, bins=range(-10, 36, 2), alpha=0.7, label="ERA5 2024", color="blue")
+    plt.hist(
+        t_era5,
+        bins=range(-10, 36, 2),
+        alpha=0.7,
+        label=f"ERA5 {year_era5}",
+        color="blue",
+    )
     plt.title("Histogram of Daily Temperatures in Vienna")
     plt.xlabel("Temperature (°C)")
     plt.ylabel("Frequency")
@@ -139,14 +191,22 @@ def main():
         color="red",
     )
     mean_temp_era5 = t_era5.mean()
-    plt.axvline(mean_temp_era5, color="green", linestyle="dashed", linewidth=1)
+    plt.axvline(mean_temp_era5, color="blue", linestyle="dashed", linewidth=1)
     plt.text(
         mean_temp_era5 + 0.5,
         plt.ylim()[1] * 0.8,
         f"Mean: {mean_temp_era5:.2f} °C",
-        color="green",
+        color="blue",
     )
 
+    # RR curve
+    rr, tmean = plot_rr_curve(urau_code="AT001C")
+    # Get age group
+    rr = rr[:, 3]
+
+    plt.plot(tmean, rr, label="RR Curve - Age group 65-74", color="black")
+
+    plt.legend()
     plt.tight_layout()
     plt.savefig("output/vienna_temperature_histogram.png")
     plt.close()
