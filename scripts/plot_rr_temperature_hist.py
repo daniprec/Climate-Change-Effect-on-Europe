@@ -242,13 +242,27 @@ def main(year_cordex: int = 2050, year_era5: int = 2020):
     counts_cordex, _ = np.histogram(t_cordex, bins=temps.tolist())
     counts_era5, _ = np.histogram(t_era5, bins=temps.tolist())
     # Compute weighted AF
-    weighted_af_cordex = np.sum(af * counts_cordex) / np.sum(counts_cordex)
-    weighted_af_era5 = np.sum(af * counts_era5) / np.sum(counts_era5)
-    print(
-        f"Weighted Attributable Fraction (AF) for CORDEX {year_cordex}: {weighted_af_cordex:.4f}"
+    weighted_af_cordex = af * counts_cordex
+    weighted_af_era5 = af * counts_era5
+    # Temperatures below 0ºC
+    af_cordex_cold = np.sum(weighted_af_cordex[temps[:-1] < 0]) / np.sum(
+        counts_cordex[temps[:-1] < 0]
+    )
+    af_era5_cold = np.sum(weighted_af_era5[temps[:-1] < 0]) / np.sum(
+        counts_era5[temps[:-1] < 0]
+    )
+    # Temperatures above or equal 24ºC
+    af_cordex_heat = np.sum(weighted_af_cordex[temps[:-1] >= 24]) / np.sum(
+        counts_cordex[temps[:-1] >= 24]
+    )
+    af_era5_heat = np.sum(weighted_af_era5[temps[:-1] >= 24]) / np.sum(
+        counts_era5[temps[:-1] >= 24]
     )
     print(
-        f"Weighted Attributable Fraction (AF) for ERA5 {year_era5}: {weighted_af_era5:.4f}"
+        f"Attributable Fraction (Cold) CORDEX {year_cordex}: {af_cordex_cold:.4f}, ERA5 {year_era5}: {af_era5_cold:.4f}"
+    )
+    print(
+        f"Attributable Fraction (Heat) CORDEX {year_cordex}: {af_cordex_heat:.4f}, ERA5 {year_era5}: {af_era5_heat:.4f}"
     )
 
 
