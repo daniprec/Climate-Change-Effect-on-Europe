@@ -3,6 +3,7 @@ import zipfile
 
 import cdsapi
 import matplotlib.pyplot as plt
+import numpy as np
 import xarray as xr
 from pyproj import CRS, Transformer
 
@@ -32,7 +33,25 @@ def download_cordex_data():
         zip_ref.extractall("./data")
 
 
-def main():
+def load_projected_temperature_data(
+    lat: float = 48.2085, lon: float = 16.3721, year: int = 2050
+) -> np.ndarray:
+    """
+    Load daily temperature data for Vienna in 2050 from CORDEX dataset.
+    Parameters
+    ----------
+    lat : float
+        Latitude of Vienna in degrees.
+    lon : float
+        Longitude of Vienna in degrees.
+    year : int
+        Year for which to load the data (default is 2050).
+
+    Returns
+    -------
+    np.ndarray
+        Daily temperature values (in °C).
+    """
     file_nc = "./data/tas_EUR-11_MPI-M-MPI-ESM-LR_rcp45_r1i1p1_CLMcom-CCLM4-8-17_v1_day_20460101-20501231.nc"
 
     # Ensure file exists before opening
@@ -44,19 +63,15 @@ def main():
     # Open the nc file in the extracted folder
     ds = xr.open_dataset(file_nc)
 
-    # Location of Vienna
-    vienna_lat = 48.2082
-    vienna_lon = 16.3738
-
     # Transform lon/lat -> rotated-pole grid coords
     tfm = Transformer.from_crs(
         CRS.from_epsg(4326),
         CRS.from_cf(ds.rotated_latitude_longitude.attrs),
         always_xy=True,
     )
-    rlon, rlat = tfm.transform(vienna_lon, vienna_lat)
+    rlon, rlat = tfm.transform(lon, lat)
 
-    # Get nearest grid point +/- size of Vienna
+    # Get nearest grid point +/- size
     size = 0.2
     ds_vienna = ds.sel(
         rlon=slice(rlon - size, rlon + size), rlat=slice(rlat - size, rlat + size)
@@ -65,16 +80,32 @@ def main():
     ds_vienna_mean = ds_vienna.mean(dim=["rlon", "rlat"])
 
     # Select year 2050
-    ds_vienna_mean = ds_vienna_mean.sel(time=slice("2050-01-01", "2050-12-31"))
+    ds_vienna_mean = ds_vienna_mean.sel(time=slice(f"{year}-01-01", f"{year}-12-31"))
+
+    tas = ds_vienna_mean.tas - 273.15  # Convert from K to °C
+
+    return tas.values.flatten()
+
+
+def main():
+    t50 = load_projected_temperature_data()
 
     # Plot histogram of daily temperatures
     # Use bins of 1ºC from -10ºC to 36ºC
     plt.figure(figsize=(10, 6))
-    tas = ds_vienna_mean.tas - 273.15  # Convert from K to °C
-    plt.hist(tas.values.flatten(), bins=range(-10, 36, 2), edgecolor="black")
+
+    plt.hist(t50, bins=range(-10, 36, 2), edgecolor="black")
     plt.title("Histogram of Daily Temperatures in Vienna (2050)")
     plt.xlabel("Temperature (°C)")
     plt.ylabel("Frequency")
+
+    # Mark the mean temperature as a red vertical line
+    mean_temp = t50.mean()
+    plt.axvline(mean_temp, color="red", linestyle="dashed", linewidth=1)
+    plt.text(
+        mean_temp + 0.5, plt.ylim()[1] * 0.9, f"Mean: {mean_temp:.2f} °C", color="red"
+    )
+
     plt.tight_layout()
     plt.savefig("output/vienna_temperature_histogram.png")
     plt.close()
