@@ -204,7 +204,17 @@ def main(year_cordex: int = 2050, year_era5: int = 2020):
     # Get age group
     rr = rr[:, 3]
 
-    plt.plot(tmean, rr, label="RR Curve - Age group 65-74", color="black")
+    # Create a right y-axis for RR
+    ax2 = plt.gca().twinx()
+    ax2.plot(
+        tmean,
+        rr,
+        color="black",
+        label="Relative Risk (Age 65-74)",
+        linewidth=2,
+    )
+    ax2.set_ylabel("Relative Risk", color="black")
+    ax2.tick_params(axis="y", labelcolor="black")
 
     plt.legend()
     plt.tight_layout()
