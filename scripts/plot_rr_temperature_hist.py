@@ -167,16 +167,18 @@ def main(year_cordex: int = 2050, year_era5: int = 2020):
     plt.hist(
         t_cordex,
         bins=temps.tolist(),
-        alpha=0.7,
+        alpha=0.6,
         label=f"CORDEX {year_cordex}",
         color="orange",
+        edgecolor="black",
     )
     plt.hist(
         t_era5,
         bins=temps.tolist(),
-        alpha=0.7,
+        alpha=0.6,
         label=f"ERA5 {year_era5}",
         color="blue",
+        edgecolor="black",
     )
     plt.title("Histogram of Daily Temperatures in Vienna")
     plt.xlabel("Temperature (°C)")
@@ -217,6 +219,8 @@ def main(year_cordex: int = 2050, year_era5: int = 2020):
     )
     ax2.set_ylabel("Relative Risk", color="black")
     ax2.tick_params(axis="y", labelcolor="black")
+    # Add a grid to the RR axis
+    ax2.grid(True, which="both", axis="y", linestyle="--", alpha=0.5)
 
     # Use legend for both axes
     lines2, labels2 = ax2.get_legend_handles_labels()
