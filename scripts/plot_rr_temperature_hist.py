@@ -68,10 +68,10 @@ def main():
     ds_vienna_mean = ds_vienna_mean.sel(time=slice("2050-01-01", "2050-12-31"))
 
     # Plot histogram of daily temperatures
-    # Use bins of 1ºC from -10ºC to 40ºC
+    # Use bins of 1ºC from -10ºC to 36ºC
     plt.figure(figsize=(10, 6))
     tas = ds_vienna_mean.tas - 273.15  # Convert from K to °C
-    plt.hist(tas.values.flatten(), bins=range(-10, 41), edgecolor="black")
+    plt.hist(tas.values.flatten(), bins=range(-10, 36, 2), edgecolor="black")
     plt.title("Histogram of Daily Temperatures in Vienna (2050)")
     plt.xlabel("Temperature (°C)")
     plt.ylabel("Frequency")
