@@ -1,3 +1,4 @@
+import os
 import zipfile
 
 import cdsapi
@@ -26,13 +27,19 @@ def download_cordex_data():
     file_zip = "b723a83d8bb5dc479b58a3a337cba40a.zip"
 
     with zipfile.ZipFile(file_zip, "r") as zip_ref:
-        zip_ref.extractall(".")
+        zip_ref.extractall("./data")
 
 
 def main():
-    # Open the nc file in the extracted folder
+    file_nc = "./data/tas_EUR-11_MPI-M-MPI-ESM-LR_rcp45_r1i1p1_CLMcom-CCLM4-8-17_v1_day_20460101-20501231.nc"
 
-    file_nc = "data/tas_EUR-11_MPI-M-MPI-ESM-LR_rcp45_r1i1p1_CLMcom-CCLM4-8-17_v1_day_20460101-20501231.nc"
+    # Ensure file exists before opening
+    if not os.path.exists(file_nc):
+        print(f"The file {file_nc} does not exist.")
+        # Run the download function
+        download_cordex_data()
+
+    # Open the nc file in the extracted folder
     ds = xr.open_dataset(file_nc)
 
     print(ds)
